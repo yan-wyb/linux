@@ -38,11 +38,16 @@
 			0 78 1
 			0 88 1>;
 		interrupt-names = "vsync","vbyone","tcon";
-		pinctrl-names = "vbyone","vbyone_off","tcon","tcon_off";
+		pinctrl-names = "vbyone","vbyone_off",
+				"tcon_p2p","tcon_p2p_usit","tcon_p2p_off",
+				"tcon_mlvds","tcon_mlvds_off";
 		pinctrl-0 = <&lcd_vbyone_pins>;
 		pinctrl-1 = <&lcd_vbyone_off_pins>;
-		pinctrl-2 = <&lcd_tcon_pins>;
-		pinctrl-3 = <&lcd_tcon_off_pins>;
+		pinctrl-2 = <&lcd_tcon_p2p_pins>;
+		pinctrl-3 = <&lcd_tcon_p2p_usit_pins>;
+		pinctrl-4 = <&lcd_tcon_p2p_off_pins>;
+		pinctrl-5 = <&lcd_tcon_mlvds_pins>;
+		pinctrl-6 = <&lcd_tcon_mlvds_off_pins>;
 		pinctrl_version = <2>; /* for uboot */
 		memory-region = <&lcd_tcon_reserved>;
 
@@ -220,6 +225,7 @@
 				1 /*vbyone_intr_enable */
 				3>; /*vbyone_vsync_intr_enable*/
 			phy_attr=<0xf 1>; /* vswing_level, preem_level */
+			hw_filter=<0 0>;  /* filter_time, filter_cnt*/
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <0 0 1 50 /*panel power on*/
@@ -262,6 +268,7 @@
 				1   /*vbyone_intr_enable*/
 				3>; /*vbyone_vsync_intr_enable*/
 			phy_attr=<0xf 1>; /* vswing_level, preem_level */
+			hw_filter=<0 0>;  /* filter_time, filter_cnt*/
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
@@ -306,6 +313,7 @@
 				1   /*vbyone_intr_enable*/
 				3>; /*vbyone_vsync_intr_enable*/
 			phy_attr=<0xf 1>; /* vswing_level, preem_level */
+			hw_filter=<0 0>;  /* filter_time, filter_cnt*/
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
@@ -350,6 +358,7 @@
 				1   /*vbyone_intr_enable*/
 				3>; /*vbyone_vsync_intr_enable*/
 			phy_attr=<0xf 1>; /* vswing_level, preem_level */
+			hw_filter=<0 0>;  /* filter_time, filter_cnt*/
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
@@ -396,6 +405,7 @@
 				1   /*vbyone_intr_enable*/
 				3>; /*vbyone_vsync_intr_enable*/
 			phy_attr=<0xf 1>; /* vswing_level, preem_level */
+			hw_filter=<0 0>;  /* filter_time, filter_cnt*/
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <

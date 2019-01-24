@@ -417,9 +417,12 @@ void lcd_vbyone_pinmux_set(int status)
 }
 
 static char *lcd_tcon_pinmux_str[] = {
-	"tcon",
-	"tcon_off",
-	"none",
+	"tcon_p2p",       /* 0 */
+	"tcon_p2p_usit",  /* 1 */
+	"tcon_p2p_off",   /* 2 */
+	"tcon_mlvds",     /* 3 */
+	"tcon_mlvds_off", /* 4 */
+	"none",           /* 5 */
 };
 
 void lcd_tcon_pinmux_set(int status)
@@ -428,11 +431,25 @@ void lcd_tcon_pinmux_set(int status)
 	struct lcd_config_s *pconf;
 	unsigned int index;
 
+	if (!lcd_drv)
+		return;
 	if (lcd_debug_print_flag)
 		LCDPR("%s: %d\n", __func__, status);
 
 	pconf = lcd_drv->lcd_config;
-	index = (status) ? 0 : 1;
+	switch (pconf->lcd_basic.lcd_type) {
+	case LCD_P2P:
+		if (pconf->lcd_control.p2p_config->p2p_type == P2P_USIT)
+			index = (status) ? 1 : 2;
+		else
+			index = (status) ? 0 : 2;
+		break;
+	case LCD_MLVDS:
+		index = (status) ? 3 : 4;
+		break;
+	default:
+		return;
+	}
 
 	if (pconf->pinmux_flag == index) {
 		LCDPR("pinmux %s is already selected\n",

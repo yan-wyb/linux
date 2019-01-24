@@ -1402,7 +1402,11 @@ static int lcd_config_probe(struct platform_device *pdev)
 			lcd_vbyone_pinmux_set(1);
 			break;
 		case LCD_MLVDS:
+			lcd_tcon_pinmux_set(1);
+			break;
 		case LCD_P2P:
+		lcd_driver->lcd_config->lcd_control.p2p_config->p2p_type =
+				lcd_boot_ctrl_config.advanced_flag;
 			lcd_tcon_pinmux_set(1);
 			break;
 		default:
