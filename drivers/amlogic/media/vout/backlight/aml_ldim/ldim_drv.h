@@ -17,6 +17,9 @@
 
 #ifndef _AML_LDIM_DRV_H_
 #define _AML_LDIM_DRV_H_
+#include <linux/dma-contiguous.h>
+#include <linux/dma-mapping.h>
+#include <linux/mm.h>
 #include <linux/amlogic/media/vout/lcd/ldim_alg.h>
 
 /*20180629: initial version */
@@ -40,17 +43,32 @@ extern int LD_remap_lut[16][32];
 #define AML_LDIM_CLASS_NAME  "aml_ldim"
 
 /*========================================*/
+struct ldim_rmem_s {
+	void *wr_mem_vaddr1;
+	phys_addr_t wr_mem_paddr1;
+	void *wr_mem_vaddr2;
+	phys_addr_t wr_mem_paddr2;
+	void *rd_mem_vaddr1;
+	phys_addr_t rd_mem_paddr1;
+	void *rd_mem_vaddr2;
+	phys_addr_t rd_mem_paddr2;
+	unsigned int wr_mem_size;
+	unsigned int rd_mem_size;
+};
 
+/*========================================*/
 struct ldim_operate_func_s {
 	unsigned short h_region_max;
 	unsigned short v_region_max;
 	unsigned short total_region_max;
+	int (*alloc_rmem)(void);
 	void (*remap_update)(struct LDReg_s *nPRM,
 		unsigned int avg_update_en, unsigned int matrix_update_en);
 	void (*stts_init)(unsigned int pic_h, unsigned int pic_v,
 		unsigned int blk_vnum, unsigned int blk_hnum);
-	void (*ldim_init)(struct LDReg_s *nPRM,
+	void (*remap_init)(struct LDReg_s *nPRM,
 		unsigned int bl_en, unsigned int hvcnt_bypass);
+	void (*vs_arithmetic)(void);
 };
 
 void ldim_delay(int ms);
@@ -58,21 +76,32 @@ void ldim_delay(int ms);
 
 extern int  ldim_round(int ix, int ib);
 extern void LD_ConLDReg(struct LDReg_s *Reg);
-extern void ld_fw_cfg_once(struct LDReg_s *nPRM);
-
+void ld_fw_cfg_once(struct LDReg_s *nPRM);
+extern void set_vpu_dma_mif(int rd_wr_sel, unsigned int blk_vnum,
+	unsigned int blk_hnum);
+void ldim_hw_vsync_tm2(void);
 /* ldim hw */
 extern int ldim_hw_reg_dump(char *buf);
+int ldim_hw_reg_dump_tm2(char *buf);
 extern void ldim_stts_read_region(unsigned int nrow, unsigned int ncol);
 extern void ldim_set_matrix_ycbcr2rgb(void);
 extern void ldim_set_matrix_rgb2ycbcr(int mode);
 
-extern void ldim_initial_txlx(struct LDReg_s *nPRM,
+extern void remapping_initial_txlx(struct LDReg_s *nPRM,
+		unsigned int ldim_bl_en, unsigned int ldim_hvcnt_bypass);
+extern void remapping_initial_tm2(struct LDReg_s *nPRM,
 		unsigned int ldim_bl_en, unsigned int ldim_hvcnt_bypass);
 extern void ldim_stts_initial_txlx(unsigned int pic_h, unsigned int pic_v,
 		unsigned int blk_vnum, unsigned int blk_hnum);
 extern void ldim_stts_initial_tl1(unsigned int pic_h, unsigned int pic_v,
 		unsigned int blk_vnum, unsigned int blk_hnum);
+extern void ldim_stts_initial_tm2(unsigned int pic_h, unsigned int pic_v,
+		unsigned int blk_vnum, unsigned int blk_hnum);
 extern void ldim_remap_update_txlx(struct LDReg_s *nPRM,
 		unsigned int avg_update_en, unsigned int matrix_update_en);
+void ldim_remap_update_tm2(struct LDReg_s *nPRM, unsigned int avg_update_en,
+			   unsigned int matrix_update_en);
+void LDIM_Update_Matrix_tm2(int NewBlMatrix[], int BlMatrixNum,
+			    void *bl_matrix_mem_baddr);
 
 #endif
