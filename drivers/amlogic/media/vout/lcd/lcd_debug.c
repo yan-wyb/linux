@@ -3546,7 +3546,7 @@ static ssize_t lcd_tcon_debug_show(struct class *class,
 }
 
 static ssize_t lcd_tcon_status_show(struct class *class,
-				    struct class_attribute *attr, char *buf)
+		struct class_attribute *attr, char *buf)
 {
 	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 
