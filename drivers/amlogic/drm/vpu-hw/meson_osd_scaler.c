@@ -650,9 +650,6 @@ static void scaler_hw_init(struct meson_vpu_block *vblk)
 	scaler->reg = &osd_scaler_reg[vblk->index];
 	scaler->linebuffer = OSD_SCALE_LINEBUFFER;
 	scaler->bank_length = OSD_SCALE_BANK_LENGTH;
-	/*disable sc*/
-	osd_sc_en_set(scaler->reg, 0);
-	osd_sc_path_en_set(scaler->reg, 0);
 	DRM_DEBUG("%s hw_init called.\n", scaler->base.name);
 }
 

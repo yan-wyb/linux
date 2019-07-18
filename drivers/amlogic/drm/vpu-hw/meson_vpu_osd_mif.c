@@ -388,6 +388,8 @@ static void osd_set_state(struct meson_vpu_block *vblk,
 	scope_src.v_end = mvos->src_y + mvos->src_h - 1;
 	pixel_format = mvos->pixel_format;
 	canvas_index = osd_canvas[vblk->index][osd_canvas_index[vblk->index]];
+	/*Toto: need to separate*/
+	osd_ctrl_set(osd->reg);
 	canvas_config(canvas_index, phy_addr, byte_stride, src_h,
 		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
 	osd_canvas_index[vblk->index] ^= 1;
@@ -519,7 +521,6 @@ static void osd_hw_init(struct meson_vpu_block *vblk)
 		return;
 	}
 	osd->reg = &osd_mif_reg[vblk->index];
-	osd_ctrl_set(osd->reg);
 	DRM_DEBUG("%s hw_init done.\n", osd->base.name);
 }
 

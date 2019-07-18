@@ -72,7 +72,7 @@
 			reusable;
 			size = <0x800000>;
 			alignment = <0x400000>;
-			alloc-ranges = <0x30000000 0x50000000>;
+			alloc-ranges = <0x7f800000 0x800000>;
 		};
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
