@@ -27,7 +27,8 @@
 /*20181203: add 50/60hz change & iw7027 error handle support */
 /*20181220: add tl1 support*/
 /*20190103: add analog pwm support*/
-#define LDIM_DRV_VER    "20190103"
+/*20190107: add iw7038, iw7027_he support and ldim_delay for delay ms*/
+#define LDIM_DRV_VER    "20190107"
 
 extern unsigned char ldim_debug_print;
 
@@ -52,6 +53,7 @@ struct ldim_operate_func_s {
 		unsigned int bl_en, unsigned int hvcnt_bypass);
 };
 
+void ldim_delay(int ms);
 /*========================================*/
 
 extern int  ldim_round(int ix, int ib);

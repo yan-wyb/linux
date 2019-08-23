@@ -143,6 +143,14 @@ static struct ldim_config_s ldim_config = {
 	.hvcnt_bypass = 0,
 };
 
+void ldim_delay(int ms)
+{
+	if (ms > 0 && ms < 20)
+		usleep_range(ms * 1000, ms * 1000 + 1);
+	else if (ms > 20)
+		msleep(ms);
+}
+
 static void ldim_db_para_print(struct LDReg_s *mLDReg)
 {
 	int i, len;

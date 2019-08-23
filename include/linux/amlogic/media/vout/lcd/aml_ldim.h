@@ -70,6 +70,7 @@ struct ldim_dev_config_s {
 	int lamp_err_gpio;
 	unsigned char fault_check;
 	unsigned char write_check;
+	unsigned char device_count;
 
 	unsigned int dim_min;
 	unsigned int dim_max;
@@ -88,8 +89,10 @@ struct ldim_dev_config_s {
 	unsigned short bl_mapping[LD_BLKREGNUM];
 
 	void (*dim_range_update)(void);
-	int (*dev_reg_write)(unsigned char *buf, unsigned int len);
-	int (*dev_reg_read)(unsigned char *buf, unsigned int len);
+	int (*dev_reg_write)(unsigned int dev_id, unsigned char *buf,
+			     unsigned int len);
+	int (*dev_reg_read)(unsigned int dev_id, unsigned char *buf,
+			    unsigned int len);
 };
 
 /*******global API******/
