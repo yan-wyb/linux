@@ -3155,6 +3155,11 @@ void read_pulldown_info(unsigned int *glb_frm_mot_num,
 	*glb_fid_mot_num = (Rd(DI_INFO_DATA)&0xffffff);
 }
 
+unsigned int di_rd_mcdi_fldcnt(void)
+{
+	return RDMA_RD(MCDI_RO_FLD_MTN_CNT);
+}
+
 void read_new_pulldown_info(struct FlmModReg_t *pFMReg)
 {
 	int i = 0;

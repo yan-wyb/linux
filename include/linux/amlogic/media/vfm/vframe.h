@@ -465,6 +465,7 @@ struct vframe_s {
 	struct codec_mm_box_s mm_box;
 	struct vsif_info vsif;
 	struct emp_info emp;
+	u32 di_cm_cnt;
 } /*vframe_t */;
 
 #if 0

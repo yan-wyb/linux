@@ -2473,7 +2473,10 @@ static void di_patch_mov_ini(void)
 	}
 	pmov->en_support = true;
 	pmov->mode = -1;
-	pmov->nub = 0;
+	pmov->nub = 3;
+	pmov->reg_addr[0] = DI_NR_CTRL1;
+	pmov->reg_addr[1] = DI_NR_CTRL2;
+	pmov->reg_addr[2] = NR4_TOP_CTRL;
 }
 
 bool di_patch_mov_db(unsigned int addr, unsigned int val)
@@ -3762,6 +3765,7 @@ static void pre_de_done_buf_config(void)
 		if (post_wr_buf) {
 			post_wr_buf->vframe->di_pulldown = 0;
 			post_wr_buf->vframe->di_gmv = 0;
+			post_wr_buf->vframe->di_cm_cnt = 0;
 		}
 
 		if (post_wr_buf && !di_pre_stru.cur_prog_flag) {
@@ -3777,7 +3781,9 @@ static void pre_de_done_buf_config(void)
 
 			}
 			post_wr_buf->vframe->di_pulldown |= 0x08;
+
 			post_wr_buf->vframe->di_gmv = glb_frame_mot_num;
+			post_wr_buf->vframe->di_cm_cnt = di_rd_mcdi_fldcnt();
 			if (di_pre_stru.combing_fix_en)
 				cur_lev = adaptive_combing_fixing(
 				di_pre_stru.mtn_status,
