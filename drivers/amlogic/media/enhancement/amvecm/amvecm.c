@@ -6089,6 +6089,30 @@ static ssize_t amvecm_debug_store(struct class *cla,
 				goto free_buf;
 			mtx_setting(POST2_MTX, val, 1);
 		}
+	} else if (!strcmp(parm[0], "mltcast_ratio1")) {
+		pr_info("current value: %d\n", mltcast_ratio1);
+		if (parm[1]) {
+			if (kstrtoul(parm[1], 10, &val) < 0)
+				goto free_buf;
+		}
+		mltcast_ratio1 = val;
+		pr_info("setting value: %d\n", mltcast_ratio1);
+	} else if (!strcmp(parm[0], "mltcast_ratio2")) {
+		pr_info("current value: %d\n", mltcast_ratio2);
+		if (parm[1]) {
+			if (kstrtoul(parm[1], 10, &val) < 0)
+				goto free_buf;
+		}
+		mltcast_ratio2 = val;
+		pr_info("setting value: %d\n", mltcast_ratio2);
+	} else if (!strcmp(parm[0], "mltcast_skip_en")) {
+		pr_info("current value: %d\n", mltcast_skip_en);
+		if (parm[1]) {
+			if (kstrtoul(parm[1], 10, &val) < 0)
+				goto free_buf;
+		}
+		mltcast_skip_en = val;
+		pr_info("setting value: %d\n", mltcast_skip_en);
 	} else
 		pr_info("unsupport cmd\n");
 
