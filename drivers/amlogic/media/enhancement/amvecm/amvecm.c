@@ -2263,6 +2263,18 @@ static ssize_t amvecm_dnlp_debug_store(struct class *cla,
 					pr_info("%s\n", stemp);
 			} else
 				pr_info("error cmd\n");
+		} else if (!strcmp(parm[1], "ve_dnlp_tgt_10b")) {
+			/*read only curve*/
+			if (!parm[2]) {
+				pr_info("error cmd\n");
+				goto free_buf;
+			} else if (!strcmp(parm[2], "all")) {
+				for (i = 0; i < 65; i++)
+					d_convert_str(ve_dnlp_tgt_10b_copy[i],
+						      i, stemp, 4, 10);
+					pr_info("%s\n", stemp);
+			} else
+				pr_info("error cmd\n");
 		} else if (!strcmp(parm[1], "GmScurve")) {
 			/*read only curve*/
 			if (parm[2] == NULL) {
