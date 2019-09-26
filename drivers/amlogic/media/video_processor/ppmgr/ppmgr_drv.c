@@ -242,7 +242,8 @@ static int parse_para(const char *para, int para_num, int *result)
 	char *token = NULL;
 	char *params, *params_base;
 	int *out = result;
-	int len = 0, count = 0;
+	ssize_t len;
+	int count = 0;
 	int res = 0;
 	int ret = 0;
 
@@ -530,7 +531,7 @@ static ssize_t rect_write(struct class *cla, struct class_attribute *attr,
 	char *strp = (char *)buf;
 	char *endp = NULL;
 	int value_array[4];
-	static int buflen;
+	static ssize_t buflen;
 	static char *tokenlen;
 	int i;
 	long tmp;
@@ -630,7 +631,7 @@ static void set_disp_para(const char *para)
 static ssize_t disp_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
-	int buflen;
+	ssize_t buflen;
 
 	buflen = strlen(buf);
 	if (buflen <= 0)
@@ -721,7 +722,7 @@ static ssize_t ppscaler_rect_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
-	int buflen;
+	ssize_t buflen;
 
 	buflen = strlen(buf);
 	if (buflen <= 0)
