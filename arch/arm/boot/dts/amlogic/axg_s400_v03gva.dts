@@ -1396,3 +1396,16 @@
 &audio_data{
 	status = "okay";
 };
+
+&spicc0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins>;
+//	cs-gpios = <&gpio GPIOH_20 0>;
+	spidev {
+		compatible = "rohm,dh2228fv";
+		status = "okay";
+		reg = <0>;
+		spi-max-frequency = <3340000>;
+	};
+};
