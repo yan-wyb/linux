@@ -39,7 +39,7 @@
 #define MESON_BLOCK_MAX_NAME_LEN 32
 /*ratio base for scaler calc;maybe need bigger than 1000*/
 #define RATIO_BASE 1000
-#define MESON_OSD_INPUT_W_LIMIT 1920
+#define MESON_OSD_INPUT_W_LIMIT 3840
 
 #define MAX_DIN_NUM 4
 #define MAX_DOUT_NUM 2
