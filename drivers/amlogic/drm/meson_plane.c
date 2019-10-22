@@ -251,6 +251,13 @@ static int meson_plane_atomic_get_property(struct drm_plane *plane,
 					struct drm_property *property,
 					uint64_t *val)
 {
+	struct am_osd_plane *osd_plane;
+	struct am_meson_plane_state *plane_state;
+
+	osd_plane = to_am_osd_plane(plane);
+	plane_state = to_am_meson_plane_state(state);
+	if (property == osd_plane->prop_premult_en)
+		*val = plane_state->premult_en;
 	return 0;
 }
 
@@ -259,6 +266,14 @@ static int meson_plane_atomic_set_property(struct drm_plane *plane,
 					 struct drm_property *property,
 					 uint64_t val)
 {
+	struct am_osd_plane *osd_plane;
+	struct am_meson_plane_state *plane_state;
+
+	osd_plane = to_am_osd_plane(plane);
+	plane_state = to_am_meson_plane_state(state);
+	if (property == osd_plane->prop_premult_en)
+		plane_state->premult_en = val;
+
 	return 0;
 }
 
@@ -362,6 +377,7 @@ static int meson_plane_atomic_check(struct drm_plane *plane,
 	struct meson_vpu_pipeline_state *mvps;
 	struct am_osd_plane *osd_plane = to_am_osd_plane(plane);
 	struct meson_drm *drv = osd_plane->drv;
+	struct am_meson_plane_state *plane_state;
 	int ret;
 
 	if (!state || !drv) {
@@ -400,6 +416,8 @@ static int meson_plane_atomic_check(struct drm_plane *plane,
 		return ret;
 	}
 
+	plane_state = to_am_meson_plane_state(state);
+	plane_info->premult_en = plane_state->premult_en;
 	plane_info->enable = 1;
 	DRM_DEBUG("index=%d, zorder=%d\n",
 		plane_info->plane_index, plane_info->zorder);
@@ -427,6 +445,24 @@ static const struct drm_plane_helper_funcs am_osd_helper_funcs = {
 	.atomic_check	= meson_plane_atomic_check,
 	.atomic_disable	= meson_plane_atomic_disable,
 };
+
+int drm_plane_create_premult_en_property(struct drm_plane *plane)
+{
+	struct drm_device *dev = plane->dev;
+	struct drm_property *prop;
+	struct am_osd_plane *osd_plane;
+
+	osd_plane = to_am_osd_plane(plane);
+	prop = drm_property_create_bool(dev, DRM_MODE_PROP_ATOMIC,
+					"PREMULT_EN");
+	if (!prop)
+		return -ENOMEM;
+
+	drm_object_attach_property(&plane->base, prop, 0);
+	osd_plane->prop_premult_en = prop;
+
+	return 0;
+}
 
 static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 {
@@ -459,6 +495,7 @@ static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 				 format_modifiers,
 				 type, plane_name);
 
+	drm_plane_create_premult_en_property(plane);
 	drm_plane_helper_add(plane, &am_osd_helper_funcs);
 	osd_drm_debugfs_add(&osd_plane->plane_debugfs_dir,
 			    plane_name, osd_plane->plane_index);

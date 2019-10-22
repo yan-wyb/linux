@@ -169,6 +169,7 @@ struct meson_vpu_osd_layer_info {
 	u32 afbc_inter_format;
 	u32 afbc_en;
 	u32 fb_size;
+	u32 premult_en;
 };
 
 struct meson_vpu_osd {
@@ -205,6 +206,7 @@ struct meson_vpu_osd_state {
 	int r_mode;
 	u32 plane_index;
 	u32 fb_size;
+	u32 premult_en;
 };
 
 struct meson_vpu_afbc {
