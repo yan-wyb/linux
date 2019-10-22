@@ -75,6 +75,8 @@ enum scpi_std_cmd {
 	SCPI_CMD_GET_CEC2		= 0xB5,
 	SCPI_CMD_SEND_DSP_DATA		= 0xB6,
 	SCPI_CMD_BL4_WAIT_UNLOCK	= 0xD6,
+	SCPI_CMD_BL4_SEND		= 0xD7,
+	SCPI_CMD_BL4_LISTEN		= 0xD8,
 	SCPI_CMD_COUNT
 };
 
@@ -102,6 +104,11 @@ struct scpi_dvfs_info {
 	struct scpi_opp_entry *opp;
 } __packed;
 
+struct bl40_msg_buf {
+	int size;
+	char buf[256];
+} __packed;
+
 unsigned long scpi_clk_get_val(u16 clk_id);
 int scpi_clk_set_val(u16 clk_id, unsigned long rate);
 int scpi_dvfs_get_idx(u8 domain);
@@ -122,4 +129,5 @@ int scpi_init_dsp_cfg0(u32 id, u32 addr, u32 cfg0);
 int scpi_unlock_bl40(void);
 int scpi_send_dsp_cmd(void *data, int size, bool to_dspa, int cmd, int taskid);
 int scpi_req_handle(void *p, u32 size, u32 cmd);
+int scpi_send_bl40(unsigned int cmd, struct bl40_msg_buf *bl40_buf);
 #endif /*_SCPI_PROTOCOL_H_*/

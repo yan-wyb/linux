@@ -15236,3 +15236,7 @@ M: shunzhou jiang <shunzhou.jiang@amlogic.com>
 F: drivers/amlogic/mailbox/meson_mhu_dsp.c
 F: drivers/amlogic/mailbox/meson_mhu_dsp.h
 F: drivers/amlogic/mailbox/scpi_protocol_dsp.c
+
+AMLOGIC SM1/G12A BL40 HEADER
+M: shunzhou jiang <shunzhou.jiang@amlogic.com>
+F: drivers/amlogic/firmware/bl40_module.h
