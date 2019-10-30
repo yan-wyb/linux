@@ -1066,7 +1066,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 				rx_pr("cec_off,ignore edid update\n");
 		}
 		#endif
-		hdmi_rx_top_edid_update();
+		/*hdmi_rx_top_edid_update();*/
 		fsm_restart();
 		rx_pr("*update edid*\n");
 		break;
@@ -1709,6 +1709,60 @@ static ssize_t earc_cap_ds_store(struct device *dev,
 	return count;
 }
 
+static ssize_t edid_select_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "edid select for portD~A: 0x%x\n",
+		edid_select);
+}
+
+static ssize_t edid_select_store(struct device *dev,
+				 struct device_attribute *attr,
+				 const char *buf,
+				 size_t count)
+{
+	int ret;
+	unsigned int tmp;
+	int i;
+	/* PCB port number for UI HDMI1/2/3/4 */
+	unsigned char pos[E_PORT_NUM] = {0};
+
+	/* edid selection for UI HDMI4/3/2/1, eg 0x0120
+	 * value 2: auto, 1: EDID2.0, 0: EDID1.4
+	 */
+	ret = kstrtouint(buf, 16, &tmp);
+	if (ret)
+		return -EINVAL;
+
+	for (i = 0; i < E_PORT_NUM; i++) {
+		switch ((port_map >> (i * 4)) & 0xF) {
+		case 1:
+			pos[0] = i;
+			break;
+		case 2:
+			pos[1] = i;
+			break;
+		case 3:
+			pos[2] = i;
+			break;
+		case 4:
+			pos[3] = i;
+			break;
+		default:
+			break;
+		}
+	}
+	/* edid select for portD/C/B/A */
+	edid_select = ((tmp & 0xF) << (pos[0] * 4)) |
+		(((tmp >> 4) & 0xF) << (pos[1] * 4)) |
+		(((tmp >> 8) & 0xF) << (pos[2] * 4)) |
+		(((tmp >> 12) & 0xF) << (pos[3] * 4));
+	rx_pr("edid select for UI HDMI4~1: 0x%x, for portD~A: 0x%x\n",
+	      tmp, edid_select);
+	return count;
+}
+
 static DEVICE_ATTR(debug, 0644, hdmirx_debug_show, hdmirx_debug_store);
 static DEVICE_ATTR(edid, 0644, hdmirx_edid_show, hdmirx_edid_store);
 static DEVICE_ATTR(key, 0644, hdmirx_key_show, hdmirx_key_store);
@@ -1725,6 +1779,7 @@ static DEVICE_ATTR(hw_info, 0644, hw_info_show, hw_info_store);
 static DEVICE_ATTR(edid_dw, 0644, edid_dw_show, edid_dw_store);
 static DEVICE_ATTR(ksvlist, 0644, ksvlist_show, ksvlist_store);
 static DEVICE_ATTR(earc_cap_ds, 0644, earc_cap_ds_show, earc_cap_ds_store);
+static DEVICE_ATTR(edid_select, 0644, edid_select_show, edid_select_store);
 
 static int hdmirx_add_cdev(struct cdev *cdevp,
 		const struct file_operations *fops,
@@ -2260,6 +2315,11 @@ static int hdmirx_probe(struct platform_device *pdev)
 		rx_pr("hdmirx: fail to create earc_cap_ds file\n");
 		goto fail_create_earc_cap_ds;
 	}
+	ret = device_create_file(hdevp->dev, &dev_attr_edid_select);
+	if (ret < 0) {
+		rx_pr("hdmirx: fail to create edid_select file\n");
+		goto fail_create_edid_select;
+	}
 
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
@@ -2471,6 +2531,7 @@ static int hdmirx_probe(struct platform_device *pdev)
 		rx_pr("warning: no rev cmd mem\n");
 	rx_emp_resource_allocate(&(pdev->dev));
 	aml_phy_get_trim_val();
+	fs_mode_init();
 	hdmirx_hw_probe();
 	if ((rx.chip_id >= CHIP_ID_TL1) && phy_tdr_en)
 		term_cal_en = (!is_ft_trim_done());
@@ -2495,6 +2556,8 @@ fail_kmalloc_pd_fifo:
 	return ret;
 fail_get_resource_irq:
 	return ret;
+fail_create_edid_select:
+	device_remove_file(hdevp->dev, &dev_attr_edid_select);
 fail_create_earc_cap_ds:
 	device_remove_file(hdevp->dev, &dev_attr_earc_cap_ds);
 fail_create_ksvlist:
@@ -2555,6 +2618,7 @@ static int hdmirx_remove(struct platform_device *pdev)
 	unregister_early_suspend(&hdmirx_early_suspend_handler);
 #endif
 	mutex_destroy(&hdevp->rx_lock);
+	device_remove_file(hdevp->dev, &dev_attr_edid_select);
 	device_remove_file(hdevp->dev, &dev_attr_debug);
 	device_remove_file(hdevp->dev, &dev_attr_edid);
 	device_remove_file(hdevp->dev, &dev_attr_key);

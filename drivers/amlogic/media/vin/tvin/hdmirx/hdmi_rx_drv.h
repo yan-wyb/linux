@@ -47,7 +47,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2019/11/18"
+#define RX_VER2 "ver.2019/11/20"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -278,6 +278,15 @@ struct rx_video_info {
 #define EMP_BUFF_MAX_PKT_CNT ((EMP_BUFFER_SIZE/2)/32 - 200)
 #define TMDS_DATA_BUFFER_SIZE	0x200000
 
+struct rx_fastswitch_mode {
+	enum hdcp_version_e hdcp_ver[E_PORT_NUM];
+	/* if edid ver is the same after switch
+	 * edid ver in UI, no need to update edid
+	 */
+	enum edid_ver_e	edid_ver[E_PORT_NUM];
+	u8 hdmi5v_sts[E_PORT_NUM];
+	/* uint8_t hpd_sts[E_PORT_NUM]; */
+};
 
 /**
  * @short HDMI RX controller HDCP configuration
@@ -428,6 +437,7 @@ struct rx_s {
 	/* wrapper */
 	unsigned int state;
 	unsigned int pre_state;
+	struct rx_fastswitch_mode fs_mode;
 	/* recovery mode */
 	unsigned char err_rec_mode;
 	unsigned char err_code;
