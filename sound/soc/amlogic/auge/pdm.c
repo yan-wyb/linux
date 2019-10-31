@@ -556,9 +556,14 @@ static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
 	struct device *dev = rtd->platform->dev;
 	struct aml_pdm *p_pdm = (struct aml_pdm *)dev_get_drvdata(dev);
 	unsigned int status;
-	int train_sts = pdm_train_sts();
+	int train_sts = 0;
 
 	pr_debug("%s\n", __func__);
+
+	if (p_pdm->chipinfo &&
+	    p_pdm->chipinfo->train &&
+	    p_pdm->train_en)
+		train_sts = pdm_train_sts();
 
 	if (!snd_pcm_running(substream))
 		return IRQ_NONE;
