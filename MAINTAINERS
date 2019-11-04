@@ -15192,3 +15192,11 @@ AMLOGIC VPP DRIVER
 M:	Brian Zhu <brian.zhu@amlogic.com>
 F: drivers/amlogic/media/video_sink/video_hw.c
 
+AMLOGIC T962X3 DRM DTS
+M:  Dezhi Kong <dezhi.kong@amlogic.com>
+F:  arch/arm/boot/dts/amlogic/tm2_t962x3_ab301_drm.dts
+F:  arch/arm/boot/dts/amlogic/tm2_t962e2_ab311_drm.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_t962x3_ab301_drm.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_t962e2_ab311_drm.dts
+F:  arch/arm64/boot/dts/amlogic/mesontm2_drm.dtsi
+F:  arch/arm/boot/dts/amlogic/mesontm2_drm.dtsi
