@@ -518,14 +518,19 @@ static struct vdin_matrix_lup_s vdin_matrix_lup[] = {
 
 /*set csc idx conter to ranage
  * parameters:
- *	a.csc_idx
+ *	a.devp
  * return
  *	0: limit
  *	1: full
  */
-u32 vdin_matrix_range_chk(enum vdin_matrix_csc_e csc_idx)
+u32 vdin_matrix_range_chk(struct vdin_dev_s *devp)
 {
-	switch (csc_idx) {
+	enum tvin_color_fmt_range_e fmt_range;
+	enum vdin_format_convert_e format_convert;
+
+	fmt_range = devp->prop.color_fmt_range;
+	format_convert = devp->format_convert;
+	switch (devp->csc_idx) {
 	case VDIN_MATRIX_YUV601F_RGB:
 	case VDIN_MATRIX_RGBS_YUV601F:
 	case VDIN_MATRIX_YUV601_YUV601F:
@@ -544,6 +549,18 @@ u32 vdin_matrix_range_chk(enum vdin_matrix_csc_e csc_idx)
 		return 1;
 
 	case VDIN_MATRIX_NULL:
+		if (format_convert == VDIN_FORMAT_CONVERT_RGB_RGB)
+			if ((fmt_range == TVIN_FMT_RANGE_NULL) ||
+			    (fmt_range == TVIN_RGB_FULL))
+				return 1;
+			else
+				return 0;
+		else
+			if ((fmt_range == TVIN_RGB_FULL) ||
+			    (fmt_range == TVIN_YUV_FULL))
+				return 1;
+			else
+				return 0;
 	case VDIN_MATRIX_XXX_YUV601_BLACK:
 	case VDIN_MATRIX_RGB_YUV601:
 	case VDIN_MATRIX_GBR_YUV601:
@@ -576,6 +593,8 @@ u32 vdin_matrix_range_chk(enum vdin_matrix_csc_e csc_idx)
 void vdin_get_format_convert(struct vdin_dev_s *devp)
 {
 	enum vdin_format_convert_e	format_convert;
+	unsigned int port = devp->parm.port;
+	unsigned int scan_mod = devp->fmt_info_p->scan_mode;
 
 	if (devp->prop.color_format == devp->prop.dest_cfmt) {
 		switch (devp->prop.color_format) {
@@ -599,7 +618,6 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 	} else {
 		switch (devp->prop.color_format) {
 		case TVIN_YUV422:
-		case TVIN_YUV444:
 		case TVIN_YUYV422:
 		case TVIN_YVYU422:
 		case TVIN_UYVY422:
@@ -608,14 +626,24 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 				format_convert = VDIN_FORMAT_CONVERT_YUV_NV21;
 			else if (devp->prop.dest_cfmt == TVIN_NV12)
 				format_convert = VDIN_FORMAT_CONVERT_YUV_NV12;
-			else if (devp->prop.dest_cfmt == TVIN_YUV444)
+			else
+				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
+			break;
+		case TVIN_YUV444:
+			if (IS_HDMI_SRC(port) &&
+			    (scan_mod == TVIN_SCAN_MODE_PROGRESSIVE))
 				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV444;
+			else if (devp->prop.dest_cfmt == TVIN_NV21)
+				format_convert = VDIN_FORMAT_CONVERT_YUV_NV21;
+			else if (devp->prop.dest_cfmt == TVIN_NV12)
+				format_convert = VDIN_FORMAT_CONVERT_YUV_NV12;
 			else
 				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
 			break;
 		case TVIN_RGB444:
-			if (devp->prop.dest_cfmt == TVIN_YUV444)
-				format_convert = VDIN_FORMAT_CONVERT_RGB_YUV444;
+			if (IS_HDMI_SRC(port) &&
+			    (scan_mod == TVIN_SCAN_MODE_PROGRESSIVE))
+				format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
 			else if (devp->prop.dest_cfmt == TVIN_NV21)
 				format_convert = VDIN_FORMAT_CONVERT_RGB_NV21;
 			else if (devp->prop.dest_cfmt == TVIN_NV12)
@@ -641,6 +669,9 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 	}
 #endif
 	devp->format_convert = format_convert;
+
+	pr_info("%s cfmt:%d, dstcfmt:%d\n", __func__,
+		devp->prop.color_format, devp->prop.dest_cfmt);
 }
 
 /*functiong:
@@ -4737,7 +4768,7 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 		vf_dp->present_flag = false;
 		vf->signal_type &= ~(1 << 29);
 		vf->signal_type &= ~(1 << 25);
-		val = vdin_matrix_range_chk(devp->csc_idx);
+		val = vdin_matrix_range_chk(devp);
 		vf->signal_type |= (val << 25);
 		/*todo;default is bt709,if change need sync*/
 		vf->signal_type = ((1 << 16) |
@@ -4859,6 +4890,8 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 	} else if ((format_convert == VDIN_FORMAT_CONVERT_YUV_RGB) ||
 		(format_convert == VDIN_FORMAT_CONVERT_RGB_RGB)) {
 		type |= VIDTYPE_RGB_444;
+		if (devp->afbce_mode_pre && vdin_chk_is_comb_mode(devp))
+			type |= VIDTYPE_COMB_MODE;
 	} else if (devp->prop.dest_cfmt == TVIN_NV21) {
 		type |= VIDTYPE_VIU_NV21;
 		type &= (~VIDTYPE_VIU_SINGLE_PLANE);

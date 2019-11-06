@@ -1270,8 +1270,8 @@ unsigned char dim_is_bypass(vframe_t *vf_in, unsigned int channel)
 	if (ppre->cur_prog_flag		&&
 	    ((ppre->cur_width > 1920)	||
 	    (ppre->cur_height > 1080)	||
-	    (ppre->cur_inp_type & VIDTYPE_VIU_444))
-	    )
+	    (ppre->cur_inp_type & VIDTYPE_VIU_444) ||
+	    (ppre->cur_inp_type & VIDTYPE_RGB_444)))
 		return 1;
 
 	if ((ppre->cur_width < 16) || (ppre->cur_height < 16))
@@ -7080,7 +7080,7 @@ static bool need_bypass(struct vframe_s *vf)
 	if (vf->source_type == VFRAME_SOURCE_TYPE_PPMGR)
 		return true;
 
-	if (vf->type & VIDTYPE_VIU_444)
+	if ((vf->type & VIDTYPE_VIU_444) || (vf->type & VIDTYPE_RGB_444))
 		return true;
 
 	if (vf->type & VIDTYPE_PIC)

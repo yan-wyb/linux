@@ -157,8 +157,6 @@ module_param(dv_de_scramble, uint, 0664);
 MODULE_PARM_DESC(dv_de_scramble, "dv_de_scramble");
 
 static unsigned int panel_reverse;
-
-
 struct vdin_hist_s vdin1_hist;
 struct vdin_v4l2_param_s vdin_v4l2_param;
 
@@ -546,6 +544,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	vdin_get_format_convert(devp);
 	devp->curr_wr_vfe = NULL;
+	devp->frame_drop_num = 0;
 	devp->vfp->skip_vf_num = devp->prop.skip_vf_num;
 	if (devp->vfp->skip_vf_num >= VDIN_CANVAS_MAX_CNT)
 		devp->vfp->skip_vf_num = 0;
@@ -808,6 +807,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	devp->cycle = 0;
 	/*reset csc_cfg in case it is enabled before switch out hdmi*/
 	devp->csc_cfg = 0;
+	devp->frame_drop_num = 0;
 
 	 /* clear color para*/
 	memset(&devp->prop, 0, sizeof(devp->prop));
@@ -1399,6 +1399,14 @@ static void vdin_hist_tgt(struct vdin_dev_s *devp, struct vframe_s *vf)
 	spin_unlock_irqrestore(&devp->hist_lock, flags);
 }
 
+void vdin_drop_frame_info(struct vdin_dev_s *devp, char *info)
+{
+	if (skip_frame_debug) {
+		pr_info("vdin.%d: vdin_irq_flag=%d %s\n",
+			devp->index, devp->vdin_irq_flag, info);
+	}
+}
+
 /*
  *VDIN_FLAG_RDMA_ENABLE=1
  *	provider_vf_put(devp->last_wr_vfe, devp->vfp);
@@ -1437,10 +1445,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	if (!devp->frontend) {
 		devp->vdin_irq_flag = 1;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "no frontend");
 		return IRQ_HANDLED;
 	}
 
@@ -1448,10 +1453,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (devp->vdin_reset_flag) {
 		devp->vdin_reset_flag = 0;
 		devp->vdin_irq_flag = 10;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "reset_flag");
 		return IRQ_HANDLED;
 	}
 	vf_drop_cnt = vdin_drop_cnt;
@@ -1478,25 +1480,18 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		vdin_hw_disable(devp);
 		devp->flags &= ~VDIN_FLAG_DEC_STOP_ISR;
 		devp->vdin_irq_flag = 2;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "stop isr");
 		goto irq_handled;
 	}
 
-	if (devp->interlace_force_drop == 1) {
-		devp->interlace_force_drop = 0;
-
+	if (devp->frame_drop_num) {
+		devp->frame_drop_num--;
 		devp->vdin_irq_flag = 9;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
-
+		vdin_drop_frame_info(devp, "drop frame");
+		vdin_drop_cnt++;
 		goto irq_handled;
 	}
-	stamp  = vdin_get_meas_vstamp(offset);
+	stamp = vdin_get_meas_vstamp(offset);
 	if (!devp->curr_wr_vfe) {
 		devp->curr_wr_vfe = provider_vf_get(devp->vfp);
 		if (devp->curr_wr_vfe) {
@@ -1506,10 +1501,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		/*save the first field stamp*/
 		devp->stamp = stamp;
 		devp->vdin_irq_flag = 3;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "no wr vfe");
 		goto irq_handled;
 	}
 
@@ -1551,10 +1543,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			}
 		} else {
 			devp->vdin_irq_flag = 5;
-			if (skip_frame_debug) {
-				pr_info("vdin.%d: vdin_irq_flag=%d\n",
-					devp->index, devp->vdin_irq_flag);
-			}
+			vdin_drop_frame_info(devp, "dv chk sun err");
 			vdin_drop_cnt++;
 			goto irq_handled;
 		}
@@ -1578,10 +1567,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (vdin_check_cycle(devp) && (!(isr_flag & VDIN_BYPASS_CYC_CHECK))
 		&& (!(devp->flags & VDIN_FLAG_SNOW_FLAG))) {
 		devp->vdin_irq_flag = 4;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "cycle chk");
 		vdin_drop_cnt++;
 		goto irq_handled;
 	}
@@ -1607,10 +1593,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		(state != TVIN_SM_STATUS_STABLE)) &&
 		(!(devp->flags & VDIN_FLAG_SNOW_FLAG))) {
 		devp->vdin_irq_flag = 6;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "sig not stable");
 		vdin_drop_cnt++;
 		goto irq_handled;
 	}
@@ -1624,10 +1607,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		((last_field_type & VIDTYPE_INTERLACE_BOTTOM) ==
 				VIDTYPE_INTERLACE_BOTTOM)) {
 		devp->vdin_irq_flag = 7;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "tran fmt chg");
 		vdin_drop_cnt++;
 		goto irq_handled;
 	}
@@ -1648,10 +1628,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			(prop->vdin_hdr_Flag != pre_prop->vdin_hdr_Flag) ||
 			(prop->color_fmt_range != pre_prop->color_fmt_range)) {
 			vdin_set_matrix(devp);
-			if (skip_frame_debug) {
-				pr_info("vdin.%d color_format changed\n",
-					devp->index);
-			}
+			vdin_drop_frame_info(devp, "color fmt chg");
 		}
 		if (prop->dest_cfmt != pre_prop->dest_cfmt) {
 			vdin_set_bitdepth(devp);
@@ -1667,11 +1644,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			if (devp->afbce_valid)
 				vdin_afbce_update(devp);
 
-			if (skip_frame_debug) {
-				pr_info("vdin.%d dest_cfmt changed: %d->%d\n",
-					devp->index,
-					pre_prop->dest_cfmt, prop->dest_cfmt);
-			}
+			vdin_drop_frame_info(devp, "dest fmt chg");
 		}
 		pre_prop->color_format = prop->color_format;
 		pre_prop->vdin_hdr_Flag = prop->vdin_hdr_Flag;
@@ -1679,10 +1652,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		pre_prop->dest_cfmt = prop->dest_cfmt;
 		devp->ignore_frames = 0;
 		devp->vdin_irq_flag = 20;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "csc chg");
 		vdin_drop_cnt++;
 		goto irq_handled;
 	}
@@ -1708,10 +1678,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	decops = devp->frontend->dec_ops;
 	if (decops->decode_isr(devp->frontend, devp->hcnt64) == TVIN_BUF_SKIP) {
 		devp->vdin_irq_flag = 8;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "buf skip flg");
 		vdin_drop_cnt++;
 		goto irq_handled;
 	}
@@ -1722,10 +1689,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	if (devp->ignore_frames < max_ignore_frame_cnt) {
 		devp->vdin_irq_flag = 12;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "ignore frame flag");
 		devp->ignore_frames++;
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1734,10 +1698,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (sm_ops->check_frame_skip &&
 		sm_ops->check_frame_skip(devp->frontend)) {
 		devp->vdin_irq_flag = 13;
-		if (skip_frame_debug) {
-			pr_info("vdin.%d: vdin_irq_flag=%d\n",
-				devp->index, devp->vdin_irq_flag);
-		}
+		vdin_drop_frame_info(devp, "skip frame flag");
 		vdin_drop_cnt++;
 		if (devp->flags&VDIN_FLAG_RDMA_ENABLE)
 			devp->ignore_frames = 0;
@@ -1755,14 +1716,15 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 						devp->index);
 		} else {
 			devp->vdin_irq_flag = 14;
-			if (skip_frame_debug) {
-				pr_info("vdin.%d: vdin_irq_flag=%d\n",
-					devp->index, devp->vdin_irq_flag);
-			}
+			vdin_drop_frame_info(devp, "no next wr vfe");
+			/* I need drop two frame */
 			if ((devp->curr_field_type & VIDTYPE_INTERLACE)
-				== VIDTYPE_INTERLACE)
-				devp->interlace_force_drop = 1;
-
+				== VIDTYPE_INTERLACE) {
+				devp->frame_drop_num = 1;
+				/*devp->interlace_force_drop = 1;*/
+				vdin_drop_frame_info(devp, "interlace drop");
+			}
+			vdin_drop_cnt++;
 			goto irq_handled;
 		}
 	}
@@ -1866,10 +1828,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			}
 		} else {
 			devp->vdin_irq_flag = 15;
-			if (skip_frame_debug) {
-				pr_info("vdin.%d: vdin_irq_flag=%d\n",
-					devp->index, devp->vdin_irq_flag);
-			}
+			vdin_drop_frame_info(devp, "game md dv crc");
 			vdin_drop_cnt++;
 			goto irq_handled;
 		}
@@ -1931,12 +1890,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	devp->frame_cnt++;
 
 irq_handled:
-
-	if ((vf_drop_cnt < vdin_drop_cnt) &&
-		((devp->curr_field_type & VIDTYPE_INTERLACE)
-		== VIDTYPE_INTERLACE))
-		devp->interlace_force_drop = 1;
-
 	/*hdmi skip policy should adapt to all drop front vframe case*/
 	if ((devp->vfp->skip_vf_num > 0) &&
 		(vf_drop_cnt < vdin_drop_cnt))

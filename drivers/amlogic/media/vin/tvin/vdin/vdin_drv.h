@@ -105,6 +105,9 @@
 #define RDMA_TABLE_SIZE (PAGE_SIZE>>3)
 /* #define VDIN_DEBUG */
 
+#define IS_HDMI_SRC(src) (((src) >= TVIN_PORT_HDMI0) && \
+				((port) <= TVIN_PORT_HDMI7))
+
 /*vdin write mem color-depth support*/
 enum VDIN_WR_COLOR_DEPTHe {
 	VDIN_WR_COLOR_DEPTH_8BIT = 0x01,
@@ -475,6 +478,7 @@ struct vdin_dev_s {
 
 	/*atv non-std signal,force drop the field if previous already dropped*/
 	unsigned int interlace_force_drop;
+	unsigned int frame_drop_num;
 	unsigned int skip_disp_md_check;
 };
 

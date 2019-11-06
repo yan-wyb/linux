@@ -258,9 +258,9 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	int sblk_num;
 	int uncmp_bits;
 	int uncmp_size;
-	int def_color_0 = 4095;
-	int def_color_1 = 2048;
-	int def_color_2 = 2048;
+	int def_color_0 = 0x3ff;
+	int def_color_1 = 0x80;
+	int def_color_2 = 0x80;
 	int def_color_3 = 0;
 	int hblksize_out = (devp->h_active + 31) >> 5;
 	int vblksize_out = (devp->v_active + 3)  >> 2;
@@ -274,6 +274,7 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	int enc_win_end_v;//input scope
 	int reg_fmt444_rgb_en = 0;
 	enum vdin_format_convert_e vdinout_fmt;
+	unsigned int bit_mode_shift = 0;
 
 	if (!devp->afbce_info)
 		return;
@@ -290,7 +291,7 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	enc_win_end_v = devp->v_active - 1;
 
 	blk_out_end_h	=  enc_win_bgn_h      >> 5 ;//output blk scope
-	blk_out_bgn_h	= (enc_win_end_h + 31)  >> 5 ;//output blk scope
+	blk_out_bgn_h	= (enc_win_end_h + 31)	>> 5 ;//output blk scope
 	blk_out_end_v	=  enc_win_bgn_v      >> 2 ;//output blk scope
 	blk_out_bgn_v	= (enc_win_end_v + 3) >> 2 ;//output blk scope
 
@@ -324,6 +325,8 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 
 	//bit size of uncompression mode
 	uncmp_size = (((((16*uncmp_bits*sblk_num)+7)>>3)+31)/32)<<1;
+
+	W_VCBUS_BIT(AFBCE_MODE_EN, 1, 18, 1);/* disable order mode */
 
 	W_VCBUS_BIT(VDIN_WRARB_REQEN_SLV, 0x1, 3, 1);//vpu arb axi_enable
 	W_VCBUS_BIT(VDIN_WRARB_REQEN_SLV, 0x1, 7, 1);//vpu arb axi_enable
@@ -387,27 +390,21 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 		(uncmp_bits & 0xf) << 4 |
 		(uncmp_bits & 0xf));
 
-	if (reg_fmt444_rgb_en) {
-		W_VCBUS(AFBCE_DEFCOLOR_1,
-			((0 & 0xfff) << 12) |  // def_color_a
-			((0 & 0xfff) << 0)    // def_color_y
-			);
+	W_VCBUS(AFBCE_DEFCOLOR_1,
+		((def_color_3 & 0xfff) << 12) |  // def_color_a
+		((def_color_0 & 0xfff) << 0)	// def_color_y
+		);
 
-		W_VCBUS(AFBCE_DEFCOLOR_2,
-			((0 & 0xfff) << 12) |  // def_color_v
-			((0 & 0xfff) << 0)    // def_color_u
-			);
-	} else {
-		W_VCBUS(AFBCE_DEFCOLOR_1,
-			((def_color_3 & 0xfff) << 12) |  // def_color_a
-			((def_color_0 & 0xfff) << 0)	// def_color_y
-			);
+	if ((devp->source_bitdepth >= VDIN_COLOR_DEEPS_8BIT) &&
+	    (devp->source_bitdepth <= VDIN_COLOR_DEEPS_12BIT))
+		bit_mode_shift = devp->source_bitdepth - VDIN_COLOR_DEEPS_8BIT;
+	/*def_color_v*/
+	/*def_color_u*/
+	W_VCBUS(AFBCE_DEFCOLOR_2,
+		(((def_color_2 << bit_mode_shift) & 0xfff) << 12) |
+		(((def_color_1 << bit_mode_shift) & 0xfff) << 0));
 
-		W_VCBUS(AFBCE_DEFCOLOR_2,
-			((def_color_2 & 0xfff) << 12) |  // def_color_v
-			((def_color_1 & 0xfff) << 0)	// def_color_u
-			);
-	}
+
 	W_VCBUS_BIT(AFBCE_MMU_RMIF_CTRL4, devp->afbce_info->table_paddr, 0, 32);
 	W_VCBUS_BIT(AFBCE_MMU_RMIF_SCOPE_X, cur_mmu_used, 0, 12);
 	/*for almost uncompressed pattern,garbage at bottom
