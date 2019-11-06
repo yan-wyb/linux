@@ -645,7 +645,8 @@ static void vd1_set_dcu(
 
 		r = 0x100;
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
-			if (type & VIDTYPE_VIU_444)
+			if ((type & VIDTYPE_VIU_444) ||
+			    (type & VIDTYPE_RGB_444))
 				r |= 0;
 			else if (type & VIDTYPE_VIU_422)
 				r |= (1 << 12);
@@ -674,7 +675,8 @@ static void vd1_set_dcu(
 			r |= VFORMATTER_RPTLINE0_EN |
 				(0xc << VFORMATTER_INIPHASE_BIT);
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
-			if (type & VIDTYPE_VIU_444) {
+			if ((type & VIDTYPE_VIU_444) ||
+			    (type & VIDTYPE_RGB_444)) {
 				r &= ~HFORMATTER_EN;
 				r &= ~VFORMATTER_EN;
 				r &= ~HFORMATTER_YC_RATIO_2_1;
@@ -719,7 +721,8 @@ static void vd1_set_dcu(
 
 	if ((vf->bitdepth & BITDEPTH_Y10) &&
 	    !frame_par->nocomp) {
-		if (vf->type & VIDTYPE_VIU_444) {
+		if ((vf->type & VIDTYPE_VIU_444) ||
+		    (vf->type & VIDTYPE_RGB_444)) {
 			bit_mode = 2;
 		} else {
 			if (vf->bitdepth & FULL_PACK_422_MODE)
@@ -833,7 +836,8 @@ static void vd1_set_dcu(
 	}
 
 	/* chroma formatter */
-	if (type & VIDTYPE_VIU_444) {
+	if ((type & VIDTYPE_VIU_444) ||
+	    (type & VIDTYPE_RGB_444)) {
 		r = HFORMATTER_YC_RATIO_1_1;
 		if (frame_par->hscale_skip_count)
 			r |= HFORMATTER_EN;
@@ -1067,7 +1071,8 @@ static void vd2_set_dcu(
 
 		r = 0x100;
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
-			if (type & VIDTYPE_VIU_444)
+			if ((type & VIDTYPE_VIU_444) ||
+			    (type & VIDTYPE_RGB_444))
 				r |= 0;
 			else if (type & VIDTYPE_VIU_422)
 				r |= (1 << 12);
@@ -1102,7 +1107,8 @@ static void vd2_set_dcu(
 				VFORMATTER_RPTLINE0_EN |
 				(0 << VFORMATTER_INIPHASE_BIT);
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
-			if (type & VIDTYPE_VIU_444) {
+			if ((type & VIDTYPE_VIU_444) ||
+			    (type & VIDTYPE_RGB_444)) {
 				r &= ~HFORMATTER_EN;
 				r &= ~VFORMATTER_EN;
 				r &= ~HFORMATTER_YC_RATIO_2_1;
@@ -1148,7 +1154,8 @@ static void vd2_set_dcu(
 
 	if ((vf->bitdepth & BITDEPTH_Y10) &&
 	    !frame_par->nocomp) {
-		if (vf->type & VIDTYPE_VIU_444) {
+		if ((vf->type & VIDTYPE_VIU_444) ||
+		    (vf->type & VIDTYPE_RGB_444)) {
 			bit_mode = 2;
 		} else {
 			if (vf->bitdepth & FULL_PACK_422_MODE)
@@ -1220,7 +1227,8 @@ static void vd2_set_dcu(
 			vd_off, 0, 2, 4);
 
 	/* chroma formatter */
-	if (type & VIDTYPE_VIU_444) {
+	if ((type & VIDTYPE_VIU_444) ||
+	    (type & VIDTYPE_RGB_444)) {
 		r = HFORMATTER_YC_RATIO_1_1;
 		if (frame_par->hscale_skip_count)
 			r |= HFORMATTER_EN;
@@ -2548,8 +2556,10 @@ void config_dvel_position(
 	setting->vc_skip = 2;
 
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
-		if (layer->dispbuf->type
-		    & VIDTYPE_VIU_444) {
+		if ((layer->dispbuf->type
+		    & VIDTYPE_VIU_444) ||
+		    (layer->dispbuf->type
+		    & VIDTYPE_RGB_444)) {
 			setting->hc_skip = 1;
 			setting->vc_skip = 1;
 		} else if (layer->dispbuf->type
@@ -3127,8 +3137,10 @@ s32 config_vd_position(
 	setting->vc_skip = 2;
 
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
-		if (layer->dispbuf->type
-			& VIDTYPE_VIU_444) {
+		if ((layer->dispbuf->type
+			& VIDTYPE_VIU_444) ||
+			(layer->dispbuf->type
+			& VIDTYPE_RGB_444)) {
 			setting->hc_skip = 1;
 			setting->vc_skip = 1;
 		} else if (layer->dispbuf->type
