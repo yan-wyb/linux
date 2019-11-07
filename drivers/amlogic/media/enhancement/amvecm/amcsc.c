@@ -2724,14 +2724,21 @@ static void print_vpp_lut(
 	enum vpp_lut_sel_e lut_sel,
 	int on)
 {
-	unsigned short r_map[VIDEO_OETF_LUT_SIZE];
-	unsigned short g_map[VIDEO_OETF_LUT_SIZE];
-	unsigned short b_map[VIDEO_OETF_LUT_SIZE];
+	unsigned short *r_map;
+	unsigned short *g_map;
+	unsigned short *b_map;
 	unsigned int addr_port;
 	unsigned int data_port;
 	unsigned int ctrl_port;
 	unsigned int data;
 	int i;
+
+	r_map = kmalloc(sizeof(unsigned short) * VIDEO_OETF_LUT_SIZE * 3,
+			GFP_ATOMIC);
+	if (!r_map)
+		return;
+	g_map = &r_map[sizeof(unsigned short) * VIDEO_OETF_LUT_SIZE * 1];
+	b_map = &r_map[sizeof(unsigned short) * VIDEO_OETF_LUT_SIZE * 2];
 
 	if (lut_sel == VPP_LUT_OSD_EOTF) {
 		addr_port = VIU_OSD1_EOTF_LUT_ADDR_PORT;
@@ -2753,8 +2760,10 @@ static void print_vpp_lut(
 		addr_port = XVYCC_INV_LUT_Y_ADDR_PORT;
 		data_port = XVYCC_INV_LUT_Y_DATA_PORT;
 		ctrl_port = XVYCC_INV_LUT_CTL;
-	} else
+	} else {
+		kfree(r_map);
 		return;
+	}
 	if (lut_sel == VPP_LUT_OSD_OETF) {
 		for (i = 0; i < 20; i++) {
 			WRITE_VPP_REG(addr_port, i);
@@ -2881,6 +2890,7 @@ static void print_vpp_lut(
 		if (on)
 			WRITE_VPP_REG_BITS(ctrl_port, 1<<2, 12, 3);
 	}
+	kfree(r_map);
 }
 
 void set_vpp_lut(
@@ -7919,14 +7929,23 @@ reg_dump:
 		READ_VPP_REG(VIU_OSD1_EOTF_CTL));
 
 	{
-		unsigned short r_map[VIDEO_OETF_LUT_SIZE];
-		unsigned short g_map[VIDEO_OETF_LUT_SIZE];
-		unsigned short b_map[VIDEO_OETF_LUT_SIZE];
+		unsigned short *r_map;
+		unsigned short *g_map;
+		unsigned short *b_map;
 		unsigned int addr_port;
 		unsigned int data_port;
 		unsigned int ctrl_port;
 		unsigned int data;
 		int i;
+
+		r_map = kmalloc(sizeof(unsigned short) *
+			VIDEO_OETF_LUT_SIZE * 3, GFP_ATOMIC);
+		if (!r_map)
+			return 0;
+		g_map = &r_map[sizeof(unsigned short) *
+			VIDEO_OETF_LUT_SIZE * 1];
+		b_map = &r_map[sizeof(unsigned short) *
+			VIDEO_OETF_LUT_SIZE * 2];
 
 		pr_err("----dump regs VPP_LUT_OSD_OETF----\n");
 
@@ -8057,6 +8076,7 @@ reg_dump:
 				hdr_osd_reg.lut_val.ob_map[i]);
 		}
 		pr_err("\n");
+		kfree(r_map);
 	}
 	pr_err("----dump regs VPP_LUT_EOTF----\n");
 	print_vpp_lut(VPP_LUT_EOTF, READ_VPP_REG(VIU_EOTF_CTL) & (7 << 27));
