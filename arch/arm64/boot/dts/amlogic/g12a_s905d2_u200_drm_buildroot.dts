@@ -1464,6 +1464,22 @@
 	};
 };
 
+
+&drm_vpu {
+	status = "okay";
+	compatible = "amlogic,meson-gxl-vpu";
+};
+
+&drm_amhdmitx {
+	status = "okay";
+	hdcp = "disabled";
+};
+
+&drm_lcd {
+	status = "disable";
+};
+
+
 &pcie_A {
 	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
 	status = "disable";
