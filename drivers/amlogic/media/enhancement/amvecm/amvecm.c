@@ -809,6 +809,8 @@ static void vpp_backup_histgram(struct vframe_s *vf)
 	vpp_hist_param.vpp_pixel_sum = vf->prop.hist.vpp_pixel_sum;
 	for (i = 0; i < 64; i++)
 		vpp_hist_param.vpp_histgram[i] = vf->prop.hist.vpp_gamma[i];
+	for (i = 0; i < 128; i++)
+		vpp_hist_param.hdr_histgram[i] = hdr_hist[NUM_HDR_HIST - 1][i];
 }
 
 static void vpp_dump_histgram(void)
@@ -816,11 +818,25 @@ static void vpp_dump_histgram(void)
 	uint i;
 
 	pr_info("%s:\n", __func__);
+	if (hdr_source_type == HDRTYPE_HDR10) {
+		pr_info("\t dump_hdr_hist begin\n");
+		for (i = 0; i < 128; i++) {
+			pr_info(
+				"[%d]0x%-8x\t", i,
+				hdr_hist[NUM_HDR_HIST - 1][i]);
+			if ((i + 1) % 8 == 0)
+				pr_info("\n");
+		}
+		pr_info("\t dump_hdr_hist done\n");
+	}
+
+	pr_info("\n\t dump_dnlp_hist begin\n");
 	for (i = 0; i < 64; i++) {
 		pr_info("[%d]0x%-8x\t", i, vpp_hist_param.vpp_histgram[i]);
 		if ((i+1)%8 == 0)
 			pr_info("\n");
 	}
+	pr_info("\n\t dump_dnlp_hist done\n");
 }
 
 void vpp_get_hist_en(void)
@@ -1211,9 +1227,6 @@ int amvecm_on_vs(
 
 	if (vd_path != VD1_PATH)
 		return result;
-
-	if (!is_dolby_vision_on())
-		get_hdr_source_type();
 
 	/* add some flag to trigger */
 	if (vf) {
@@ -3902,60 +3915,54 @@ static ssize_t amvecm_hdr_dbg_store(struct class *cla,
 	long val = 0;
 	char *buf_orig, *parm[5] = {NULL};
 	int i;
+	int curve_val[65] = {0};
+	char *stemp = NULL;
 
 	if (!buf)
 		return count;
+
+	stemp = kmalloc(400, GFP_KERNEL);
+	if (!stemp)
+		return 0;
+	memset(stemp, 0, 400);
+
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	parse_param_amvecm(buf_orig, (char **)&parm);
 
 	if (!strncmp(parm[0], "hdr_dbg", 7)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		debug_hdr = val;
 		pr_info("debug_hdr=0x%x\n", debug_hdr);
 	} else if (!strncmp(parm[0], "hdr10_pr", 8)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		hdr10_pr = val;
 		pr_info("hdr10_pr=0x%x\n", hdr10_pr);
 	} else if (!strncmp(parm[0], "clip_disable", 12)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		hdr10_clip_disable = val;
 		pr_info("hdr10_clip_disable=0x%x\n",
 			hdr10_clip_disable);
 	} else if (!strncmp(parm[0], "force_clip", 10)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		hdr10_force_clip = val;
 		pr_info("hdr10_force_clip=0x%x\n", hdr10_force_clip);
 	} else if (!strncmp(parm[0], "clip_luma", 9)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		hdr10_clip_luma = val;
 		pr_info("clip_luma=0x%x\n", hdr10_clip_luma);
 	} else if (!strncmp(parm[0], "clip_margin", 11)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		hdr10_clip_margin = val;
 		pr_info("hdr10_clip_margin=0x%x\n", hdr10_clip_margin);
 	} else if (!strncmp(parm[0], "clip_mode", 9)) {
-		if (kstrtoul(parm[1], 16, &val) < 0) {
-			kfree(buf_orig);
-			return -EINVAL;
-		}
+		if (kstrtoul(parm[1], 16, &val) < 0)
+			goto free_buf;
 		hdr10_clip_mode = val;
 		pr_info("hdr10_clip_mode=0x%x\n", hdr10_clip_mode);
 	} else if (!strncmp(parm[0], "hdr_sdr_ootf", 12)) {
@@ -3965,10 +3972,24 @@ static ssize_t amvecm_hdr_dbg_store(struct class *cla,
 				pr_info("\n");
 		}
 		pr_info("\n");
+	} else if (!strncmp(parm[0], "cgain_lut", 9)) {
+		if (!strncmp(parm[1], "rv", 2)) {
+			for (i = 0; i < 65; i++)
+				d_convert_str(
+					cgain_lut_bypass[i],
+					i, stemp, 4, 10);
+				pr_info("%s\n", stemp);
+		} else if (!strncmp(parm[1], "wv", 2)) {
+			str_sapr_to_d(parm[2], curve_val, 5);
+			for (i = 0; i < 65; i++)
+				cgain_lut_bypass[i] = curve_val[i];
+		}
 	} else {
 		pr_info("error cmd\n");
 	}
 
+free_buf:
+	kfree(stemp);
 	kfree(buf_orig);
 	return count;
 }

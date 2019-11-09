@@ -27,11 +27,7 @@
 #include "arch/vpp_hdr_regs.h"
 #include "arch/vpp_regs.h"
 #include "arch/vpp_dolbyvision_regs.h"
-
-//#define HDR2_MODULE
-//#define HDR2_PRINT
-
-#ifndef HDR2_MODULE
+#include "hdr/gamut_convert.h"
 
 // sdr to hdr table  12bit
 int cgain_lut0[65] = {
@@ -547,304 +543,6 @@ unsigned int hdr10_clip_luma;
 unsigned int hdr10_clip_margin = 2;
 /*clip mode: 0->eo clip, 1->oo clip*/
 unsigned int hdr10_clip_mode;
-#else //HDR2_MODULE
-int64_t FloatRev(int64_t ia)
-{
-	int64_t tmp;
-	int64_t iA_exp;
-	int64_t iA_val;
-
-	iA_exp = ia >> precision;
-	iA_val = ia & 0x3fff;
-
-	if (iA_exp == 0x3f)
-		tmp = 0;
-	else if (iA_exp >= precision)
-		tmp = ((int64_t)(iA_val + (1ULL << precision)))
-			<< (iA_exp - precision);
-	else
-		tmp = ((int64_t)(iA_val + (1ULL << precision) +
-			(1ULL << (precision - iA_exp - 1)))) >>
-			(precision - iA_exp);
-
-	return tmp;
-}
-
-
-
-int64_t FloatCon(int64_t iA, int MOD)
-{
-	int64_t oxs;
-	int64_t oXs_exp;
-	int64_t oXs_val;
-	int64_t exp;
-	int64_t val;
-	int64_t iA_tmp;
-	int64_t diff;
-
-	exp = LOG2(iA);
-	/*exp = iA==0 ? 0 : LOG2(iA);*/
-
-	oXs_exp = exp;
-	if (exp >= precision)
-		val = iA >> (exp - precision);
-	else
-		val = iA << (precision - exp);
-
-	oXs_val = val & ((1 << precision) - 1);
-
-	if (iA == 0) {
-		oXs_exp = 0x3f;
-		oXs_val = 0;
-	}
-
-	if (exp >= MOD) {
-		oXs_exp = MOD - 1;
-		oXs_val = 0x3fff;
-	}
-
-	oxs = (oXs_exp << 14) + oXs_val;
-	iA_tmp = FloatRev(oxs);
-
-	return oxs;
-}
-
-int64_t pq_eotf(int64_t e)
-{
-	double m1 = 2610.0/4096/4;
-	double m2 = 2523.0/4096*128;
-	double c3 = 2392.0/4096*32;
-	double c2 = 2413.0/4096*32;
-	double c1 = c3-c2+1;
-	int64_t o;
-	double e_v = ((double)e) / pow(2, IE_BW);
-
-	o = (int64_t)(pow(((MAX((pow(e_v, (1 / m2)) - c1), 0)) /
-		(c2 - c3 * pow(e_v, (1 / m2)))),
-		(1 / m1)) * (pow(2, O_BW)) + 0.5);
-	return o;
-}
-
-int64_t pq_oetf(int64_t o)
-{
-	double m1 = 2610.0/4096/4;
-	double m2 = 2523.0/4096*128;
-	double c3 = 2392.0/4096*32;
-	double c2 = 2413.0/4096*32;
-	double c1 = c3 - c2 + 1;
-	int64_t e;
-	double o_v = o / pow(2, O_BW);
-
-	if (o == pow(2, O_BW))
-		e = (int64_t)pow(2, OE_BW);
-	else
-		e = (int64_t)(pow(((c1 + c2 * pow(o_v, m1)) /
-			(1 + c3 * pow(o_v, m1))),
-			m2) * (pow(2, OE_BW)) + 0 .5);
-	return e;
-}
-
-int64_t gm_eotf(int64_t e)
-{
-	int64_t o;
-	double e_v = ((double)e) / pow(2, IE_BW);
-
-	o = (int64_t)(pow(e_v, 2.4) * (pow(2, O_BW)) + 0.5);
-	return o;
-}
-
-int64_t gm_oetf(int64_t o)
-{
-	int64_t e;
-	double o_v = o / pow(2, O_BW);
-
-	e = (int64_t)(pow(o_v, 1 / 2.4) * (pow(2, OE_BW)) + 0.5);
-	return e;
-}
-
-int64_t sld_eotf(int64_t e)
-{
-	double m = 0.15;
-	double p = 2.0;
-	int64_t o;
-	double e_v = ((double)e) / pow(2, 12);
-	double tmp = pow((e_v), -(1.0 / m));
-
-	o = (int64_t)(1.0 / (pow((e_v), -(1.0 / m)) * p - p + 1.0) *
-			(pow(2, 32)) + 0.5);
-	return o;
-}
-
-int64_t sld_oetf(int64_t o)
-{
-	double m = 0.15;
-	double p = 2.0;
-	int64_t e;
-	double o_v = o / pow(2, 32);
-
-	e = (int64_t)(pow((p*o_v) / ((p - 1)*o_v + 1.0), m) *
-			(pow(2, OE_BW)) + 0.5);
-	return e;
-}
-
-int64_t hlg_eotf(int64_t e)
-{
-	double a = 0.17883277;
-	double b = 0.02372241;
-	double c = 1.00429347;
-	double e_v = ((double)e) / pow(2, IE_BW);
-	double o_v;
-	int64_t o;
-
-	if (e_v < 0.5)
-		o_v = pow(e_v, 2) / 3;
-	else
-		o_v = exp((e_v - c) / a) + b;
-	o = (int64_t)(o_v * (pow(2, O_BW)) + 0.5);
-	return o;
-}
-
-
-int64_t hlg_oetf(int64_t o)
-{
-	double a = 0.17883277;
-	double b = 0.02372241;
-	double c = 1.00429347;
-	double tmp = 0.08333333;
-	int64_t e;
-	double e_v;
-	double o_v = o / pow(2, O_BW);
-
-	if (o_v < tmp)
-		e_v = pow((3 * o_v), 0.5);
-	else
-		e_v = a * log(o_v - b) + c;
-
-	e = (int64_t)(e_v * (pow(2, OE_BW)) + 0.5);
-	return e;
-}
-
-int64_t ootf_gain(int64_t o)
-{
-	double p1 = fmt_io == 1;
-	double p2 = 1;
-	double p3 = fmt_io == 2;
-	double p4 = 1;
-	double p5 = 0;
-	double o_v = o / pow(2, O_BW);
-
-	double y = 4 * o_v * pow((1 - o_v), 3) * p1 +
-			6 * pow(o_v, 2) * pow((1 - o_v), 2) * p2 +
-			4 * pow(o_v, 3) * (1 - o_v) * p3 + pow(o_v, 4);
-
-	double gain = o_v == 0 ?  1 : y / o_v;
-	int64_t gain_t;
-
-	gain_t = (int64_t)(gain * (pow(2, OGAIN_BW - 2)) + 0.5);
-
-	return gain_t;
-}
-
-int64_t hlg_gain(int64_t o)
-{
-	double p = 1.2 - 1 + 0.42 * (LOG2(peak_out / 1000) / LOG2(10));
-	int64_t gain;
-	double o_v = o / pow(2, O_BW);
-
-	gain = (int64_t)(pow(o_v, p) * (pow(2, OGAIN_BW)) + 0.5);
-	return gain;
-}
-
-int64_t nolinear_cgain(int64_t i)
-{
-	int64_t out;
-	double ColorSaturationWeight = 1.2;
-	double fscsm = 3 + ColorSaturationWeight *
-			MAX((log(((double)i) / pow(2, OE_BW-2)) - 1), 0);
-
-	out = (int64_t)(pow(2, 10) * fscsm);
-	return out;
-}
-
-/*146bins*/
-void eotf_float_gen(int64_t *o_out, MenuFun eotf)
-{
-	int64_t tmp_o, tmp_e;
-	int i;
-
-	for (i = 0; i < 16; i++) {
-		tmp_e = (int64_t)((1ULL << (IE_BW - 10)) * i);
-		tmp_o = eotf(tmp_e);
-		o_out[i] = FloatCon(tmp_o, maxbit);
-	}
-
-	for (i = 2; i <= 128; i++) {
-		tmp_e = (int64_t)((1ULL << (IE_BW - 7)) * i);
-		if (tmp_e == (1 << IE_BW))
-			tmp_o = 0xffffffff;
-		else
-			tmp_o = eotf(tmp_e);
-		o_out[i + 14] = FloatCon(tmp_o, maxbit);
-	}
-}
-
-/*149 bins piece wise lut*/
-void oetf_float_gen(int64_t *bin_e, MenuFun oetf)
-{
-	/*int64_t bin_e[1024]; = zeros(1024);*/
-	int64_t bin_o[1025];/* = zeros(1024);*/
-
-	int i = 0, j;
-	int bin_num = 0;
-
-	bin_o[i] = 0;
-	i++;
-	/*bin1~bin8*/
-	for (; pow(2, i - 1) * pow(2, 4) < pow(2, 11); i++)
-		bin_o[i] = POW(2, i - 1) * POW(2, 4);
-
-	bin_num = i;
-
-	/*bin9~bin44*/
-	for (j = 11; j < 20; j++) {/* bin_o< 2^20*/
-		for (; i < bin_num + 4; i++)
-			bin_o[i] = (i - bin_num) * (POW(2, j - 2)) + POW(2, j);
-		bin_num = i;
-	}
-	bin_num = i;
-
-	/*bin45~bin132*/
-	for (j = 20; j < 31; j++) {/*bin_o<2 ^31*/
-		for (; i < bin_num + 8; i++)
-			bin_o[i] = (i - bin_num) * (POW(2, j - 3)) + POW(2, j);
-		bin_num = i;
-	}
-	/*bin133~bin148*/
-	for (; i < bin_num + 16; i++)
-		bin_o[i] = (i - bin_num) * (POW(2, 31 - 4)) + POW(2, 31);
-
-	bin_o[i] = 0x100000000;
-
-	for (j = 0; j <= i; j++) {
-		bin_e[j] = oetf(bin_o[j]);
-		if (bin_e[j] >= (1 << OE_BW))
-			bin_e[j] = (1 << OE_BW) - 1;
-	}
-}
-
-void nolinear_lut_gen(int64_t *bin_c, MenuFun cgain)
-{
-	/*int bin_c[65]; = zeros(1024);*/
-	/*int max_in = 1 << 12;*/
-	/*bin_c : 4.10*/
-	/*c gain input :OE_BW*/
-	int j;
-
-	for (j = 0; j <= 64; j++)
-		bin_c[j] = cgain(j * 64);
-}
-
-#endif /*HDR2_MODULE*/
 
 static uint force_din_swap = 0xff;
 module_param(force_din_swap, uint, 0664);
@@ -918,6 +616,11 @@ int ncl_2020_p3dci[9] = {
 
 /* standard2020->d65p3 8bit*/
 int ncl_2020_p3d65[9] = {
+	344, -72, -15, -16, 275, -2, 0, -5, 260
+};
+
+/* primary->panel 8bit*/
+int ncl_prmy_panel[9] = {
 	344, -72, -15, -16, 275, -2, 0, -5, 260
 };
 
@@ -1770,6 +1473,12 @@ void set_hdr_matrix(
 			adpscl_shift[0] = adp_scal_x_shift;
 			adpscl_shift[1] = OO_NOR -
 			_log2((1 << OO_NOR) / oo_y_lut_hdr_hlg[148]);
+		} else if (hdr_mtx_param->p_sel == SDR_GMT_CONVERT) {
+			scale_shift =
+			_log2((1 << OO_NOR) / oo_y_lut_bypass[148]);
+			/*because input 1/2, shift0/shift1 need change*/
+			adpscl_shift[0] = adp_scal_x_shift - 1;
+			adpscl_shift[1] = OO_NOR - scale_shift - 1;
 		} else {
 			adpscl_shift[0] = adp_scal_x_shift;
 			adpscl_shift[1] = OO_NOR;
@@ -2136,8 +1845,7 @@ void set_c_gain(
 	VSYNC_WR_MPEG_REG(cgain_lut_data_port, lut[64]);
 }
 
-#define NUM_HDR_HIST 16
-static u32 hdr_hist[NUM_HDR_HIST][128];
+u32 hdr_hist[NUM_HDR_HIST][128];
 static u32 hdr_max_rgb;
 static u8 percentile_percent[7] = {
 	1, 25, 50, 75, 90, 95, 99
@@ -2191,7 +1899,7 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 
 	if ((hist_height != READ_VPP_REG(hist_ctrl_port + 2) + 1) ||
 	    (hist_width != READ_VPP_REG(hist_ctrl_port + 1) + 1) ||
-	    (READ_VPP_REG_BITS(hist_ctrl_port, 4, 1) == 0) ||
+	    /*(READ_VPP_REG_BITS(hist_ctrl_port, 4, 1) == 0) ||*/
 	    (READ_VPP_REG_BITS(hist_ctrl_port, 0, 3) != hist_sel)) {
 		set_hist(module_sel, 1, hist_sel, hist_width, hist_height);
 		return;
@@ -2292,10 +2000,11 @@ struct hdr_proc_lut_param_s hdr_lut_param;
 
 enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	enum hdr_process_sel hdr_process_select,
-	struct vinfo_s *vinfo)
+	struct vinfo_s *vinfo,
+	struct matrix_s *gmt_mtx)
 {
 	int bit_depth;
-	unsigned int i = 0;
+	unsigned int i = 0, j = 0;
 	struct hdr_proc_mtx_param_s hdr_mtx_param;
 	int output_mode;
 	bool mtx_only_mode = false;
@@ -2336,39 +2045,6 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	if (is_meson_tl1_cpu())
 		bit_depth = 10;
 
-#ifdef HDR2_MODULE
-	MenuFun fun[] = {pq_eotf, pq_oetf, gm_eotf, gm_oetf,
-		sld_eotf, sld_oetf, hlg_eotf, hlg_oetf, ootf_gain,
-		nolinear_cgain, hlg_gain};
-
-	if (hdr_process_select == HDR_BYPASS
-	|| hdr_process_select == HDR_OFF) {
-		/*lut parameters*/
-		eotf_float_gen(hdr_lut_param.eotf_lut, fun[2]);
-		oetf_float_gen(hdr_lut_param.oetf_lut, fun[1]);
-		oetf_float_gen(hdr_lut_param.ogain_lut, fun[8]);
-		nolinear_lut_gen(hdr_lut_param.cgain_lut, fun[9]);
-		hdr_lut_param.lut_on = LUT_OFF;
-		hdr_lut_param.bitdepth = bit_depth;
-	} else if (hdr_process_select == HDR_SDR) {
-		/*lut parameters*/
-		eotf_float_gen(hdr_lut_param.eotf_lut, fun[2]);
-		oetf_float_gen(hdr_lut_param.oetf_lut, fun[1]);
-		oetf_float_gen(hdr_lut_param.ogain_lut, fun[8]);
-		nolinear_lut_gen(hdr_lut_param.cgain_lut, fun[9]);
-		hdr_lut_param.lut_on = LUT_ON;
-		hdr_lut_param.bitdepth = bit_depth;
-	} else if (hdr_process_select == SDR_HDR) {
-		/*lut parameters*/
-		eotf_float_gen(hdr_lut_param.eotf_lut, fun[2]);
-		oetf_float_gen(hdr_lut_param.oetf_lut, fun[1]);
-		oetf_float_gen(hdr_lut_param.ogain_lut, fun[8]);
-		nolinear_lut_gen(hdr_lut_param.cgain_lut, fun[9]);
-		hdr_lut_param.lut_on = LUT_ON;
-		hdr_lut_param.bitdepth = bit_depth;
-	} else
-		return hdr_process_select;
-#else
 	/*lut parameters*/
 	if (hdr_process_select == RGB_YUV) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
@@ -2600,6 +2276,20 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		hdr_lut_param.bitdepth = bit_depth;
 		hdr_lut_param.cgain_en = LUT_OFF;
 		hdr_lut_param.hist_en = LUT_ON;
+	} else if (hdr_process_select == SDR_GMT_CONVERT) {
+		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
+			hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
+			hdr_lut_param.ogain_lut[i] = oo_y_lut_bypass[i];
+			if (i < HDR2_EOTF_LUT_SIZE)
+				hdr_lut_param.eotf_lut[i] =
+					eo_y_lut_sdr[i];
+			if (i < HDR2_CGAIN_LUT_SIZE)
+				hdr_lut_param.cgain_lut[i] =
+					cgain_lut_bypass[i] - 1;
+		}
+		hdr_lut_param.lut_on = LUT_ON;
+		hdr_lut_param.bitdepth = bit_depth;
+		hdr_lut_param.cgain_en = LUT_ON;
 	} else
 		return hdr_process_select;
 #ifdef HDR2_PRINT
@@ -2610,7 +2300,6 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		hdr_lut_param.cgain_en,
 		hdr_lut_param.cgain_lut[0], hdr_lut_param.cgain_lut[32],
 		hdr_lut_param.cgain_lut[64]);
-#endif
 #endif
 	/*mtx parameters*/
 	/* default pre/post in:yuv_rgb out:rgb_yuv */
@@ -2708,24 +2397,45 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		hdr_mtx_param.mtx_on = MTX_OFF;
 		hdr_mtx_param.p_sel = hdr_process_select;
 	} else if (hdr_process_select == HDR_SDR ||
-		hdr_process_select == HLG_SDR ||
 		hdr_process_select == HDR10P_SDR) {
 		hdr_mtx_param.mtx_only = HDR_ONLY;
 		hdr_mtx_param.mtx_gamut_mode = 1;
+		if (gmt_mtx) {
+			for (i = 0; i < 3; i++)
+				for (j = 0; j < 3; j++)
+					hdr_mtx_param.mtx_gamut[i * 3 + j] =
+					gmt_mtx->matrix[i][j];
+		} else {
+			for (i = 0; i < 9; i++)
+				hdr_mtx_param.mtx_gamut[i] =
+				ncl_2020_709_8bit[i];
+		}
 		for (i = 0; i < MTX_NUM_PARAM; i++) {
 			hdr_mtx_param.mtx_in[i] = ycbcr2rgb_ncl2020[i];
 			hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_709[i];
 			hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_709[i];
 			hdr_mtx_param.mtx_out[i] = rgb2ycbcr_709[i];
-			if (i < 9) {
-				if (hdr_process_select == HLG_SDR) {
-					hdr_mtx_param.mtx_gamut[i] =
-						ncl_2020_709[i];
-				} else {
-					hdr_mtx_param.mtx_gamut[i] =
-						ncl_2020_709_8bit[i];
-				}
-			}
+		}
+		hdr_mtx_param.mtx_on = MTX_ON;
+		hdr_mtx_param.p_sel = hdr_process_select;
+	}  else if (hdr_process_select == HLG_SDR) {
+		hdr_mtx_param.mtx_only = HDR_ONLY;
+		hdr_mtx_param.mtx_gamut_mode = 1;
+		if (gmt_mtx) {
+			for (i = 0; i < 3; i++)
+				for (j = 0; j < 3; j++)
+					hdr_mtx_param.mtx_gamut[i * 3 + j] =
+					gmt_mtx->matrix[i][j];
+		} else {
+			for (i = 0; i < 9; i++)
+				hdr_mtx_param.mtx_gamut[i] =
+				ncl_2020_709[i];
+		}
+		for (i = 0; i < MTX_NUM_PARAM; i++) {
+			hdr_mtx_param.mtx_in[i] = ycbcr2rgb_ncl2020[i];
+			hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_709[i];
+			hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_709[i];
+			hdr_mtx_param.mtx_out[i] = rgb2ycbcr_709[i];
 		}
 		hdr_mtx_param.mtx_on = MTX_ON;
 		hdr_mtx_param.p_sel = hdr_process_select;
@@ -2826,6 +2536,28 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_mtx_param.mtx_on = MTX_ON;
 		hdr_mtx_param.p_sel = HDR_IPT;
+	} else if (hdr_process_select == SDR_GMT_CONVERT) {
+		if (gmt_mtx) {
+			for (i = 0; i < 3; i++)
+				for (j = 0; j < 3; j++)
+					hdr_mtx_param.mtx_gamut[i * 3 + j] =
+					gmt_mtx->matrix[i][j];
+		} else {
+			for (i = 0; i < 9; i++)
+				hdr_mtx_param.mtx_gamut[i] =
+				bypass_coeff[i];
+		}
+		hdr_mtx_param.mtx_only = HDR_ONLY;
+		hdr_mtx_param.mtx_gamut_mode = 1;
+		for (i = 0; i < MTX_NUM_PARAM; i++) {
+			hdr_mtx_param.mtx_in[i] = ycbcr2rgb_709[i];
+			hdr_mtx_param.mtx_cgain[i] =
+				rgb2ycbcr_709[i];
+			hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_709[i];
+			hdr_mtx_param.mtx_out[i] = rgb2ycbcr_709[i];
+		}
+		hdr_mtx_param.mtx_on = MTX_ON;
+		hdr_mtx_param.p_sel = SDR_GMT_CONVERT;
 	}
 
 	set_hdr_matrix(module_sel, HDR_IN_MTX, &hdr_mtx_param, NULL);
@@ -2904,7 +2636,7 @@ int hdr10p_ebzcurve_update(
 				ncl_2020_709_8bit[i];
 		else
 			hdr_mtx_param.mtx_gamut[i] =
-				ncl_2020_p3d65[i] *
+				ncl_prmy_panel[i] *
 				p_hdr10pgen_param->scale_gmt / 1024;
 	}
 
@@ -2923,10 +2655,11 @@ int hdr10p_ebzcurve_update(
 enum hdr_process_sel hdr10p_func(
 	enum hdr_module_sel module_sel,
 	enum hdr_process_sel hdr_process_select,
-	struct vinfo_s *vinfo)
+	struct vinfo_s *vinfo,
+	struct matrix_s *gmt_mtx)
 {
 	int bit_depth;
-	unsigned int i = 0;
+	unsigned int i = 0, j = 0;
 	struct hdr_proc_mtx_param_s hdr_mtx_param;
 	bool mtx_only_mode = false;
 
@@ -3071,6 +2804,21 @@ enum hdr_process_sel hdr10p_func(
 		hdr_process_select == HLG_SDR) {
 		hdr_mtx_param.mtx_only = HDR_ONLY;
 		hdr_mtx_param.mtx_gamut_mode = 1;
+		if (gmt_mtx) {
+			for (i = 0; i < 3; i++)
+				for (j = 0; j < 3; j++) {
+					if (gmt_mtx->matrix[i][j] & 0x8000)
+						ncl_prmy_panel[i * 3 + j] =
+						gmt_mtx->matrix[i][j] -
+						(1 << 16);
+					else
+						ncl_prmy_panel[i * 3 + j] =
+						gmt_mtx->matrix[i][j];
+				}
+		} else {
+			for (i = 0; i < 9; i++)
+				ncl_prmy_panel[i] = ncl_2020_p3d65[i];
+		}
 		for (i = 0; i < MTX_NUM_PARAM; i++) {
 			hdr_mtx_param.mtx_in[i] = ycbcr2rgb_ncl2020[i];
 			hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_709[i];
@@ -3078,7 +2826,7 @@ enum hdr_process_sel hdr10p_func(
 			hdr_mtx_param.mtx_out[i] = rgb2ycbcr_709[i];
 			if (i < 9) {
 				hdr_mtx_param.mtx_gamut[i] =
-					ncl_2020_p3d65[i];
+					ncl_prmy_panel[i];
 			}
 		}
 		hdr_mtx_param.mtx_on = MTX_ON;

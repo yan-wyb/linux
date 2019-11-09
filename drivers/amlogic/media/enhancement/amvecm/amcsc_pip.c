@@ -37,7 +37,7 @@ static const char *module_str[7] = {
 	"DI"
 };
 
-static const char *process_str[16] = {
+static const char *process_str[17] = {
 	"UNKNOWN",
 	"HDR_BYPASS",
 	"HDR_SDR",
@@ -53,7 +53,8 @@ static const char *process_str[16] = {
 	"RGB_YUV",
 	"RGB_HDR",
 	"RGB_HLG",
-	"HDR10P_SDR"
+	"HDR10P_SDR",
+	"SDR_GMT_CONVERT"
 };
 
 static const char *policy_str[3] = {
@@ -100,7 +101,7 @@ void hdr_proc(
 	enum hdr_process_sel cur_hdr_process;
 
 	cur_hdr_process = hdr_func(
-		module_sel, hdr_process_select, vinfo);
+		module_sel, hdr_process_select, vinfo, NULL);
 	if (cur_hdr_process != hdr_process_select)
 		pr_csc(8, "am_vecm: module=%s, process=%s(%s)\n",
 			module_str[module_sel],

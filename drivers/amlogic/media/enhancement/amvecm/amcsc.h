@@ -15,6 +15,10 @@
  *
  */
 
+#include <linux/amlogic/media/vfm/vframe.h>
+#include <linux/amlogic/media/vout/vout_notify.h>
+#include <linux/amlogic/media/amvecm/amvecm.h>
+
 #ifndef AM_CSC_H
 #define AM_CSC_H
 
@@ -171,7 +175,6 @@ extern u32 get_videopip_enabled(void);
 void set_video_mute(bool on);
 int get_video_mute(void);
 
-extern void get_hdr_source_type(void);
 extern void get_cur_vd_signal_type(enum vd_path_e vd_path);
 extern enum color_primary_e get_color_primary(void);
 /*hdr*/
