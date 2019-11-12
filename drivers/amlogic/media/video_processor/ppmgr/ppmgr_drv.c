@@ -595,7 +595,14 @@ static ssize_t dump_path_write(struct class *cla, struct class_attribute *attr,
 		PPMGRDRV_INFO("buf kstrdup failed\n");
 		return 0;
 	}
-	strcpy(ppmgr_device.dump_path, tmp);
+	if (strlen(tmp) >= sizeof(ppmgr_device.dump_path) - 1) {
+		memcpy(ppmgr_device.dump_path, tmp,
+		       sizeof(ppmgr_device.dump_path) - 1);
+		ppmgr_device.dump_path[
+			sizeof(ppmgr_device.dump_path) - 1] = '\0';
+	} else {
+		strcpy(ppmgr_device.dump_path, tmp);
+	}
 
 	return count;
 
