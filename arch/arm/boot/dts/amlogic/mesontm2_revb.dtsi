@@ -190,7 +190,7 @@
 	};
 
 	mailbox: mhu@ff63c400 {
-		status = "disabled";
+		status = "okay";
 		compatible = "amlogic, meson_mhu";
 		reg = <0xff63c400 0x4c>,   /* MHU registers */
 		      <0xfffdf000 0x800>;   /* Payload area */
@@ -202,7 +202,7 @@
 	};
 
 	mailbox_dsp: mhu@ff680150 {
-		status = "disabled";
+		status = "okay";
 		compatible = "amlogic, meson_mhu_dsp";
 		reg = <0xff680150 0x84>,   /* MHU registers */
 		      <0xff690150 0x84>,
@@ -519,7 +519,7 @@
 
 	wdt: watchdog@0xffd0f0d0 {
 		compatible = "amlogic, meson-wdt";
-		status = "disabled";
+		status = "okay";
 		default_timeout=<10>;
 		reset_watchdog_method=<1>; /* 0:sysfs,1:kernel */
 		reset_watchdog_time=<2>;
@@ -533,7 +533,7 @@
 
 	jtag {
 		compatible = "amlogic, jtag";
-		status = "disabled";
+		status = "okay";
 		select = "disable"; /* disable/apao/swd_apao */
 		pinctrl-names="jtag_apao_pins", "jtag_swd_apao_pins";
 		pinctrl-0=<&jtag_apao_pins>;
@@ -607,19 +607,19 @@
 		aml_aes {
 			compatible = "amlogic,aes_g12a_dma";
 			dev_name = "aml_aes_dma";
-			status = "disabled";
+			status = "okay";
 		};
 
 		aml_sha {
 			compatible = "amlogic,sha_dma";
 			dev_name = "aml_sha_dma";
-			status = "disabled";
+			status = "okay";
 		};
 	};
 
 	rng {
 		compatible = "amlogic,meson-rng";
-		status = "disabled";
+		status = "okay";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xff630218 0x4>;
@@ -1000,7 +1000,7 @@
 				compatible = "amlogic, aml_remote";
 				reg = <0x8040 0x44>,
 					<0x8000 0x20>;
-				status = "disabled";
+				status = "okay";
 				protocol = <REMOTE_TYPE_NEC>;
 				interrupts = <GIC_SPI 196 IRQ_TYPE_EDGE_RISING>;
 				pinctrl-names = "default";
@@ -1690,7 +1690,7 @@
 
 	ddr_bandwidth {
 		compatible = "amlogic, ddr-bandwidth";
-		status = "disabled";
+		status = "okay";
 		reg = <0xff638000 0x100
 		       0xff638c00 0x100>;
 		interrupts = <0 52 1>;

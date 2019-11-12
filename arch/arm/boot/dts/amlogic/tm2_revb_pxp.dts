@@ -1236,7 +1236,7 @@
 
 	wifi{
 		compatible = "amlogic, aml_wifi";
-		status = "disabled";
+		status = "okay";
 		interrupt_pin = <&gpio       GPIOC_12       GPIO_ACTIVE_HIGH>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
 		dhd_static_buf;    //dhd_static_buf support
@@ -1351,7 +1351,7 @@
 }; /* end of / */
 
 &i2c0 {
-	status = "disabled";
+	status = "okay";
 	clock-frequency = <300000>;
 	pinctrl-names="default";
 	pinctrl-0=<&i2c0_dv_pins>;
@@ -1885,7 +1885,7 @@
 };
 
 &i2c3 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c3_h1_pins>;
 	clock-frequency = <400000>;
@@ -2066,7 +2066,7 @@
 };
 
 &pwm_AO_cd {
-	status = "disabled";
+	status = "okay";
 };
 
 &saradc {
@@ -2074,18 +2074,18 @@
 };
 
 &i2c1 {
-	status = "disabled";
+	status = "okay";
 	clock-frequency = <300000>;
 	pinctrl-names="default";
 	pinctrl-0=<&i2c1_h_pins>;
 };
 
 &pwm_ab {
-	status = "disabled";
+	status = "okay";
 };
 
 &pwm_cd {
-	status = "disabled";
+	status = "okay";
 };
 
 &efuse {
