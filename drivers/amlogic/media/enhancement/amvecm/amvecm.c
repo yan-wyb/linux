@@ -6717,12 +6717,64 @@ static ssize_t amvecm_lc_store(struct class *cls,
 	else if (!strcmp(parm[0], "reg_lmtrat_sigbin")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			goto free_buf;
-		lc_reg_lmtrat_sigbin = val;
-		pr_info("reg_lmtrat_sigbin = %d\n", lc_reg_lmtrat_sigbin);
+		lc_tune_curve.lc_reg_lmtrat_sigbin = val;
+		pr_info(
+			"reg_lmtrat_sigbin = %d\n",
+			lc_tune_curve.lc_reg_lmtrat_sigbin);
+	} else if (!strcmp(parm[0], "reg_lmtrat_thd_max")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		lc_tune_curve.lc_reg_lmtrat_thd_max = val;
+		pr_info(
+			"reg_lmtrat_thd_max = %d\n",
+			lc_tune_curve.lc_reg_lmtrat_thd_max);
+	} else if (!strcmp(parm[0], "reg_lmtrat_thd_black")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		lc_tune_curve.lc_reg_lmtrat_thd_black = val;
+		pr_info(
+			"reg_lmtrat_thd_black = %d\n",
+			lc_tune_curve.lc_reg_lmtrat_thd_black);
+	} else if (!strcmp(parm[0], "reg_thd_black")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		lc_tune_curve.lc_reg_thd_black = val;
+		WRITE_VPP_REG_BITS(
+			LC_STTS_BLACK_INFO,
+			lc_tune_curve.lc_reg_thd_black, 0, 8);
+		pr_info(
+			"reg_thd_black = %d\n",
+			lc_tune_curve.lc_reg_thd_black);
+	} else if (!strcmp(parm[0], "ypkBV_black_thd")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		lc_tune_curve.ypkbv_black_thd = val;
+		pr_info(
+			"ypkBV_black_thd = %d\n",
+			lc_tune_curve.ypkbv_black_thd);
+	} else if (!strcmp(parm[0], "yminV_black_thd")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		lc_tune_curve.yminv_black_thd = val;
+		pr_info(
+			"yminV_black_thd = %d\n",
+			lc_tune_curve.yminv_black_thd);
+	} else if (!strcmp(parm[0], "tune_curve_debug")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		lc_node_pos_v = val;
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto free_buf;
+		lc_node_pos_h = val;
+		pr_info(
+		"tune_curve_debug pos = v %d h %d\n",
+		lc_node_pos_v, lc_node_pos_h);
 	} else if (!strcmp(parm[0], "tune_curve_en")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			goto free_buf;
 		tune_curve_en = val;
+		amlc_debug = 0xc;
+		lc_node_prcnt = 10;
 		pr_info("tune_curve_en = %d\n", tune_curve_en);
 	} else if (!strcmp(parm[0], "detect_signal_range_en")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
