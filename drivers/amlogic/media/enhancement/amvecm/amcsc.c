@@ -6433,10 +6433,13 @@ static int sink_support_hdr10_plus(const struct vinfo_s *vinfo)
 
 bool is_vinfo_available(const struct vinfo_s *vinfo)
 {
-	return strcmp(vinfo->name, "invalid") &&
-		strcmp(vinfo->name, "null") &&
-		strcmp(vinfo->name, "576cvbs") &&
-		strcmp(vinfo->name, "470cvbs");
+	if (!vinfo)
+		return false;
+	else
+		return strcmp(vinfo->name, "invalid") &&
+			strcmp(vinfo->name, "null") &&
+			strcmp(vinfo->name, "576cvbs") &&
+			strcmp(vinfo->name, "470cvbs");
 }
 EXPORT_SYMBOL(is_vinfo_available);
 
@@ -7152,7 +7155,7 @@ int is_sink_cap_changed(
 	int sink_available;
 	int ret = 0;
 
-	if (is_vinfo_available(vinfo)) {
+	if (vinfo && is_vinfo_available(vinfo)) {
 		hdr_cap = (1 << 0) |
 			(sink_support_dolby_vision(vinfo) << 1) |
 			(sink_support_hdr10_plus(vinfo) << 2) |
