@@ -174,6 +174,7 @@ static void dtmb_25m_coeff(void)
 void dtmb_all_reset(void)
 {
 	int temp_data = 0;
+	unsigned int reg_val;
 
 	if (is_ic_ver(IC_VER_TXL)) {
 		/*fix bug 139044: DTMB lost sync*/
@@ -241,6 +242,16 @@ void dtmb_all_reset(void)
 		dtmb_write_reg(DTMB_FRONT_DEBUG_CFG, 0x5480000);
 		/*reduce fec lost timeout*/
 		dtmb_write_reg(DTMB_FRONT_19_CONFIG, 0x30);
+
+		reg_val = dtmb_read_reg(DTMB_TOP_CTRL_TPS);
+		/* for Task 19:Switch mode and modulation parameters test
+		 * dtmb_spectrum: 0=normal, 1=inverted
+		 */
+		if (dtmb_spectrum == 0)
+			reg_val |= 0x4;
+		else if (dtmb_spectrum == 1)
+			reg_val &= ~0x4;
+		dtmb_write_reg(DTMB_TOP_CTRL_TPS, reg_val);
 	} else {
 		dtmb_write_reg(DTMB_FRONT_AGC_CONFIG1, 0x10127);
 		dtmb_write_reg(DTMB_CHE_IBDFE_CONFIG6, 0x943228cc);

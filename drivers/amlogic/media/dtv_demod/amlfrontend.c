@@ -2551,6 +2551,8 @@ static int gxtv_demod_dtmb_set_frontend(struct dvb_frontend *fe)
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct aml_demod_dtmb param;
 	int times;
+	/*[0]: specturm inverse(1),normal(0); [1]:if_frequency*/
+	unsigned int tuner_freq[2] = {0};
 
 	if (!demod_thread)
 		return 0;
@@ -2565,6 +2567,17 @@ static int gxtv_demod_dtmb_set_frontend(struct dvb_frontend *fe)
 	tuner_set_params(fe);	/*aml_fe_analog_set_frontend(fe);*/
 	msleep(100);
 /* demod_power_switch(PWR_ON); */
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+		if (fe->ops.tuner_ops.get_if_frequency)
+			fe->ops.tuner_ops.get_if_frequency(fe, tuner_freq);
+		if (tuner_freq[0] == 0)
+			demod_status.spectrum = 0;
+		else if (tuner_freq[0] == 1)
+			demod_status.spectrum = 1;
+		else
+			pr_err("wrong specturm val get from tuner\n");
+	}
 
 	dtmb_set_ch(&demod_status, /*&demod_i2c,*/ &param);
 
