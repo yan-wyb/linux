@@ -18,6 +18,7 @@
 #define _AMDV_H_
 
 #define V1_5
+#define V1_6_1
 #define V2_4
 /*  driver version */
 #define DRIVER_VER "20181220"
@@ -67,9 +68,13 @@ enum core3_switch_type {
 struct TgtOutCscCfg {
 	int32_t   lms2RgbMat[3][3]; /**<@brief  LMS to RGB matrix */
 	int32_t   lms2RgbMatScale;  /**<@brief  LMS 2 RGB matrix scale */
+#ifdef V1_6_1
+	int32_t   reserved[4];
+#else
 	uint8_t   whitePoint[3];    /**<@brief  White point */
 	uint8_t   whitePointScale;  /**<@brief  White point scale */
 	int32_t   reserved[3];
+#endif
 };
 #pragma pack(pop)
 
@@ -98,14 +103,102 @@ struct TgtGDCfg {
 	uint16_t  gdTriggerPeriod;
 	uint32_t  gdTriggerLinThresh;
 	uint32_t  gdDelayMilliSec_ott;
+#ifdef V1_6_1
+	int16_t   gdRiseWeight;      /*Back light rise weight signed Q3.12 */
+	int16_t   gdFallWeight;      /*Back light fall weight signed Q3.12 */
+	uint32_t  gdDelayMilliSec_ll;/*Back light delay for LL case */
+	uint32_t  gdContrast;        /*GD Contrast DM 4 only */
+	uint32_t  reserved[3];
+#else
 #ifdef V1_5
 	uint32_t  reserved[6];
 #else
 	uint32_t  reserved[9];
 #endif
+#endif
 };
 #pragma pack(pop)
 
+#ifdef V1_6_1
+/*! @brief Ambient light configuration.*/
+# pragma pack(push, 1)
+struct AmbientCfg {
+	uint32_t ambient;
+	uint32_t tFrontLux;
+	uint32_t tFrontLuxScale;
+	uint32_t tRearLum;
+	uint32_t tRearLumScale;
+	uint32_t tWhitexy[2];
+	uint32_t tSurroundReflection;
+	uint32_t tScreenReflection;
+	uint32_t alDelay;
+	uint32_t alRise;
+	uint32_t alFall;
+};
+#pragma pack(pop)
+
+/*! @brief Adaptive Boost configuration.*/
+# pragma pack(push, 1)
+struct TgtABCfg {
+	int32_t   abEnable;             /*Adaptive boost enabled */
+	uint32_t  abHighestTmax;        /*Adaptive boost highest Tmax */
+	uint32_t  abLowestTmax;         /*Adaptive boost lowest Tmax  */
+	int16_t   abRiseWeight;         /*Back light rise weight signed Q3.12 */
+	int16_t   abFallWeight;         /*Back light fall weight signed Q3.12 */
+	uint32_t  abDelayMilliSec_hdmi; /*Back light delay for HDMI case */
+	uint32_t  abDelayMilliSec_ott;  /*Back light delay for OTT case */
+	uint32_t  abDelayMilliSec_ll;   /*Back light delay for LL case */
+	uint32_t  reserved[3];
+};
+#pragma pack(pop)
+
+
+# pragma pack(push, 1)
+struct TargetDisplayConfig {
+	uint16_t gamma;        /*Gamma */
+	uint16_t eotf;         /*Target EOTF */
+	uint16_t rangeSpec;    /*Target Range */
+	uint16_t maxPq;        /*Target max luminance in PQ */
+	uint16_t minPq;        /*Target min luminance in PQ */
+	uint16_t maxPq_dm3;    /*Target max luminance for DM3 in PQ  */
+	int32_t  min_lin;      /*Target min luminance in linear scale 2^18 */
+	int32_t  max_lin;      /*Target max luminance in linear scale 2^18 */
+	int32_t  max_lin_dm3;  /*Target max luminance for DM 3*/
+	int32_t  tPrimaries[8];/*Target primaries */
+	uint16_t mSWeight;  /*Multi-scale Weight,maybe overwritten by metadata*/
+	int16_t  trimSlopeBias;  /*Trim Slope bias */
+	int16_t  trimOffsetBias; /*Trim Offset bias */
+	int16_t  trimPowerBias;      /*Trim Power bias */
+	int16_t  msWeightBias;       /*Multi-scale weight bias */
+	int16_t  chromaWeightBias;   /*Tone mapping chroma weight bias */
+	int16_t  saturationGainBias; /*Tone mapping saturation gain bias */
+	uint16_t tuningMode;         /*Tuning Mode */
+	int16_t  brightness;         /*Brightness */
+	int16_t  contrast;           /*Contrast */
+	int16_t  dColorShift;        /*ColorShift */
+	int16_t  dSaturation;        /*Saturation */
+	int16_t  dBacklight;         /*Backlight */
+	int16_t  dbgExecParamsPrintPeriod; /*Print reg values every n-th frame*/
+	int16_t  dbgDmMdPrintPeriod;       /*Print DM metadata*/
+	int16_t  dbgDmCfgPrintPeriod;      /*Print DM configuration*/
+	struct TgtGDCfg  gdConfig;         /*Global Dimming configuration */
+	struct TgtABCfg  abConfig;         /*Adaptive boost configuration */
+	struct AmbientCfg ambientConfig;   /*Ambient light configuration */
+	uint8_t  vsvdb[7];
+	uint8_t  dm31_avail;
+	uint8_t  reference_mode_dark_id;
+	uint8_t  applyL11;
+	uint8_t  reserved1[1];
+	int16_t  backlight_scaler;       /*Backlight Scaler */
+	struct TgtOutCscCfg ocscConfig;  /*Output CSC configuration */
+	int16_t  brightnessPreservation; /*Brightness preservation */
+	uint8_t  num_total_viewing_modes;/*Num of total viewing modes in cfg*/
+	uint8_t  viewing_mode_valid;     /*1 if the viewing mode is valid*/
+	int16_t  padding[128];
+};
+#pragma pack(pop)
+
+#else
 /*! @defgroup general Enumerations and data structures*/
 # pragma pack(push, 1)
 struct TargetDisplayConfig {
@@ -177,13 +270,15 @@ struct TargetDisplayConfig {
 	int16_t  padding[8];
 };
 #pragma pack(pop)
-
+#endif
 /*! @brief PQ config main data structure.*/
 struct pq_config_s {
+#ifndef V1_6_1
 	unsigned char default_gm_lut[GM_LUT_HDR_SIZE + GM_LUT_SIZE];
 	unsigned char gd_gm_lut_min[GM_LUT_HDR_SIZE + GM_LUT_SIZE];
 	unsigned char gd_gm_lut_max[GM_LUT_HDR_SIZE + GM_LUT_SIZE];
 	unsigned char pq2gamma[sizeof(int32_t)*PQ2G_LUT_SIZE];
+#endif
 	unsigned char backlight_lut[BACLIGHT_LUT_SIZE];
 	struct TargetDisplayConfig target_display_config;
 };
@@ -587,7 +682,20 @@ struct tv_dovi_setting_s {
 	uint32_t video_height;
 	enum input_mode_e input_mode;
 };
-
+#ifdef V1_6_1
+extern int tv_control_path(
+	enum signal_format_e in_format,
+	enum input_mode_e in_mode,
+	char *in_comp, int in_comp_size,
+	char *in_md, int in_md_size,
+	int set_bit_depth, int set_chroma_format, int set_yuv_range,
+	struct pq_config_s *pq_config,
+	struct ui_menu_params_s *menu_param,
+	int set_no_el,
+	struct hdr10_param_s *hdr10_param,
+	struct tv_dovi_setting_s *output,
+	char *vsem_if, int vsem_if_size);
+#else
 extern int tv_control_path(
 	enum signal_format_e in_format,
 	enum input_mode_e in_mode,
@@ -599,6 +707,8 @@ extern int tv_control_path(
 	int set_no_el,
 	struct hdr10_param_s *hdr10_param,
 	struct tv_dovi_setting_s *output);
+
+#endif
 
 extern void *metadata_parser_init(int flag);
 extern int metadata_parser_reset(int flag);
@@ -629,6 +739,20 @@ struct dolby_vision_func_s {
 		int set_no_el,
 		struct hdr10_param_s *hdr10_param,
 		struct dovi_setting_s *output);
+#ifdef V1_6_1
+	int (*tv_control_path)(
+		enum signal_format_e in_format,
+		enum input_mode_e in_mode,
+		char *in_comp, int in_comp_size,
+		char *in_md, int in_md_size,
+		int set_bit_depth, int set_chroma_format, int set_yuv_range,
+		struct pq_config_s *pq_config,
+		struct ui_menu_params_s *menu_param,
+		int set_no_el,
+		struct hdr10_param_s *hdr10_param,
+		struct tv_dovi_setting_s *output,
+		char *vsem_if, int vsem_if_size);
+#else
 	int (*tv_control_path)(
 		enum signal_format_e in_format,
 		enum input_mode_e in_mode,
@@ -640,6 +764,7 @@ struct dolby_vision_func_s {
 		int set_no_el,
 		struct hdr10_param_s *hdr10_param,
 		struct tv_dovi_setting_s *output);
+#endif
 };
 
 extern int register_dv_functions(const struct dolby_vision_func_s *func);

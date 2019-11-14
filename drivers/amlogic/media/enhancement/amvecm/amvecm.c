@@ -1175,7 +1175,7 @@ int amvecm_on_vs(
 	if (probe_ok == 0)
 		return 0;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (for_dolby_vision_certification() && (vd_path == VD1_PATH))
+	if (for_dolby_vision_video_effect() && (vd_path == VD1_PATH))
 		return 0;
 #endif
 	if (!dnlp_insmod_ok && vd_path == VD1_PATH)
@@ -1270,7 +1270,7 @@ void refresh_on_vs(struct vframe_s *vf)
 	if (vf != NULL) {
 		vpp_get_vframe_hist_info(vf);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-		if (!for_dolby_vision_certification())
+		if (!for_dolby_vision_video_effect())
 #endif
 			ve_on_vs(vf);
 		vpp_backup_histgram(vf);
