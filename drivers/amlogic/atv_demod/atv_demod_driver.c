@@ -47,7 +47,8 @@
 /********************************CODE CHANGE LIST*****************************/
 /* Date --- Version --- Note *************************************************/
 /* 2019/11/05 --- V2.15 --- Add dynamic monitoring line frequency deviation. */
-#define AMLATVDEMOD_VER "V2.15"
+/* 2019/11/25 --- V2.16 --- Add pal-m/n ring filter processing. */
+#define AMLATVDEMOD_VER "V2.16"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 

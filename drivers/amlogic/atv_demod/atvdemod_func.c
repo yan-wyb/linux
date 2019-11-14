@@ -370,7 +370,8 @@ void atv_dmd_ring_filter(bool on, int std)
 		} else if (std == AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_I) {
 			filter = 2;
 		} else if (std == AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC_M ||
-				std == AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC) {
+			std == AML_ATV_DEMOD_VIDEO_MODE_PROP_NTSC ||
+			std == AML_ATV_DEMOD_VIDEO_MODE_PROP_PAL_M) {
 			filter = 1;
 		} else {
 			filter = 0;
