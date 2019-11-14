@@ -1419,6 +1419,7 @@ uint8_t rx_get_vsi_info(void)
 					dv_nopacket_timeout;
 				pkt->sbpkt.payload.data[0] = 0xffff;
 			}
+			ret = E_VSI_DV10;
 		} else if ((pkt->length == E_PKT_LENGTH_5) &&
 			(pkt->sbpkt.payload.data[0] & 0xffff)) {
 			rx.vs_info_details.dolby_vision = false;
