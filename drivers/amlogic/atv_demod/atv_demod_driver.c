@@ -49,7 +49,8 @@
 /* 2019/11/05 --- V2.15 --- Add dynamic monitoring line frequency deviation. */
 /* 2019/11/25 --- V2.16 --- Add pal-m/n ring filter processing. */
 /* 2019/12/31 --- V2.17 --- Fix atv vif setting and offset error. */
-#define AMLATVDEMOD_VER "V2.17"
+/* 2020/01/06 --- V2.18 --- Optimize MTS(Multi-channel sound) control flow. */
+#define AMLATVDEMOD_VER "V2.18"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
