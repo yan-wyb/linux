@@ -1708,6 +1708,7 @@ static int ddr_pm_event(struct notifier_block *notifier,
 		pm_audio_set_suspend(true);
 		break;
 	case PM_POST_SUSPEND:
+		pm_audio_set_suspend(false);
 		break;
 	default:
 		break;

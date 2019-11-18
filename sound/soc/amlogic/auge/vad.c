@@ -323,8 +323,7 @@ static int vad_engine_check(struct vad *p_vad)
 
 	read_bytes = frame_count * chnum * bytes_per_sample;
 	if (bytes < read_bytes) {
-		pr_warn("%s line:%d, %d bytes, need more data\n",
-			__func__, __LINE__, bytes);
+		pr_debug("%s: need more data: %d\n", __func__, bytes);
 		return 0;
 	}
 
