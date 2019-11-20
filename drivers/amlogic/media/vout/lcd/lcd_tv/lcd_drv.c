@@ -157,6 +157,7 @@ static void lcd_venc_set(struct lcd_config_s *pconf)
 	lcd_vcbus_write(ENCL_VIDEO_VAVON_ELINE, v_active - 1  + video_on_line);
 	switch (pconf->lcd_basic.lcd_type) {
 	case LCD_P2P:
+	case LCD_MLVDS:
 		lcd_vcbus_write(ENCL_VIDEO_V_PRE_DE_BLINE,
 			video_on_line - 1 - 4);
 		lcd_vcbus_write(ENCL_VIDEO_V_PRE_DE_ELINE,
