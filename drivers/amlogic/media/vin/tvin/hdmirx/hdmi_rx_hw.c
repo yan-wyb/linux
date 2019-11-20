@@ -4471,23 +4471,19 @@ void rx_phy_rt_cal(void)
 	u32 temp;
 	int val_cnt = 1;
 
-	rx_pr("360=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1));
 	for (; i < 100; i++) {
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_MISC_CNTL0, MISCI_COMMON_RST, 0);
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_MISC_CNTL0, MISCI_COMMON_RST, 1);
 		udelay(1);
 		temp = (rd_reg_hhi(HHI_HDMIRX_PHY_MISC_STAT) >> 1) & 0x3ff;
-		rx_pr("temp=%x\n", temp);
 		if (i == 0) {
 			x_val[0][0] = temp;
 			x_val[0][1] = 1;
 		}
 
 		for (; j < i; j++) {
-			rx_pr("j=%d\n", j);
 			if (temp == x_val[j][0]) {
 				x_val[j][1]	+= 1;
-				rx_pr("++,val=%x\n", x_val[j][0]);
 				goto todo;
 			}
 		}
@@ -4498,14 +4494,10 @@ todo:
 			val_cnt++;
 			rx_pr("new\n");
 		}
-		rx_pr("x_val=0x%x,cnt=%d,val_cnt=%d\n",
-		      x_val[j][0], x_val[j][1], val_cnt);
 
 		if (x_val[j][1] == 10) {
 			term_cal_val = (~((x_val[j][0]) << 1)) & 0x3ff;
-			for (; j < val_cnt; j++)
-				rx_pr("val=%x,cnt=%d\n",
-				      x_val[j][0], x_val[j][1]);
+			rx_pr("tdr cal val=0x%x", term_cal_val);
 			return;
 		}
 		j = 0;
