@@ -1357,19 +1357,28 @@ uint8_t rx_get_vsi_info(void)
 	uint8_t ret = E_VSI_NULL;
 	unsigned int tmp;
 
+	if (rx.vs_info_details.timeout > 0) {
+		rx.vs_info_details.timeout--;
+	} else {
+		rx.vs_info_details.dolby_vision = false;
+		memset(&rx_pkt.vs_info, 0, sizeof(struct pd_infoframe_s));
+	}
 	pkt = (struct vsi_infoframe_st *)&(rx_pkt.vs_info);
 	rx.vs_info_details._3d_structure = 0;
 	rx.vs_info_details._3d_ext_data = 0;
 	rx.vs_info_details.low_latency = false;
 	rx.vs_info_details.backlt_md_bit = false;
-	/* rx.vs_info_details.dolby_timeout = 0xffff; */
+
 	switch (pkt->ieee) {
 	case IEEE_DV15:
 		/* dolbyvision 1.5 */
 		ret = E_VSI_DV15;
-		if (pkt->length != E_PKT_LENGTH_27)
+		if (pkt->length != E_PKT_LENGTH_27) {
 			if (log_level & PACKET_LOG)
 				rx_pr("vsi dv15 length err\n");
+			rx.vs_info_details.dolby_vision = false;
+			break;
+		}
 		tmp = pkt->sbpkt.payload.data[0] & _BIT(1);
 		rx.vs_info_details.dolby_vision = tmp ? true : false;
 		tmp = pkt->sbpkt.payload.data[0] & _BIT(0);
@@ -2062,6 +2071,7 @@ readpkt:
 		rx_pkt_get_vsi_ex(&prx->vs_info);
 		rxpktsts.pkt_op_flag &= ~PKT_OP_VSI;
 		rxpktsts.pkt_cnt_vsi_ex++;
+		rx.vs_info_details.timeout = dv_nopacket_timeout;
 	} else if (pkt_int_src == PKT_BUFF_SET_DRM) {
 		rxpktsts.pkt_attach_drm++;
 		rxpktsts.pkt_op_flag |= PKT_OP_DRM;

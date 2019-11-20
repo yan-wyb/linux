@@ -2258,6 +2258,7 @@ void rx_main_state_machine(void)
 		sig_stable_cnt = 0;
 		sig_unstable_cnt = 0;
 		sig_stable_err_cnt = 0;
+		rx_pkt_initial();
 		rx.state = FSM_SIG_STABLE;
 		break;
 	case FSM_SIG_STABLE:

@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2019/11/18"
+#define RX_VER0 "ver.2019/11/20"
 /*
  *
  *
@@ -327,6 +327,7 @@ struct vsi_info_s {
 	unsigned int eff_tmax_pq;
 	bool allm_mode;
 	bool hdr10plus;
+	u8 timeout;
 };
 
 #define CHANNEL_STATUS_SIZE   24
