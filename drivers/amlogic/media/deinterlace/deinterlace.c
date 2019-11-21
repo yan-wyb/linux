@@ -5523,8 +5523,7 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 	/* make sure the height is even number */
 	if (di_height%2) {
 		/*for skip mode,post only half line-1*/
-		if (((di_height > 150) && (di_height < 1080)) &&
-			di_vscale_skip_count_real)
+		if ((di_height > 3) && di_vscale_skip_count_real)
 			di_height = di_height - 3;
 		else
 			di_height++;
