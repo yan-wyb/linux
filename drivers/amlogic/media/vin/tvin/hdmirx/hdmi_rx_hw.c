@@ -2411,26 +2411,36 @@ void hdmirx_load_firm_reset(int type)
  */
 void rx_audio_bandgap_rst(void)
 {
-	if (rx.chip_id >= CHIP_ID_TL1)
-		return;
-
-	wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 1);
-	udelay(10);
-	wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 0);
+	if (rx.chip_id >= CHIP_ID_TL1) {
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0, _BIT(10), 1);
+		udelay(10);
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0, _BIT(10), 0);
+	} else {
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 1);
+		udelay(10);
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 0);
+	}
 	if (log_level & AUDIO_LOG)
 		rx_pr("%s\n", __func__);
 }
 
 void rx_audio_bandgap_en(void)
 {
-	if (rx.chip_id >= CHIP_ID_TL1)
-		return;
+	if (rx.chip_id >= CHIP_ID_TL1) {
+		/* for tl1/tm2 0:bg on   1: bg off */
+		wr_reg_hhi_bits(HHI_VDAC_CNTL1, _BIT(7), 0);
 
-	wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(9), 1);
-	wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 1);
-	udelay(10);
-	wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 0);
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0, _BIT(10), 1);
+		udelay(10);
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0, _BIT(10), 0);
+	} else {
+		/* for txlx/txl... 1:bg on   0: bg off */
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(9), 1);
 
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 1);
+		udelay(10);
+		wr_reg_hhi_bits(HHI_VDAC_CNTL0_TXLX, _BIT(13), 0);
+	}
 	if (log_level & AUDIO_LOG)
 		rx_pr("%s\n", __func__);
 }
