@@ -470,6 +470,13 @@ static ssize_t tvafe_store(struct device *dev,
 		}
 		pr_info("[tvafe..]%s: avout_en = 0x%x\n",
 			__func__, user_param->avout_en);
+	} else if (!strncmp(buff, "vs_test", strlen("vs_test"))) {
+		if (parm[1]) {
+			if (kstrtouint(parm[1], 16, &tvafe_vs_test) < 0)
+				goto tvafe_store_err;
+		}
+		pr_info("[tvafe..]%s: tvafe_vs_test = 0x%x\n",
+			__func__, tvafe_vs_test);
 	} else if (!strncmp(buff, "dbg_print", strlen("dbg_print"))) {
 		if (parm[1]) {
 			if (kstrtouint(parm[1], 16, &tvafe_dbg_print) < 0)

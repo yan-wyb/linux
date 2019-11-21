@@ -264,8 +264,6 @@ void vdin_auto_de_handler(struct vdin_dev_s *devp)
 				pre_hs, cur_hs, pre_he, cur_he,
 				devp->cutwindow_cfg);
 			devp->cutwindow_cfg = 1;
-		} else {
-			devp->cutwindow_cfg = 0;
 		}
 	}
 }

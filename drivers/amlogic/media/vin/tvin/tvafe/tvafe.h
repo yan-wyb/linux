@@ -156,5 +156,7 @@ extern unsigned int force_nostd;
 #define TVAFE_DBG_NOSTD2     (1 << 13)
 extern unsigned int tvafe_dbg_print;
 
+extern unsigned int tvafe_vs_test;
+
 #endif  /* _TVAFE_H */
 

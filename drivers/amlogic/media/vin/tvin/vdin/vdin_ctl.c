@@ -1156,6 +1156,9 @@ void vdin_set_decimation(struct vdin_dev_s *devp)
 	/* output_width_m1 */
 	wr_bits(offset, VDIN_INTF_WIDTHM1, (devp->h_active - 1),
 			VDIN_INTF_WIDTHM1_BIT, VDIN_INTF_WIDTHM1_WID);
+	if (vdin_ctl_dbg)
+		pr_info("%s: h_active=%u, v_active=%u\n",
+			__func__, devp->h_active, devp->v_active);
 	return;
 }
 
@@ -1217,8 +1220,10 @@ void vdin_set_cutwin(struct vdin_dev_s *devp)
 			devp->prop.vs, devp->prop.ve);
 	}
 	if (vdin_ctl_dbg)
-		pr_info("h_active=%d, v_active=%d\n",
-			devp->h_active, devp->v_active);
+		pr_info("%s: h_active=%d, v_active=%d, hs:%u, he:%u, vs:%u, ve:%u\n",
+			__func__, devp->h_active, devp->v_active,
+			devp->prop.hs, devp->prop.he,
+			devp->prop.vs, devp->prop.ve);
 
 }
 

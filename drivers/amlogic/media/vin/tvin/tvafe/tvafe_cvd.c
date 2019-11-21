@@ -109,6 +109,7 @@ static bool scene_colorful_old;
 static int lock_cnt;
 static bool ntsc50_en;
 bool reinit_scan;
+static unsigned int cvd_l_ave_pre, cvd_vs_adj_en_pre, cvd_vs_adj_level;
 
 static int cdto_adj_th = TVAFE_CVD2_CDTO_ADJ_TH;
 module_param(cdto_adj_th, int, 0664);
@@ -1898,7 +1899,7 @@ static void tvafe_cvd2_auto_de(struct tvafe_cvd2_s *cvd2)
 	if ((user_param->auto_adj_en & TVAFE_AUTO_DE) == 0)
 		return;
 
-	if (!cvd2->hw.line625 || (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I))
+	if (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I)
 		return;
 
 	lines->val[0] = lines->val[1];
@@ -1937,7 +1938,7 @@ static void tvafe_cvd2_auto_de(struct tvafe_cvd2_s *cvd2)
 					tvafe_pr_info("%s: lrg vlines:%d, de_offset:%d tmp:%x\n",
 				__func__, l_ave, lines->de_offset, tmp);
 			}
-		} else {
+		} else if (l_ave > 0) {
 			if (lines->de_offset > 0) {
 				tmp = ((TVAFE_CVD2_PAL_DE_START -
 					lines->de_offset + 1) << 16) |
@@ -1950,9 +1951,13 @@ static void tvafe_cvd2_auto_de(struct tvafe_cvd2_s *cvd2)
 					__func__, l_ave, lines->de_offset, tmp);
 				lines->de_offset--;
 			}
+		} else {
+			scene_colorful_old = 0;
+			W_APB_REG(ACD_REG_2E, acd_vde_config);
 		}
 	}
 }
+
 /* vlis advice new add @20170329 */
 static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 {
@@ -1963,9 +1968,8 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 	if ((user_param->auto_adj_en & TVAFE_AUTO_VS) == 0)
 		return;
 
-	if (!cvd2->hw.line625 ||
-		((cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I) &&
-		(cvd2->config_fmt != TVIN_SIG_FMT_CVBS_NTSC_M)))
+	if ((cvd2->config_fmt != TVIN_SIG_FMT_CVBS_PAL_I) &&
+	    (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_NTSC_M))
 		return;
 	if ((user_param->auto_adj_en & TVAFE_AUTO_DE)  == 0) {
 		lines->val[0] = lines->val[1];
@@ -1980,6 +1984,7 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 			l_min = lines->val[i];
 		l_ave += lines->val[i];
 	}
+
 	if (lines->check_cnt++ == user_param->vline_chk_cnt)
 		lines->check_cnt = user_param->vline_chk_cnt;
 	if (lines->check_cnt == user_param->vline_chk_cnt) {
@@ -1992,28 +1997,50 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 				W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, 0x3);
 			else
 				W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, 0xa);
+
+			/* get the average value */
+			if ((l_ave > vs_adj_th_level0) ||
+			    (l_ave < vs_adj_th_level00))
+				cvd2->info.vs_adj_level = 0;
+			else if ((l_ave > vs_adj_th_level1) ||
+				 (l_ave < vs_adj_th_level01))
+				cvd2->info.vs_adj_level = 1;
+			else if ((l_ave > vs_adj_th_level2) ||
+				 (l_ave < vs_adj_th_level02))
+				cvd2->info.vs_adj_level = 2;
+			else if ((l_ave > vs_adj_th_level3) ||
+				 (l_ave < vs_adj_th_level03))
+				cvd2->info.vs_adj_level = 3;
+			else if ((l_ave > vs_adj_th_level4) ||
+				 (l_ave < vs_adj_th_level04))
+				cvd2->info.vs_adj_level = 4;
+			else
+				cvd2->info.vs_adj_level = 0xff;
 		} else {
 			cvd2->info.vs_adj_en = 0;
 			if (R_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE) != 0xa)
 				W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, 0xa);
-		}
-		/* get the average value */
-		if ((l_ave > vs_adj_th_level0) || (l_ave < vs_adj_th_level00))
-			cvd2->info.vs_adj_level = 0;
-		else if ((l_ave > vs_adj_th_level1) ||
-			(l_ave < vs_adj_th_level01))
-			cvd2->info.vs_adj_level = 1;
-		else if ((l_ave > vs_adj_th_level2) ||
-			(l_ave < vs_adj_th_level02))
-			cvd2->info.vs_adj_level = 2;
-		else if ((l_ave > vs_adj_th_level3) ||
-			(l_ave < vs_adj_th_level03))
-			cvd2->info.vs_adj_level = 3;
-		else if ((l_ave > vs_adj_th_level4) ||
-			(l_ave < vs_adj_th_level04))
-			cvd2->info.vs_adj_level = 4;
-		else
+
 			cvd2->info.vs_adj_level = 0xff;
+		}
+
+		if (tvafe_dbg_print & TVAFE_DBG_NOSTD) {
+			if ((cvd_l_ave_pre != l_ave) ||
+			    (cvd_vs_adj_en_pre != cvd2->info.vs_adj_en) ||
+			     (cvd_vs_adj_level != cvd2->info.vs_adj_level)) {
+				tvafe_pr_info("%s: lines->val:%d %d %d %d, l_ave:%d, 0xe6:%d, vs_adj_en:%d, level:%d\n",
+					      __func__, lines->val[0],
+					      lines->val[1],
+					      lines->val[2], lines->val[3],
+					      l_ave, R_APB_REG(CVD2_REG_E6),
+					      cvd2->info.vs_adj_en,
+					      cvd2->info.vs_adj_level);
+			}
+		}
+
+		cvd_l_ave_pre = l_ave;
+		cvd_vs_adj_en_pre = cvd2->info.vs_adj_en;
+		cvd_vs_adj_level = cvd2->info.vs_adj_level;
 	}
 }
 #endif
