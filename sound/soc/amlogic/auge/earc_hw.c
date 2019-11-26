@@ -14,6 +14,8 @@
  * more details.
  *
  */
+#define DEBUG
+
 #include <linux/types.h>
 #include <linux/kernel.h>
 
@@ -35,7 +37,8 @@ void earcrx_pll_refresh(struct regmap *top_map)
 	mmio_update_bits(top_map, EARCRX_PLL_CTRL3,
 			 0x1 << 15, 0x0 << 15);
 }
-void earcrx_cmdc_init(struct regmap *top_map)
+
+void earcrx_cmdc_int_mask(struct regmap *top_map)
 {
 	/* set irq mask */
 	mmio_write(top_map, EARCRX_CMDC_INT_MASK,
@@ -56,7 +59,10 @@ void earcrx_cmdc_init(struct regmap *top_map)
 		   (0 <<  1) |  /* int_recv_packet */
 		   (0 <<  0)	 /* int_rec_time_out */
 		  );
+}
 
+void earcrx_cmdc_init(struct regmap *top_map)
+{
 	mmio_write(top_map, EARCRX_ANA_CTRL0,
 		   0x1  << 31 | /* earcrx_en_d2a */
 		   0x10 << 24 | /* earcrx_cmdcrx_reftrim */
@@ -384,6 +390,16 @@ void earctx_cmdc_init(struct regmap *top_map)
 		  );
 }
 
+void earctx_cmdc_set_timeout(struct regmap *cmdc_map, int no_timeout)
+{
+	/* no timeout */
+	mmio_update_bits(cmdc_map,
+			 EARC_TX_CMDC_VSM_CTRL5,
+			 0x3 << 0,
+			 no_timeout << 1
+			 );
+}
+
 void earctx_cmdc_arc_connect(struct regmap *cmdc_map, bool init)
 {
 	if (init)
@@ -422,18 +438,22 @@ void earctx_cmdc_hpd_detect(struct regmap *top_map,
 			);
 
 	if (st) {
+		/* reset for comma_cnt, timeout_sts */
 		mmio_update_bits(cmdc_map,
 				 EARC_TX_CMDC_VSM_CTRL0,
-				 0x1 << 19,
-				 0x1 << 19	/* comma_cnt_rst */
+				 0x3 << 18,
+				 0x3 << 18
 				);
 
+		/* reset and hpd sel */
 		mmio_update_bits(cmdc_map,
 				 EARC_TX_CMDC_VSM_CTRL0,
-				 0x1 << 19 | 0xf << 20,
-				 0x0 << 19 |   /* comma_cnt_rst */
+				 0x3f << 18,
+				 0x0 << 18 |
 				 0x3 << 20 | 0x3 << 22
 				);
+
+		earctx_cmdc_set_timeout(cmdc_map, 0);
 
 		mmio_update_bits(cmdc_map,
 				 EARC_TX_CMDC_VSM_CTRL1,
@@ -630,10 +650,8 @@ static void earcrx_cmdc_get_reg(struct regmap *cmdc_map, int dev_id, int offset,
 			 dev_id << 8 |
 			 offset << 0);
 
-	for (i = 0; i < bytes; i++) {
+	for (i = 0; i < bytes; i++)
 		data[i] = mmio_read(cmdc_map, EARC_RX_CMDC_DEVICE_RDATA);
-		pr_info("%s, data[%d]:%#x\n", __func__, i, data[i]);
-	}
 
 	mmio_update_bits(cmdc_map, EARC_RX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 29, 0x1 << 29);
@@ -658,10 +676,8 @@ static void earcrx_cmdc_set_reg(struct regmap *cmdc_map, int dev_id, int offset,
 			 dev_id << 8 |
 			 offset << 0);
 
-	for (i = 0; i < bytes; i++) {
-		pr_info("%s, data[%d]:%#x\n", __func__, i, data[i]);
+	for (i = 0; i < bytes; i++)
 		mmio_write(cmdc_map, EARC_RX_CMDC_DEVICE_WDATA, data[i]);
-	}
 
 	mmio_update_bits(cmdc_map, EARC_RX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 29, 0x1 << 29);
@@ -746,14 +762,8 @@ static int earctx_cmdc_get_reg(struct regmap *cmdc_map, int dev_id, int offset,
 			 dev_id << 8 |
 			 offset << 0);
 
-	for (i = 0; i < bytes; i++) {
+	for (i = 0; i < bytes; i++)
 		data[i] = mmio_read(cmdc_map, EARC_TX_CMDC_DEVICE_RDATA);
-		pr_info("%s, bytes:%d, data[%d]:%#x\n",
-			__func__,
-			bytes,
-			i,
-			data[i]);
-	}
 
 	mmio_update_bits(cmdc_map, EARC_TX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 29, 0x1 << 29);
@@ -771,7 +781,6 @@ static int earctx_cmdc_set_reg(struct regmap *cmdc_map, int dev_id, int offset,
 {
 	int val = 0, i;
 	int ret = -1;
-	int cnt = 0;
 
 	mmio_update_bits(cmdc_map, EARC_TX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 31 | /* apb_write */
@@ -787,16 +796,10 @@ static int earctx_cmdc_set_reg(struct regmap *cmdc_map, int dev_id, int offset,
 			 dev_id << 8 |
 			 offset << 0);
 
-	for (i = 0; i < bytes; i++) {
+	for (i = 0; i < bytes; i++)
 		mmio_update_bits(cmdc_map, EARC_TX_CMDC_DEVICE_WDATA,
 				 0xff << 0,
 				 data[i] << 0);
-		pr_info("%s, data[%d]:%#x, bytes:%d\n",
-			__func__,
-			i,
-			data[i],
-			bytes);
-	}
 
 	mmio_update_bits(cmdc_map, EARC_TX_CMDC_MASTER_CTRL,
 			 0x1 << 31 | /* master_cmd_rw, write */
@@ -816,9 +819,7 @@ static int earctx_cmdc_set_reg(struct regmap *cmdc_map, int dev_id, int offset,
 	while (!(val & (1 << 29))) {
 		usleep_range(500, 1500);
 		val = mmio_read(cmdc_map, EARC_TX_CMDC_MASTER_CTRL);
-		cnt++;
 	}
-	pr_info("%s, cnt:%d\n", __func__, cnt);
 
 	mmio_update_bits(cmdc_map, EARC_TX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 29, 0x1 << 29);

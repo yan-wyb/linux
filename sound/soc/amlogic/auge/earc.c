@@ -505,6 +505,13 @@ static int earc_dai_prepare(
 		enum frddr_dest dst = EARCTX_DMAC;
 		unsigned int fifo_id, frddr_type = 0;
 		struct iec958_chsts chsts;
+		enum attend_type type =
+			earctx_cmdc_get_attended_type(p_earc->tx_cmdc_map);
+
+		if (type == ATNDTYP_DISCNCT) {
+			dev_err(p_earc->dev, "Neither eARC or ARC is attended!\n");
+			return -ENOTCONN;
+		}
 
 		pr_info("%s Expected frddr dst:%s\n",
 			__func__,
@@ -662,7 +669,7 @@ static int earc_dai_hw_params(
 	int ret = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		int freq = rate * 128 * 5;
+		int freq = rate * 128 * 5; /* 5, falling edge */
 
 		if (spdif_is_4x_clk()) {
 			pr_debug("set 4x audio clk for 958\n");
@@ -674,8 +681,9 @@ static int earc_dai_hw_params(
 		clk_set_rate(p_earc->clk_tx_dmac_srcpll, freq * 4);
 		clk_set_rate(p_earc->clk_tx_dmac, freq);
 
-		pr_info("%s, tx dmac clk, set freq: %d, get freq:%lu\n",
+		pr_info("%s, tx dmac clk, rate:%d, set freq: %d, get freq:%lu\n",
 			__func__,
+			rate,
 			freq,
 			clk_get_rate(p_earc->clk_tx_dmac));
 	}
@@ -1105,7 +1113,7 @@ int earctx_get_cds(struct snd_kcontrol *kcontrol,
 }
 
 static const struct snd_kcontrol_new earc_controls[] = {
-	SOC_SINGLE_BOOL_EXT("HDMI ARC Switch",
+	SOC_SINGLE_BOOL_EXT("eARC ARC Switch",
 			    0,
 			    earcrx_arc_get_enable,
 			    earcrx_arc_set_enable),
@@ -1201,6 +1209,9 @@ void earc_hdmitx_hpdst(bool st)
 	/* ensure clock gate */
 	audiobus_update_bits(EE_AUDIO_CLK_GATE_EN1, 0x1 << 6, 0x1 << 6);
 
+	if (st)
+		earcrx_cmdc_int_mask(p_earc->rx_top_map);
+
 	earcrx_cmdc_arc_connect(p_earc->rx_cmdc_map, st);
 
 	earcrx_cmdc_hpd_detect(p_earc->rx_cmdc_map, st);
@@ -1222,11 +1233,6 @@ static int earcrx_cmdc_setup(struct earc *p_earc)
 		}
 	}
 
-	/* rx cmdc init */
-	earcrx_cmdc_init(p_earc->rx_top_map);
-	/* Default: arc arc_initiated */
-	earcrx_cmdc_arc_connect(p_earc->rx_cmdc_map, true);
-
 	ret = devm_request_threaded_irq(p_earc->dev,
 					p_earc->irq_earc_rx,
 					NULL,
@@ -1240,6 +1246,11 @@ static int earcrx_cmdc_setup(struct earc *p_earc)
 			p_earc->irq_earc_rx);
 		return ret;
 	}
+
+	/* rx cmdc init */
+	earcrx_cmdc_init(p_earc->rx_top_map);
+	/* Default: arc arc_initiated */
+	earcrx_cmdc_arc_connect(p_earc->rx_cmdc_map, true);
 
 	return ret;
 }
@@ -1286,7 +1297,6 @@ void earc_hdmirx_hpdst(int earc_port, bool st)
 		earc_port,
 		st ? "plugin" : "plugout");
 
-	earctx_cmdc_int_mask(p_earc->tx_top_map);
 	earctx_cmdc_arc_connect(p_earc->tx_cmdc_map, st);
 	earctx_cmdc_hpd_detect(p_earc->tx_top_map,
 			       p_earc->tx_cmdc_map,
@@ -1325,8 +1335,10 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 
 	/* tx cmdc init */
 	earctx_cmdc_init(p_earc->tx_top_map);
+	/* Default: no time out to connect RX */
+	earctx_cmdc_set_timeout(p_earc->tx_cmdc_map, 1);
 	/* Default: arc arc_initiated */
-	earctx_cmdc_arc_connect(p_earc->tx_cmdc_map, true);
+	earctx_cmdc_int_mask(p_earc->tx_top_map);
 
 	return ret;
 }
@@ -1512,13 +1524,13 @@ static int earc_platform_probe(struct platform_device *pdev)
 	s_earc = p_earc;
 
 	/* RX */
-	if (p_earc->irq_earc_rx > 0) {
+	if (!IS_ERR(p_earc->rx_top_map)) {
 		earcrx_extcon_register(p_earc);
 		earcrx_cmdc_setup(p_earc);
 	}
 
 	/* TX */
-	if (p_earc->irq_earc_tx > 0) {
+	if (!IS_ERR(p_earc->tx_top_map)) {
 		earctx_extcon_register(p_earc);
 		earctx_cmdc_setup(p_earc);
 	}
