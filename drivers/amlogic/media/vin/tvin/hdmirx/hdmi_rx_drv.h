@@ -47,7 +47,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2019/11/20"
+#define RX_VER2 "ver.2019/11/26"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -436,6 +436,7 @@ struct rx_s {
 
 	/* wrapper */
 	unsigned int state;
+	unsigned int fsm_ext_state;
 	unsigned int pre_state;
 	struct rx_fastswitch_mode fs_mode;
 	/* recovery mode */

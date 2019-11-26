@@ -60,6 +60,7 @@ enum fsm_states_e {
 	FSM_SIG_WAIT_STABLE,
 	FSM_SIG_STABLE,
 	FSM_SIG_READY,
+	FSM_NULL,
 };
 
 enum err_code_e {

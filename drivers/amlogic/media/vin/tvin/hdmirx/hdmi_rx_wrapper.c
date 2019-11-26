@@ -1170,6 +1170,7 @@ static void signal_status_init(void)
 	}
 	set_scdc_cfg(1, 0);
 	rx.state = FSM_INIT;
+	rx.fsm_ext_state = FSM_NULL;
 	/*if (hdcp22_on)*/
 		/*esm_set_stable(0);*/
 	rx.hdcp.hdcp_version = HDCP_VER_NONE;
@@ -1400,7 +1401,7 @@ void fsm_restart(void)
 	set_scdc_cfg(1, 0);
 	vic_check_en = false;
 	/* dvi_check_en = true; */
-	rx.state = FSM_INIT;
+	rx.fsm_ext_state = FSM_INIT;
 	rx.phy.cable_clk = 0;
 	rx.phy.pll_rate = 0;
 	rx.phy.phy_bw = 0;
@@ -1464,7 +1465,7 @@ void rx_send_hpd_pulse(void)
 {
 	/*rx_set_cur_hpd(0);*/
 	/*fsm_restart();*/
-	rx.state = FSM_HPD_LOW;
+	rx.fsm_ext_state = FSM_HPD_LOW;
 }
 
 static void set_hdcp(struct hdmi_rx_hdcp *hdcp, const unsigned char *b_key)
@@ -1972,6 +1973,7 @@ void hdmirx_open_port(enum tvin_port_e port)
 	}
 	edid_update_flag = 0;
 	rx_pkt_initial();
+	rx.fsm_ext_state = FSM_NULL;
 	sm_pause = fsmst;
 	extcon_set_state_sync(rx.rx_excton_open, EXTCON_DISP_HDMI, 1);
 	rx_pr("%s:%d\n", __func__, rx.port);
@@ -3092,6 +3094,14 @@ void rx_dw_edid_monitor(void)
 	}
 }
 
+void rx_ext_state_monitor(void)
+{
+	if (rx.fsm_ext_state != FSM_NULL) {
+		rx.state = rx.fsm_ext_state;
+		rx.fsm_ext_state = FSM_NULL;
+	}
+}
+
 void hdmirx_timer_handler(unsigned long arg)
 {
 	struct hdmirx_dev_s *devp = (struct hdmirx_dev_s *)arg;
@@ -3109,6 +3119,7 @@ void hdmirx_timer_handler(unsigned long arg)
 			if (!sm_pause) {
 				rx_clkrate_monitor();
 				rx_main_state_machine();
+				rx_ext_state_monitor();
 			}
 			/* rx_pkt_check_content(); */
 			rx_err_monitor();
