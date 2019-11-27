@@ -114,7 +114,7 @@ uint32_t *pd_fifo_buf;
 static DEFINE_SPINLOCK(rx_pr_lock);
 DECLARE_WAIT_QUEUE_HEAD(query_wait);
 
-int hdmi_yuv444_enable;
+int hdmi_yuv444_enable = 1;
 module_param(hdmi_yuv444_enable, int, 0664);
 MODULE_PARM_DESC(hdmi_yuv444_enable, "hdmi_yuv444_enable");
 
@@ -687,22 +687,23 @@ void hdmirx_get_color_fmt(struct tvin_sig_property_s *prop)
 
 	if (rx.pre.sw_dvi == 1)
 		format = E_COLOR_RGB;
-	prop->dest_cfmt = TVIN_YUV422;
 	switch (format) {
 	case E_COLOR_YUV422:
 	case E_COLOR_YUV420:
 		prop->color_format = TVIN_YUV422;
+		prop->dest_cfmt = TVIN_YUV422;
 		break;
 	case E_COLOR_YUV444:
 		prop->color_format = TVIN_YUV444;
-		if (hdmi_yuv444_enable)
+		if (!hdmi_yuv444_enable)
+			prop->dest_cfmt = TVIN_YUV422;
+		else
 			prop->dest_cfmt = TVIN_YUV444;
 		break;
 	case E_COLOR_RGB:
 	default:
 		prop->color_format = TVIN_RGB444;
-		if (it_content || pc_mode_en)
-			prop->dest_cfmt = TVIN_YUV444;
+		prop->dest_cfmt = TVIN_YUV444;
 		break;
 	}
 	if (rx.pre.interlaced == 1)
@@ -711,17 +712,19 @@ void hdmirx_get_color_fmt(struct tvin_sig_property_s *prop)
 	switch (prop->color_format) {
 	case TVIN_YUV444:
 	case TVIN_YUV422:
-		if (yuv_quant_range == E_RANGE_LIMIT)
+		/* Table 8-5 of hdmi1.4b spec */
+		if (yuv_quant_range == E_YCC_RANGE_LIMIT)
 			prop->color_fmt_range = TVIN_YUV_LIMIT;
-		else if (yuv_quant_range == E_RANGE_FULL)
+		else if (yuv_quant_range == E_YCC_RANGE_FULL)
 			prop->color_fmt_range = TVIN_YUV_FULL;
 		else
 			prop->color_fmt_range = TVIN_FMT_RANGE_NULL;
 		break;
 	case TVIN_RGB444:
-		if ((rgb_quant_range == E_RANGE_FULL) || (rx.pre.sw_dvi == 1))
+		if ((rgb_quant_range == E_RGB_RANGE_FULL) ||
+		    (rx.pre.sw_dvi == 1))
 			prop->color_fmt_range = TVIN_RGB_FULL;
-		else if (rgb_quant_range == E_RANGE_LIMIT)
+		else if (rgb_quant_range == E_RGB_RANGE_LIMIT)
 			prop->color_fmt_range = TVIN_RGB_LIMIT;
 		else
 			prop->color_fmt_range = TVIN_FMT_RANGE_NULL;

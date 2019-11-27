@@ -47,7 +47,7 @@
  *
  *
  */
-#define RX_VER2 "ver.2019/12/17"
+#define RX_VER2 "ver.2020/01/14"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -158,10 +158,16 @@ enum colorspace_e {
 	E_COLOR_YUV420,
 };
 
-enum colorrange_e {
-	E_RANGE_DEFAULT,
-	E_RANGE_LIMIT,
-	E_RANGE_FULL,
+enum colorrange_rgb_e {
+	E_RGB_RANGE_DEFAULT,
+	E_RGB_RANGE_LIMIT,
+	E_RGB_RANGE_FULL,
+};
+
+enum colorrange_ycc_e {
+	E_YCC_RANGE_LIMIT,
+	E_YCC_RANGE_FULL,
+	E_YCC_RANGE_RSVD,
 };
 
 enum colordepth_e {

@@ -2284,6 +2284,8 @@ void rx_main_state_machine(void)
 		rx.state = FSM_WAIT_CLK_STABLE;
 		break;
 	case FSM_WAIT_CLK_STABLE:
+		if (rx.cur_5v_sts == 0)
+			break;
 		if (is_clk_stable()) {
 			if (clk_unstable_cnt != 0) {
 				rx_pr("wait clk cnt %d\n", clk_unstable_cnt);
