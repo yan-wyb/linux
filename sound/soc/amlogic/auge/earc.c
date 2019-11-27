@@ -252,17 +252,17 @@ static irqreturn_t earc_tx_isr(int irq, void *data)
 	if (status0)
 		earctx_cdmc_clr_irqs(p_earc->tx_top_map, status0);
 
-	if (status0 & INT_EARCTX_CMDC_IDLE2) {
-		earctx_update_attend_event(p_earc,
-					   false, true);
-
-		pr_debug("%s EARCTX_CMDC_IDLE2\n", __func__);
-	}
 	if (status0 & INT_EARCTX_CMDC_IDLE1) {
 		earctx_update_attend_event(p_earc,
 					   false, false);
 
 		pr_debug("%s EARCTX_CMDC_IDLE1\n", __func__);
+	}
+	if (status0 & INT_EARCTX_CMDC_IDLE2) {
+		earctx_update_attend_event(p_earc,
+					   false, true);
+
+		pr_debug("%s EARCTX_CMDC_IDLE2\n", __func__);
 	}
 	if (status0 & INT_EARCTX_CMDC_DISC2)
 		pr_debug("%s EARCTX_CMDC_DISC2\n", __func__);
@@ -278,12 +278,8 @@ static irqreturn_t earc_tx_isr(int irq, void *data)
 		pr_debug("%s EARCTX_CMDC_HB_STATUS\n", __func__);
 	if (status0 & INT_EARCTX_CMDC_LOSTHB)
 		pr_debug("%s EARCTX_CMDC_LOSTHB\n", __func__);
-	if (status0 & INT_EARCTX_CMDC_TIMEOUT) {
-		earctx_update_attend_event(p_earc,
-					   false, false);
-
+	if (status0 & INT_EARCTX_CMDC_TIMEOUT)
 		pr_debug("%s EARCTX_CMDC_TIMEOUT\n", __func__);
-	}
 	if (status0 & INT_EARCTX_CMDC_STATUS_CH)
 		pr_debug("%s EARCTX_CMDC_STATUS_CH\n", __func__);
 	if (status0 & INT_EARCTX_CMDC_RECV_NACK)
