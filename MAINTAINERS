@@ -15213,3 +15213,7 @@ F:  arch/arm64/boot/dts/amlogic/tm2_t962e2_ab311_gva_sbr.dts
 AMLOGIC V4L HEADFILE
 M: Nanxin Qin <Nanxin.Qin@amlogic.com>
 F: include/linux/amlogic/media/video_sink/v4lvideo_ext.h
+
+AMLOGIC POWER DOMAIN DRIVER
+M:	Zhiqiang Liang <zhiqiang.liang@amlogic.com>
+F: 	drivers/amlogic/power/power_domain.c
