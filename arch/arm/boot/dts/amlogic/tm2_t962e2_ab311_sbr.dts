@@ -325,7 +325,8 @@
 				prefix-names = "AMP", "AMP1", "tas5782m_pu1",
 				"tas5782m_pu2", "tas5782m_pu3", "tas5782m_pu4";
 				sound-dai = <&ad82584f &ad82584f1 &tas5782m_pu1
-				&tas5782m_pu2 &tas5782m_pu3 &tas5782m_pu4>;
+				&tas5782m_pu2 &tas5782m_pu3 &tas5782m_pu4
+				&tl1_codec>;
 			};
 		};
 
@@ -1371,6 +1372,9 @@
 
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdma_mclk &tdmout_a>;
+
+		/* In for ACODEC_ADC */
+		acodec_adc = <1>;
 	};
 
 	tdmb:tdm@1 {
