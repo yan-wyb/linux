@@ -604,6 +604,9 @@ void tvafe_cvd2_non_std_config(struct tvafe_cvd2_s *cvd2)
 					VACTIVE_START_BIT, VACTIVE_START_WID);
 			W_APB_BIT(CVD2_ACTIVE_VIDEO_VHEIGHT, 0xe0,
 					VACTIVE_HEIGHT_BIT, VACTIVE_HEIGHT_WID);
+			/* c0[2] = 0 ,bypass iir */
+			W_APB_REG(CVD2_NEW_DCRESTORE_CNTL,
+				  R_APB_REG(CVD2_NEW_DCRESTORE_CNTL) & ~0x4);
 		} else {
 			/* W_APB_BIT(CVD2_VSYNC_SIGNAL_THRESHOLD, 1, */
 			/* VS_SIGNAL_AUTO_TH_BIT, VS_SIGNAL_AUTO_TH_WID); */
@@ -649,7 +652,9 @@ void tvafe_cvd2_non_std_config(struct tvafe_cvd2_s *cvd2)
 
 			/* vsync signal is not good */
 			W_APB_REG(CVD2_NOISE_THRESHOLD, 0x00);
-
+			/* c0[2] = 0 ,bypass iir */
+			W_APB_REG(CVD2_NEW_DCRESTORE_CNTL,
+				  R_APB_REG(CVD2_NEW_DCRESTORE_CNTL) & ~0x4);
 		} else {
 
 			if (cvd2->info.scene_colorful)
