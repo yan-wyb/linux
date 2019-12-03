@@ -26,6 +26,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
+#include <linux/amlogic/pm.h>
 
 /* Meson I2C register map */
 #define REG_CTRL					0x00
@@ -662,6 +663,9 @@ static int meson_i2c_remove(struct platform_device *pdev)
 
 static int __maybe_unused meson_i2c_resume(struct device *dev)
 {
+	if (is_pm_freeze_mode())
+		return 0;
+
 	pinctrl_pm_select_default_state(dev);
 
 	return 0;
@@ -669,6 +673,9 @@ static int __maybe_unused meson_i2c_resume(struct device *dev)
 
 static int __maybe_unused meson_i2c_suspend(struct device *dev)
 {
+	if (is_pm_freeze_mode())
+		return 0;
+
 	pinctrl_pm_select_sleep_state(dev);
 
 	return 0;

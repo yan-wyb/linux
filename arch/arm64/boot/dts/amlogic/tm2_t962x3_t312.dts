@@ -1344,8 +1344,9 @@
 &i2c0 {
 	status = "okay";
 	clock-frequency = <300000>;
-	pinctrl-names="default";
-	pinctrl-0=<&i2c0_dv_pins>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&i2c0_dv_pins>;
+	pinctrl-1 = <&i2c0_dv_pins_slp_input>;
 };
 
 &audiobus {
@@ -2098,8 +2099,9 @@
 &i2c1 {
 	status = "okay";
 	clock-frequency = <300000>;
-	pinctrl-names="default";
-	pinctrl-0=<&i2c1_h_pins>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_h_pins>;
+	pinctrl-1 = <&i2c1_h_pins_slp_input>;
 
 	lcd_extern_i2c0: lcd_extern_i2c@0 {
 		compatible = "lcd_ext, i2c";
