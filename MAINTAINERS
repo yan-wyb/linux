@@ -15287,3 +15287,7 @@ F: arch/arm/boot/dts/amlogic/mesontm2_revb_t962x3_t312-panel.dtsi
 F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_ab301-panel.dtsi
 F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_ab309-panel.dtsi
 F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_t312-panel.dtsi
+
+AMLOGIC ION
+M: Dezhi Kong <dezhi.kong@amlogic.com>
+F:  drivers/staging/android/ion/ion_secure_heap.c
