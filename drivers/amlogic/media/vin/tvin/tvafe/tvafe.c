@@ -119,6 +119,8 @@ unsigned int av2_plugin_state;
  */
 unsigned int tvafe_dbg_print;
 unsigned int tvafe_vs_test;
+static enum tvin_sig_fmt_e tvafe_manual_fmt_save;
+bool tvafe_atv_search_channel;
 
 #ifdef CONFIG_AMLOGIC_ATV_DEMOD
 static struct tvafe_info_s *g_tvafe_info;
@@ -267,7 +269,25 @@ static int tvafe_work_mode(bool mode)
 {
 	tvafe_pr_info("%s: %d\n", __func__, mode);
 	tvafe_mode = mode;
-	reinit_scan = true;
+	if (mode) {
+		reinit_scan = true;
+		if (tvafe_atv_search_channel) {
+			tvafe_manual_fmt_save = TVIN_SIG_FMT_NULL;
+			manual_flag = 0;
+		}
+	} else {
+		if (tvafe_atv_search_channel) {
+			if (g_tvafe_info) {
+				g_tvafe_info->cvd2.manual_fmt =
+					tvafe_manual_fmt_save;
+		tvafe_pr_info("%s: set cvd2 manual fmt:%s.\n",
+			      __func__,
+			      tvin_sig_fmt_str(tvafe_manual_fmt_save));
+			if (tvafe_manual_fmt_save != TVIN_SIG_FMT_NULL)
+				manual_flag = 1;
+			}
+		}
+	}
 
 	return 0;
 }
@@ -282,6 +302,7 @@ static int tvafe_get_v_fmt(void)
 	}
 	if (g_tvafe_info)
 		fmt = tvafe_cvd2_get_format(&g_tvafe_info->cvd2);
+	tvafe_manual_fmt_save = fmt;
 	return fmt;
 }
 #endif
@@ -638,13 +659,16 @@ static int tvafe_dec_isr(struct tvin_frontend_s *fe, unsigned int hcnt64)
 		tvafe_cvd2_adj_pga(&tvafe->cvd2);
 #endif
 
-	if (tvafe->parm.info.fmt == TVIN_SIG_FMT_CVBS_PAL_I) {
+	if (!tvafe_atv_search_channel) {
+		if (tvafe->parm.info.fmt == TVIN_SIG_FMT_CVBS_PAL_I) {
 #ifdef TVAFE_SET_CVBS_CDTO_EN
-		tvafe_cvd2_adj_cdto(&tvafe->cvd2, hcnt64);
+			tvafe_cvd2_adj_cdto(&tvafe->cvd2, hcnt64);
 #endif
-		tvafe_cvd2_adj_hs(&tvafe->cvd2, hcnt64);
-	} else if (tvafe->parm.info.fmt == TVIN_SIG_FMT_CVBS_NTSC_M)
-		tvafe_cvd2_adj_hs_ntsc(&tvafe->cvd2, hcnt64);
+			tvafe_cvd2_adj_hs(&tvafe->cvd2, hcnt64);
+		} else if (tvafe->parm.info.fmt == TVIN_SIG_FMT_CVBS_NTSC_M) {
+			tvafe_cvd2_adj_hs_ntsc(&tvafe->cvd2, hcnt64);
+		}
+	}
 
 	aspect_ratio = tvafe_cvd2_get_wss();
 	switch (aspect_ratio) {
@@ -1019,7 +1043,7 @@ static long tvafe_ioctl(struct file *file,
 				unsigned int cmd, unsigned long arg)
 {
 	long ret = 0;
-	unsigned int snowcfg = 0;
+	unsigned int temp = 0;
 	void __user *argp = (void __user *)arg;
 	struct tvafe_dev_s *devp = file->private_data;
 	struct tvafe_info_s *tvafe = &devp->tvafe;
@@ -1067,13 +1091,12 @@ static long tvafe_ioctl(struct file *file,
 		}
 	case TVIN_IOC_S_AFE_SONWCFG:
 		/*tl1/txhd tvconfig snow en/disable*/
-		if (copy_from_user(&snowcfg, argp,
-			sizeof(unsigned int))) {
+		if (copy_from_user(&temp, argp, sizeof(unsigned int))) {
 			tvafe_pr_info("snowcfg: get param err\n");
 			ret = -EINVAL;
 			break;
 		}
-		if (snowcfg == 1)
+		if (temp == 1)
 			tvafe_set_snow_cfg(true);
 		else
 			tvafe_set_snow_cfg(false);
@@ -1121,6 +1144,18 @@ static long tvafe_ioctl(struct file *file,
 			ret = -EFAULT;
 		tvafe_pr_info("%s: ioctl get fmt:%s.\n",
 			__func__, tvin_sig_fmt_str(fmt));
+		break;
+	case TVIN_IOC_S_AFE_ATV_SEARCH:
+		if (copy_from_user(&temp, argp, sizeof(unsigned int))) {
+			tvafe_pr_info("set atv_search: get param err\n");
+			ret = -EINVAL;
+			break;
+		}
+		if (temp)
+			tvafe_atv_search_channel = true;
+		else
+			tvafe_atv_search_channel = false;
+		tvafe_pr_info("set atv_search: %d\n", tvafe_atv_search_channel);
 		break;
 	default:
 		ret = -ENOIOCTLCMD;
@@ -1566,6 +1601,7 @@ static int tvafe_drv_probe(struct platform_device *pdev)
 
 	disableapi = false;
 	force_stable = false;
+	tvafe_atv_search_channel = false;
 
 	tvafe_pr_info("driver probe ok\n");
 

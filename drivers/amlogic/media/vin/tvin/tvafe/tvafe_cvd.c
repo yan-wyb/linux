@@ -77,8 +77,8 @@
 
 /* wait for signal stable */
 #define FMT_WAIT_CNT 15
-#define NTSC_SW_MAXCNT 20
-#define NTSC_SW_MIDCNT 40
+#define NTSC_SW_MAXCNT 40
+#define NTSC_SW_MIDCNT 20
 
 /*threshold for 4xx or 3xx valid*/
 #define CNT_VLD_TH 0x30
@@ -1462,7 +1462,10 @@ static bool tvafe_cvd2_condition_shift(struct tvafe_cvd2_s *cvd2)
 					__func__);
 			}
 		}
+
+		return true;
 	}
+
 	if (((cvd2->vd_port == TVIN_PORT_CVBS3) ||
 		(cvd2->vd_port == TVIN_PORT_CVBS0)) &&
 		force_fmt_flag) {

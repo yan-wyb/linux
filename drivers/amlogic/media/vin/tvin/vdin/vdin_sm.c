@@ -89,7 +89,7 @@ static int atv_stable_fmt_check_enable;
  *gxtvbb add atv snow config,the config will affect signal detect.
  *ensure after prestable into stable,the state is really stable!
  */
-static int atv_prestable_out_cnt = 100;
+static int atv_prestable_out_cnt = 50;
 static int other_stable_out_cnt = EXIT_STABLE_MAX_CNT;
 static int other_unstable_out_cnt = BACK_STABLE_MAX_CNT;
 static int manual_unstable_out_cnt = 30;

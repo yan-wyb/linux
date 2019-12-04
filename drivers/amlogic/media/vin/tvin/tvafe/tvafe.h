@@ -32,7 +32,7 @@
 /* ************************************************* */
 /* *** macro definitions ********************************************* */
 /* *********************************************************** */
-#define TVAFE_VER "Ref.2019/08/08"
+#define TVAFE_VER "Ref.2019/12/04"
 
 /* used to set the flag of tvafe_dev_s */
 #define TVAFE_FLAG_DEV_OPENED 0x00000010
@@ -145,6 +145,7 @@ unsigned int cvd_get_shift_cnt(enum tvafe_cvd2_shift_cnt_e src);
 
 extern bool disableapi;
 extern bool force_stable;
+extern bool tvafe_atv_search_channel;
 
 extern unsigned int force_nostd;
 

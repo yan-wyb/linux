@@ -477,6 +477,14 @@ static ssize_t tvafe_store(struct device *dev,
 		}
 		pr_info("[tvafe..]%s: tvafe_vs_test = 0x%x\n",
 			__func__, tvafe_vs_test);
+	} else if (!strncmp(buff, "search", strlen("search"))) {
+		if (parm[1]) {
+			if (kstrtouint(parm[1], 16, &val) < 0)
+				goto tvafe_store_err;
+			tvafe_atv_search_channel = (val ? true : false);
+		}
+		pr_info("[tvafe..]%s: tvafe_atv_search_channel = %d\n",
+			__func__, tvafe_atv_search_channel);
 	} else if (!strncmp(buff, "dbg_print", strlen("dbg_print"))) {
 		if (parm[1]) {
 			if (kstrtouint(parm[1], 16, &tvafe_dbg_print) < 0)
