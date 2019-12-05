@@ -177,9 +177,10 @@ struct bl_config_s {
 /* backlight_properties: state */
 /* Flags used to signal drivers of state changes */
 /* Upper 4 bits in bl props are reserved for driver internal use */
-#define BL_STATE_LCD_ON               (1 << 3)
-#define BL_STATE_BL_POWER_ON          (1 << 1)
-#define BL_STATE_BL_ON                (1 << 0)
+#define BL_STATE_LCD_ON               BIT(3)
+#define BL_STATE_BL_INIT_ON           BIT(2)
+#define BL_STATE_BL_POWER_ON          BIT(1)
+#define BL_STATE_BL_ON                BIT(0)
 struct aml_bl_drv_s {
 	unsigned int index;
 	unsigned int level;

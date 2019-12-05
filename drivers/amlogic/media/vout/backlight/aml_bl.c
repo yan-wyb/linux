@@ -622,7 +622,8 @@ void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status)
 
 static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
 {
-	if (bl_drv->state & BL_STATE_BL_ON) {
+	if ((bl_drv->state & BL_STATE_BL_ON) ||
+	    (bl_drv->state & BL_STATE_BL_INIT_ON)) {
 		bl_pwm_ctrl(bl_pwm, 1);
 	} else {
 		if (bl_debug_print_flag)
@@ -1208,7 +1209,6 @@ static unsigned int aml_bl_update_brightness_level(unsigned int brightness)
 {
 	unsigned int bl_level = brightness;
 
-	mutex_lock(&bl_level_mutex);
 	if (bl_level > 255) {
 		BLPR("0-255 is the valid data\n");
 		bl_level = 255;
@@ -1231,7 +1231,7 @@ static unsigned int aml_bl_update_brightness_level(unsigned int brightness)
 		BLPR("%s: %u, real brightness: %u, state: 0x%x\n",
 		     __func__, brightness, bl_level, bl_drv->state);
 	}
-	mutex_unlock(&bl_level_mutex);
+
 	return 0;
 }
 
@@ -1240,7 +1240,9 @@ static int aml_bl_update_status(struct backlight_device *bd)
 	if (brightness_bypass)
 		return 0;
 
+	mutex_lock(&bl_level_mutex);
 	aml_bl_update_brightness_level(bd->props.brightness);
+	mutex_unlock(&bl_level_mutex);
 	return 0;
 }
 
@@ -2194,7 +2196,6 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 /* lcd notify */
 static void aml_bl_step_on(int brightness)
 {
-	mutex_lock(&bl_level_mutex);
 	BLPR("bl_step_on level: %d\n", brightness);
 
 	if (brightness == 0) {
@@ -2206,18 +2207,20 @@ static void aml_bl_step_on(int brightness)
 			bl_power_on();
 	}
 	msleep(120);
-	mutex_unlock(&bl_level_mutex);
 }
 
 static void aml_bl_on_function(void)
 {
+	mutex_lock(&bl_level_mutex);
+
 	/* lcd power on backlight flag */
 	bl_drv->state |= (BL_STATE_LCD_ON | BL_STATE_BL_POWER_ON);
-	BLPR("%s: bl_level=%u, state=0x%x\n",
-		__func__, bl_drv->level, bl_drv->state);
+	BLPR("%s: bl_step_on_flag=%d, bl_level=%u, state=0x%x\n",
+	     __func__, bl_step_on_flag, bl_drv->level, bl_drv->state);
 	if (brightness_bypass)
 		bl_drv->bldev->props.brightness = bl_drv->level;
 
+	bl_drv->state |= BL_STATE_BL_INIT_ON;
 	switch (bl_step_on_flag) {
 	case 1:
 		aml_bl_step_on(bl_drv->bconf->level_default);
@@ -2233,6 +2236,9 @@ static void aml_bl_on_function(void)
 		break;
 	}
 	aml_bl_update_brightness_level(bl_drv->bldev->props.brightness);
+	bl_drv->state &= ~(BL_STATE_BL_INIT_ON);
+
+	mutex_unlock(&bl_level_mutex);
 }
 
 static void aml_bl_delayd_on(struct work_struct *work)
@@ -2291,11 +2297,14 @@ static int aml_bl_off_notifier(struct notifier_block *nb,
 
 	bl_on_request = 0;
 	bl_drv->state &= ~(BL_STATE_LCD_ON | BL_STATE_BL_POWER_ON);
+	mutex_lock(&bl_level_mutex);
 	if (brightness_bypass) {
 		if (bl_drv->state & BL_STATE_BL_ON)
 			bl_power_off();
-	} else
+	} else {
 		aml_bl_update_brightness_level(bl_drv->bldev->props.brightness);
+	}
+	mutex_unlock(&bl_level_mutex);
 
 	return NOTIFY_OK;
 }
@@ -2323,11 +2332,13 @@ static inline int aml_bl_pwm_vs_lcd_update(struct bl_pwm_config_s *bl_pwm)
 	if (cnt == bl_pwm->pwm_cnt)
 		return 0;
 
+	mutex_lock(&bl_level_mutex);
 	bl_pwm_config_init(bl_pwm);
 	if (brightness_bypass)
 		bl_set_duty_pwm(bl_pwm);
 	else
 		aml_bl_update_brightness_level(bl_drv->bldev->props.brightness);
+	mutex_unlock(&bl_level_mutex);
 
 	return 0;
 }
@@ -2898,6 +2909,8 @@ static void bl_debug_pwm_set(unsigned int index, unsigned int value, int state)
 	if (aml_bl_check_driver())
 		return;
 
+	mutex_lock(&bl_level_mutex);
+
 	switch (bconf->method) {
 	case BL_CTRL_PWM:
 		bl_pwm = bconf->bl_pwm;
@@ -3003,6 +3016,7 @@ static void bl_debug_pwm_set(unsigned int index, unsigned int value, int state)
 			break;
 		}
 	}
+	mutex_unlock(&bl_level_mutex);
 }
 
 static ssize_t bl_debug_pwm_store(struct class *class,
@@ -3257,11 +3271,14 @@ static ssize_t bl_debug_brightness_store(struct class *class,
 	if (!brightness_bypass)
 		brightness_bypass = 1;
 
+	mutex_lock(&bl_level_mutex);
 	ret = aml_bl_update_brightness_level(brightness_level);
 	if (ret == 0)
 		BLPR("brightness %d update ok\n", brightness_level);
 	else
 		BLERR("update fail\n");
+	mutex_unlock(&bl_level_mutex);
+
 	return count;
 }
 
@@ -3471,10 +3488,12 @@ static void aml_bl_init_status_update(void)
 			BL_STATE_BL_POWER_ON | BL_STATE_BL_ON);
 	bl_on_request = 1;
 
+	mutex_lock(&bl_level_mutex);
 	if (brightness_bypass)
 		aml_bl_set_level(bl_on_level);
 	else
 		aml_bl_update_brightness_level(bl_drv->bldev->props.brightness);
+	mutex_unlock(&bl_level_mutex);
 
 	switch (bl_drv->bconf->method) {
 	case BL_CTRL_PWM:
