@@ -781,8 +781,10 @@ static void set_combing_regs(int lvl, int bit_mode)
 			 *confirmed with vlsi-baozheng, G12a/G12B/SM1
 			 *is same as TL1, Change the condition to cpu after G12a
 			 */
-		if (((bit_mode != 10) || cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
-			&& combing_setting_registers[i] == NR2_MATNR_DEGHOST)
+		if (((bit_mode != 10) ||
+		     cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) ||
+		     is_meson_txlx_cpu()) &&
+		    combing_setting_registers[i] == NR2_MATNR_DEGHOST)
 			break;
 		else if (i < GXTVBB_REG_START) {
 			/* TODO: need change to check if
