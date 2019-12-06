@@ -87,6 +87,7 @@ struct loopback {
 	struct toddr *tddr;
 
 	struct loopback_chipinfo *chipinfo;
+	bool vad_running;
 };
 
 #define LOOPBACK_RATES      (SNDRV_PCM_RATE_8000_192000)
@@ -123,9 +124,17 @@ static irqreturn_t loopback_ddr_isr(int irq, void *data)
 	struct device *dev = rtd->platform->dev;
 	struct loopback *p_loopback = (struct loopback *)dev_get_drvdata(dev);
 	unsigned int status;
+	bool vad_running = vad_lb_is_running(p_loopback->id);
 
 	if (!snd_pcm_running(ss))
 		return IRQ_NONE;
+
+	if (p_loopback->vad_running != vad_running) {
+		if (p_loopback->vad_running)
+			snd_pcm_stop_xrun(ss);
+
+		p_loopback->vad_running = vad_running;
+	}
 
 	status = aml_toddr_get_status(p_loopback->tddr) & MEMIF_INT_MASK;
 	if (status & MEMIF_INT_COUNT_REPEAT) {
