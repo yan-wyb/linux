@@ -53,7 +53,7 @@
 #define SCRAMBLE_SEL 1
 #define HYST_HDMI_TO_DVI 5
 /* must = 0, other agilent source fail */
-#define HYST_DVI_TO_HDMI 1
+#define HYST_DVI_TO_HDMI 0
 #define GCP_GLOBAVMUTE_EN 1 /* ag506 must clear this bit */
 #define EDID_CLK_DIV 9 /* sys clk/(9+1) = 20M */
 #define HDCP_KEY_WR_TRIES		(5)
