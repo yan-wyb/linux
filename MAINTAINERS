@@ -15217,3 +15217,14 @@ F: include/linux/amlogic/media/video_sink/v4lvideo_ext.h
 AMLOGIC POWER DOMAIN DRIVER
 M:	Zhiqiang Liang <zhiqiang.liang@amlogic.com>
 F: 	drivers/amlogic/power/power_domain.c
+
+AMLOGIC TM2 BUILDROOR DTS
+M:  Guofeng Tang <Guofeng.Tang@amlogic.com>
+F:  arch/arm/boot/dts/amlogic/tm2_t962e2_ab311_buildroot.dts
+F:  arch/arm/boot/dts/amlogic/tm2_t962e2_ab311_drm_buildroot.dts
+F:  arch/arm/boot/dts/amlogic/tm2_t962x3_ab301_buildroot.dts
+F:  arch/arm/boot/dts/amlogic/tm2_t962x3_ab301_drm_buildroot.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_t962e2_ab311_buildroot.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_t962e2_ab311_drm_buildroot.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_t962x3_ab301_buildroot.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_t962x3_ab301_drm_buildroot.dts
