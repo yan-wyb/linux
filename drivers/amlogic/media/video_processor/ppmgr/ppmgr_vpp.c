@@ -1224,6 +1224,9 @@ static void process_vf_rotate(struct vframe_s *vf,
 	if (vf->type & VIDTYPE_MVC)
 		pp_vf->dec_frame = vf;
 
+	if (vf->type & VIDTYPE_PIC)
+		pp_vf->dec_frame = vf;
+
 	if (vf->type & VIDTYPE_COMPRESS) {
 		if (vf->canvas0Addr != (u32)-1) {
 			canvas_copy(vf->canvas0Addr & 0xff,
