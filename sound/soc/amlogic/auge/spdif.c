@@ -32,6 +32,7 @@
 #include <sound/control.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
+#include <sound/asoundef.h>
 
 #include "ddr_mngr.h"
 #include "spdif_hw.h"
@@ -223,6 +224,15 @@ static int spdifin_check_audio_type(void)
 	int pc = spdifin_get_audio_type();
 	int audio_type = 0;
 	int i;
+	bool is_raw = spdifin_get_ch_status0to31() & IEC958_AES0_NONAUDIO;
+
+	/*
+	 * Raw->pcm case, the HW Pc & Pd would keep the value.
+	 * So we need check channel status first.
+	 * If it's non-pcm audio, then get the audio type from Pc reg.
+	 */
+	if (!is_raw)
+		return 0;
 
 	for (i = 0; i < total_num; i++) {
 		if (pc == type_texts[i].pc) {
