@@ -2386,8 +2386,6 @@ static int hdmirx_probe(struct platform_device *pdev)
 		clk_rate = clk_get_rate(hdevp->cfg_clk);
 	}
 
-	hdcp22_on = rx_is_hdcp22_support();
-
 	hdevp->esm_clk = clk_get(&pdev->dev, "hdcp_rx22_esm");
 	if (IS_ERR(hdevp->esm_clk)) {
 		rx_pr("get esm_clk err\n");
@@ -2525,7 +2523,17 @@ static int hdmirx_probe(struct platform_device *pdev)
 		rx.arc_port = 0x1;
 		rx_pr("not find arc_port, portB by default\n");
 	}
-
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "hdcp_tee_path",
+						&hdcp_tee_path);
+	if (ret) {
+		hdcp_tee_path = 0;
+		rx_pr("not find hdcp_tee_path, hdcp normal path\n");
+	}
+	if (hdcp_tee_path)
+		hdcp22_on = 1;
+	else
+		hdcp22_on = rx_is_hdcp22_support();
 	ret = of_reserved_mem_device_init(&(pdev->dev));
 	if (ret != 0)
 		rx_pr("warning: no rev cmd mem\n");

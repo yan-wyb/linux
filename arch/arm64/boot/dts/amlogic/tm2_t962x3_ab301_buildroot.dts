@@ -859,6 +859,7 @@
 		 * bit [3:0]: tdr level control
 		 */
 		term_lvl = <0x11>;
+		hdcp_tee_path = <1>;
 		interrupts = <0 41 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc CLKID_HDMIRX_MODET_COMP>,
 			   <&clkc CLKID_HDMIRX_CFG_COMP>,

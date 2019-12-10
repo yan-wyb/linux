@@ -1125,6 +1125,7 @@ extern bool hdcp_hpd_ctrl_en;
 extern int eq_dbg_lvl;
 extern int phy_term_lel;
 extern bool phy_tdr_en;
+extern int hdcp_tee_path;
 
 extern void rx_get_best_eq_setting(void);
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
@@ -1315,6 +1316,7 @@ extern void hdmirx_top_irq_en(bool flag);
 void rx_phy_rt_cal(void);
 bool is_ft_trim_done(void);
 void aml_phy_get_trim_val(void);
+unsigned int rx_set_hdcp14_secure_key(void);
 #endif
 
 

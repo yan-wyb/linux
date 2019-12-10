@@ -114,7 +114,7 @@ u32 phy_trim_val;
  */
 int phy_term_lel;
 bool phy_tdr_en;
-
+int hdcp_tee_path;
 /*------------------------variable define end------------------------------*/
 
 static int check_regmap_flag(unsigned int addr)
@@ -1519,8 +1519,7 @@ void rx_hdcp14_config(const struct hdmi_rx_hdcp *hdcp)
 	/* hdmirx_wr_bits_dwc(ctx, DWC_HDCP_CTRL, KEY_DECRYPT_ENABLE, 1); */
 	hdmirx_wr_bits_dwc(DWC_HDCP_CTRL, KEY_DECRYPT_ENABLE, 0);
 	hdmirx_wr_dwc(DWC_HDCP_SEED, hdcp->seed);
-	if (hdcp14_key_mode == SECURE_MODE) {
-		rx_set_hdcp14_secure_key();
+	if (hdcp14_key_mode == SECURE_MODE || rx_set_hdcp14_secure_key()) {
 		rx_pr("hdcp1.4 secure mode\n");
 	} else {
 		rx_hdcp14_set_normal_key(&rx.hdcp);
