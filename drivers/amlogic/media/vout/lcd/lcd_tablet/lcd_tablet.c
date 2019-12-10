@@ -239,6 +239,10 @@ static int lcd_set_vframe_rate_hint(int duration)
 		return 0;
 	}
 
+	if (lcd_drv->lcd_config->lcd_timing.fr_adjust_type == 0xff) {
+		LCDPR("%s: fixed timing, exit\n", __func__);
+		return 0;
+	}
 	info = lcd_drv->lcd_info;
 
 	fr_policy = lcd_drv->fr_auto_policy;
@@ -298,6 +302,10 @@ static int lcd_set_vframe_rate_end_hint(void)
 		return 0;
 	}
 
+	if (lcd_drv->lcd_config->lcd_timing.fr_adjust_type == 0xff) {
+		LCDPR("%s: fixed timing, exit\n", __func__);
+		return 0;
+	}
 	if (lcd_debug_print_flag)
 		LCDPR("fr_auto_policy = %d\n", lcd_drv->fr_auto_policy);
 	if (lcd_drv->fr_auto_policy) {
