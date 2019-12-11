@@ -589,10 +589,8 @@ static int loopback_set_ctrl(struct loopback *p_loopback, int bitwidth)
 		datain_cfg.type       = datain_toddr_type;
 		datain_cfg.m          = datain_msb;
 		datain_cfg.n          = datain_lsb;
-		datalb_cfg.datalb_src  = 0; /* todo: tdmin_LB */
-		/* get resample B status */
-		datalb_cfg.resample_enable =
-			(unsigned int)get_resample_enable(RESAMPLE_B);
+		datain_cfg.src        = p_loopback->datain_src;
+
 		lb_set_datain_cfg(p_loopback->id, &datain_cfg);
 	}
 
@@ -625,7 +623,10 @@ static int loopback_set_ctrl(struct loopback *p_loopback, int bitwidth)
 		datalb_cfg.type        = datalb_toddr_type;
 		datalb_cfg.m           = datalb_msb;
 		datalb_cfg.n           = datalb_lsb;
-		datalb_cfg.datalb_src  = p_loopback->datalb_src;
+		datalb_cfg.datalb_src  = 0; /* todo: tdmin_LB */
+		/* get resample B status */
+		datalb_cfg.resample_enable =
+			(unsigned int)get_resample_enable(RESAMPLE_B);
 
 		lb_set_datalb_cfg(p_loopback->id, &datalb_cfg);
 	}
@@ -893,7 +894,6 @@ static int loopback_dai_hw_params(
 	struct snd_pcm_hw_params *params,
 	struct snd_soc_dai *dai)
 {
-	struct snd_pcm_runtime *runtime = ss->runtime;
 	struct loopback *p_loopback = snd_soc_dai_get_drvdata(dai);
 	unsigned int rate, channels;
 	snd_pcm_format_t format;
@@ -937,7 +937,7 @@ static int loopback_dai_hw_params(
 			break;
 		}
 	}
-	loopback_set_clk(p_loopback, runtime->rate, true);
+	loopback_set_clk(p_loopback, rate, true);
 
 	return ret;
 }
