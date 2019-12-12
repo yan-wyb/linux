@@ -3082,7 +3082,6 @@ void vdin_set_default_regmap(unsigned int offset)
 	/* [    0]     clkgate.bbar             = 0/(auto, off!!!!!!!!) */
 	wr(offset, VDIN_COM_GCLK_CTRL, 0x00000000);
 
-
 	/* [12: 0]  decimation.output_width_m1  = 0 */
 	wr(offset, VDIN_INTF_WIDTHM1, 0x00000000);
 

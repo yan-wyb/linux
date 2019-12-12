@@ -1540,12 +1540,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	long long vlock_delay_jiffies, vlock_t1;
 	enum vdin_vf_put_md put_md = VDIN_VF_PUT;
 	int ret;
-
-	/* debug interrupt interval time
-	 *
-	 * this code about system time must be outside of spinlock.
-	 * because the spinlock may affect the system time.
-	 */
+	static unsigned int pre_ms, cur_ms;
 
 	/* avoid null pointer oops */
 	if (!devp)
@@ -1556,6 +1551,21 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		vdin_drop_frame_info(devp, "no frontend");
 		return IRQ_HANDLED;
 	}
+
+	sm_ops = devp->frontend->sm_ops;
+	cur_ms = jiffies_to_msecs(jiffies);
+
+	if (is_meson_tm2_cpu() && cur_ms - pre_ms < 10 &&
+	    IS_HDMI_SRC(devp->parm.port)) {
+		if (sm_ops->hdmi_clr_vsync)
+			sm_ops->hdmi_clr_vsync(devp->frontend);
+		else
+			pr_err("hdmi_clr_vsync is NULL\n ");
+
+		return IRQ_HANDLED;
+	}
+
+	pre_ms = cur_ms;
 
 	/* ignore fake irq caused by sw reset*/
 	if (devp->vdin_reset_flag) {
@@ -1681,9 +1691,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	}
 
 	devp->hcnt64 = vdin_get_meas_hcnt64(offset);
-
-	sm_ops = devp->frontend->sm_ops;
-
 	last_field_type = devp->curr_field_type;
 	devp->curr_field_type = vdin_get_curr_field_type(devp);
 

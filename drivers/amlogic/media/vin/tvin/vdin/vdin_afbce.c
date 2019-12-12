@@ -100,6 +100,18 @@ void vdin_write_mif_or_afbce_init(struct vdin_dev_s *devp)
 				0, VDIN0_OUT_AFBCE_BIT, 1);
 			W_VCBUS_BIT(VDIN_MISC_CTRL,
 				1, VDIN0_OUT_MIF_BIT, 1);
+
+			/* axi write protection
+			 * for HDMI cable plug/unplug crash issue
+			 */
+			if (is_meson_tm2_cpu()) {
+				W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 0x8000,
+					    HOLD_NUM_BIT, HOLD_NUM_WID);
+				W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 1,
+					    PROTECT_EN1_BIT, PROTECT_EN_WID);
+				W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 1,
+					    PROTECT_EN21_BIT, PROTECT_EN_WID);
+			}
 		} else if (sel == VDIN_OUTPUT_TO_AFBCE) {
 			W_VCBUS_BIT(VDIN_MISC_CTRL,
 				1, VDIN0_MIF_ENABLE_BIT, 1);
@@ -107,6 +119,12 @@ void vdin_write_mif_or_afbce_init(struct vdin_dev_s *devp)
 				0, VDIN0_OUT_MIF_BIT, 1);
 			W_VCBUS_BIT(VDIN_MISC_CTRL,
 				1, VDIN0_OUT_AFBCE_BIT, 1);
+
+			/* axi write protection
+			 * for HDMI cable plug/unplug crash issue
+			 */
+			if (is_meson_tm2_cpu())
+				W_VCBUS(VPU_AXI_WR_PROTECT, 0);
 
 			vdin_afbce_hw_enable();
 		}
@@ -129,6 +147,19 @@ void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
 			rdma_write_reg_bits(devp->rdma_handle,
 				VDIN_TOP_DOUBLE_CTRL, WR_SEL_DIS,
 				AFBCE_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+
+			/* axi write protection
+			 * for HDMI cable plug/unplug crash issue
+			 */
+			rdma_write_reg_bits(devp->rdma_handle,
+					    VPU_AXI_WR_PROTECT, 0x8000,
+					    HOLD_NUM_BIT, HOLD_NUM_WID);
+			rdma_write_reg_bits(devp->rdma_handle,
+					    VPU_AXI_WR_PROTECT, 1,
+					    PROTECT_EN1_BIT, PROTECT_EN_WID);
+			rdma_write_reg_bits(devp->rdma_handle,
+					    VPU_AXI_WR_PROTECT, 1,
+					    PROTECT_EN21_BIT, PROTECT_EN_WID);
 		}
 
 		rdma_write_reg_bits(devp->rdma_handle, AFBCE_ENABLE, 0, 8, 1);
@@ -144,6 +175,12 @@ void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
 			rdma_write_reg_bits(devp->rdma_handle,
 				VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_NOR,
 				AFBCE_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+
+			/* axi write protection
+			 * for HDMI cable plug/unplug crash issue
+			 */
+			rdma_write_reg(devp->rdma_handle, VPU_AXI_WR_PROTECT,
+				       0);
 		}
 
 		rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,

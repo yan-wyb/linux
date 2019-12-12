@@ -1000,6 +1000,11 @@ bool hdmirx_dv_config(bool en, struct tvin_frontend_s *fe)
 	return true;
 }
 
+bool hdmirx_clr_vsync(struct tvin_frontend_s *fe)
+{
+	return rx_clr_tmds_valid();
+}
+
 static struct tvin_state_machine_ops_s hdmirx_sm_ops = {
 	.nosig            = hdmirx_is_nosig,
 	.fmt_changed      = hdmirx_fmt_chg,
@@ -1012,6 +1017,7 @@ static struct tvin_state_machine_ops_s hdmirx_sm_ops = {
 	.vga_get_param    = NULL,
 	.check_frame_skip = hdmirx_check_frame_skip,
 	.hdmi_dv_config   = hdmirx_dv_config,
+	.hdmi_clr_vsync	= hdmirx_clr_vsync,
 };
 
 /*

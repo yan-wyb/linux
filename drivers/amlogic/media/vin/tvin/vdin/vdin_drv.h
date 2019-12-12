@@ -109,7 +109,7 @@
 /* #define VDIN_DEBUG */
 
 #define IS_HDMI_SRC(src) (((src) >= TVIN_PORT_HDMI0) && \
-				((port) <= TVIN_PORT_HDMI7))
+				((src) <= TVIN_PORT_HDMI7))
 
 /*vdin write mem color-depth support*/
 enum VDIN_WR_COLOR_DEPTHe {

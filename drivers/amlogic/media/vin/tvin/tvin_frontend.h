@@ -64,6 +64,7 @@ struct tvin_state_machine_ops_s {
 	bool (*check_frame_skip)(struct tvin_frontend_s *fe);
 	bool (*get_secam_phase)(struct tvin_frontend_s *fe);
 	bool (*hdmi_dv_config)(bool en, struct tvin_frontend_s *fe);
+	bool (*hdmi_clr_vsync)(struct tvin_frontend_s *fe);
 };
 
 struct tvin_frontend_s {

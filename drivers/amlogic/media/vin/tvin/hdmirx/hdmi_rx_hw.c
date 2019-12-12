@@ -1549,24 +1549,43 @@ void rx_set_term_enable(bool enable)
 }
 #endif
 
+/* rst cdr to clr tmds_valid */
+bool rx_clr_tmds_valid(void)
+{
+	u32 addr = HHI_HDMIRX_PHY_MISC_CNTL0;
+
+	if (rx.chip_id < CHIP_ID_TL1)
+		return false;
+
+	wr_reg_hhi_bits(addr, MSK(3, 7), 0);
+
+	return true;
+}
+
 void rx_set_term_value(unsigned char port, bool value)
 {
 	unsigned int data32;
 
 	if (rx.chip_id >= CHIP_ID_TL1) {
-		/* need to do : for tl1 */
 		data32 = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0);
 		if (port < E_PORT3) {
 			if (value)
 				data32 |= (1 << port);
-			else
+			else {
+				/* rst cdr to clr tmds_valid */
+				data32 &= ~(MSK(3, 7));
 				data32 &= ~(1 << port);
+			}
 			wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, data32);
 		} else if (port == ALL_PORTS) {
 			if (value)
 				data32 |= 0x7;
-			else
-				data32 &= 0xfffffff8;
+			else {
+				/* rst cdr to clr tmds_valid */
+				data32 &= 0xfffffc78;
+				data32 |= (MSK(3, 7));
+				/* data32 &= 0xfffffff8; */
+			}
 			wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, data32);
 		} else
 			rx_pr("%s port num overflow\n", __func__);

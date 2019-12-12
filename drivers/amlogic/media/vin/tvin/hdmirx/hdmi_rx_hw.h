@@ -1317,6 +1317,7 @@ void rx_phy_rt_cal(void);
 bool is_ft_trim_done(void);
 void aml_phy_get_trim_val(void);
 unsigned int rx_set_hdcp14_secure_key(void);
+bool rx_clr_tmds_valid(void);
 #endif
 
 
