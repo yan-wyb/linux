@@ -183,7 +183,7 @@
 		};
 	}; /* end of reserved-memory */
 	galcore {
-		status = "disabled";
+		status = "okay";
 	};
 	codec_mm {
 		compatible = "amlogic, codec, mm";

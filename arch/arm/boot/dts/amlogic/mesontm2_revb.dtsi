@@ -1381,7 +1381,7 @@
 	galcore {
 		compatible = "amlogic, galcore";
 		dev_name = "galcore";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 147 4>;
 		interrupt-names = "galcore";
 		reg = <0xff100000 0x800
