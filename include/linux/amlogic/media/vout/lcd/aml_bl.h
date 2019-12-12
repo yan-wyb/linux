@@ -131,6 +131,7 @@ struct bl_pwm_config_s {
 	unsigned int level_min;
 	unsigned int pwm_freq; /* pwm_vs: 1~4(vfreq), pwm: freq(unit: Hz) */
 	unsigned int pwm_duty; /* unit: % */
+	unsigned int pwm_duty_save; /* unit: %, for power on recovery */
 	unsigned int pwm_duty_max; /* unit: % */
 	unsigned int pwm_duty_min; /* unit: % */
 	unsigned int pwm_cnt; /* internal used for pwm control */

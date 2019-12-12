@@ -622,6 +622,9 @@ void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status)
 
 static void bl_set_pwm(struct bl_pwm_config_s *bl_pwm)
 {
+	if ((bl_drv->state & BL_STATE_BL_INIT_ON) == 0)
+		bl_pwm->pwm_duty_save = bl_pwm->pwm_duty;
+
 	if ((bl_drv->state & BL_STATE_BL_ON) ||
 	    (bl_drv->state & BL_STATE_BL_INIT_ON)) {
 		bl_pwm_ctrl(bl_pwm, 1);
@@ -2194,48 +2197,85 @@ static int aml_bl_config_load(struct bl_config_s *bconf,
 }
 
 /* lcd notify */
-static void aml_bl_step_on(int brightness)
-{
-	BLPR("bl_step_on level: %d\n", brightness);
-
-	if (brightness == 0) {
-		if (bl_drv->state & BL_STATE_BL_ON)
-			bl_power_off();
-	} else {
-		aml_bl_set_level(brightness);
-		if ((bl_drv->state & BL_STATE_BL_ON) == 0)
-			bl_power_on();
-	}
-	msleep(120);
-}
-
 static void aml_bl_on_function(void)
 {
+	struct bl_config_s *bconf;
+	unsigned int brightness;
+
 	mutex_lock(&bl_level_mutex);
 
 	/* lcd power on backlight flag */
 	bl_drv->state |= (BL_STATE_LCD_ON | BL_STATE_BL_POWER_ON);
 	BLPR("%s: bl_step_on_flag=%d, bl_level=%u, state=0x%x\n",
 	     __func__, bl_step_on_flag, bl_drv->level, bl_drv->state);
-	if (brightness_bypass)
-		bl_drv->bldev->props.brightness = bl_drv->level;
+	bconf = bl_drv->bconf;
+	brightness = bl_drv->bldev->props.brightness;
 
 	bl_drv->state |= BL_STATE_BL_INIT_ON;
 	switch (bl_step_on_flag) {
 	case 1:
-		aml_bl_step_on(bl_drv->bconf->level_default);
-		BLPR("bl_on level: %d\n",
-		     bl_drv->bldev->props.brightness);
+		BLPR("bl_step_on level: %d\n", bconf->level_default);
+		aml_bl_update_brightness_level(bconf->level_default);
+		msleep(120);
+		if (brightness_bypass) {
+			switch (bconf->method) {
+			case BL_CTRL_PWM:
+				bconf->bl_pwm->pwm_duty =
+					bconf->bl_pwm->pwm_duty_save;
+				bl_set_duty_pwm(bconf->bl_pwm);
+				break;
+			case BL_CTRL_PWM_COMBO:
+				bconf->bl_pwm_combo0->pwm_duty =
+					bconf->bl_pwm_combo0->pwm_duty_save;
+				bconf->bl_pwm_combo1->pwm_duty =
+					bconf->bl_pwm_combo1->pwm_duty_save;
+				bl_set_duty_pwm(bconf->bl_pwm_combo0);
+				bl_set_duty_pwm(bconf->bl_pwm_combo1);
+				break;
+			default:
+				break;
+			}
+		} else {
+			BLPR("bl_on level: %d\n", brightness);
+			aml_bl_update_brightness_level(brightness);
+		}
 		break;
 	case 2:
-		bl_drv->bldev->props.brightness = bl_level_uboot;
-		BLPR("bl_on level: %d\n",
-		     bl_drv->bldev->props.brightness);
+		BLPR("bl_step_on level: %d\n", bl_level_uboot);
+		aml_bl_update_brightness_level(bl_level_uboot);
+		msleep(120);
+		if (brightness_bypass) {
+			switch (bconf->method) {
+			case BL_CTRL_PWM:
+				bconf->bl_pwm->pwm_duty =
+					bconf->bl_pwm->pwm_duty_save;
+				bl_set_duty_pwm(bconf->bl_pwm);
+				break;
+			case BL_CTRL_PWM_COMBO:
+				bconf->bl_pwm_combo0->pwm_duty =
+					bconf->bl_pwm_combo0->pwm_duty_save;
+				bconf->bl_pwm_combo1->pwm_duty =
+					bconf->bl_pwm_combo1->pwm_duty_save;
+				bl_set_duty_pwm(bconf->bl_pwm_combo0);
+				bl_set_duty_pwm(bconf->bl_pwm_combo1);
+				break;
+			default:
+				break;
+			}
+		} else {
+			BLPR("bl_on level: %d\n", brightness);
+			aml_bl_update_brightness_level(brightness);
+		}
 		break;
 	default:
+		if (brightness_bypass) {
+			if ((bl_drv->state & BL_STATE_BL_ON) == 0)
+				bl_power_on();
+		} else {
+			aml_bl_update_brightness_level(brightness);
+		}
 		break;
 	}
-	aml_bl_update_brightness_level(bl_drv->bldev->props.brightness);
 	bl_drv->state &= ~(BL_STATE_BL_INIT_ON);
 
 	mutex_unlock(&bl_level_mutex);
