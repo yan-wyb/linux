@@ -597,52 +597,14 @@ void spdif_set_channel_status_info(
 	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
 	audiobus_update_bits(reg, 0x1 << 24, 0x0 << 24);
 
+	/* channel status a */
 	offset = EE_AUDIO_SPDIFOUT_B_CHSTS0 - EE_AUDIO_SPDIFOUT_CHSTS0;
 	reg = EE_AUDIO_SPDIFOUT_CHSTS0 + offset * spdif_id;
 	audiobus_write(reg, chsts->chstat1_l << 16 | chsts->chstat0_l);
 
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS1 - EE_AUDIO_SPDIFOUT_CHSTS1;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS1 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_l << 16 | chsts->chstat0_l);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS2 - EE_AUDIO_SPDIFOUT_CHSTS2;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS2 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_l << 16 | chsts->chstat0_l);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS3 - EE_AUDIO_SPDIFOUT_CHSTS3;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS3 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_l << 16 | chsts->chstat0_l);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS4 - EE_AUDIO_SPDIFOUT_CHSTS4;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS4 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_l << 16 | chsts->chstat0_l);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS5 - EE_AUDIO_SPDIFOUT_CHSTS5;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS5 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_l << 16 | chsts->chstat0_l);
-
+	/* channel status b */
 	offset = EE_AUDIO_SPDIFOUT_B_CHSTS6 - EE_AUDIO_SPDIFOUT_CHSTS6;
 	reg = EE_AUDIO_SPDIFOUT_CHSTS6 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS7 - EE_AUDIO_SPDIFOUT_CHSTS7;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS7 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS8 - EE_AUDIO_SPDIFOUT_CHSTS8;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS8 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTS9 - EE_AUDIO_SPDIFOUT_CHSTS9;
-	reg = EE_AUDIO_SPDIFOUT_CHSTS9 + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTSA - EE_AUDIO_SPDIFOUT_CHSTSA;
-	reg = EE_AUDIO_SPDIFOUT_CHSTSA + offset * spdif_id;
-	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
-
-	offset = EE_AUDIO_SPDIFOUT_B_CHSTSB - EE_AUDIO_SPDIFOUT_CHSTSB;
-	reg = EE_AUDIO_SPDIFOUT_CHSTSB + offset * spdif_id;
 	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
 }
 
@@ -684,7 +646,9 @@ void spdifout_play_with_zerodata(unsigned int spdif_id,
 			frddr_index, bitwidth, runtime.channels, 0);
 
 		/* channel status info */
-		spdif_get_channel_status_info(&chsts, sample_rate);
+		iec_get_channel_status_info(&chsts,
+					    AUD_CODEC_TYPE_STEREO_PCM,
+					    sample_rate);
 		spdif_set_channel_status_info(&chsts, spdif_id);
 
 		/* notify hdmitx audio */

@@ -14017,7 +14017,6 @@ M: Zhe Wang <zhe.wang@amlogic.com>
 F: sound/soc/amlogic/meson/*
 F: sound/soc/amlogic/auge/*
 F: sound/soc/codecs/amlogic/*
-F: sound/soc/codecs/amlogic/tas575x.c
 F: include/dt-bindings/clock/amlogic,axg-audio-clk.h
 
 AMLOGIC Security Support

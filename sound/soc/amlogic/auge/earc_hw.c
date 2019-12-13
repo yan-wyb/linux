@@ -19,7 +19,6 @@
 #include <linux/types.h>
 #include <linux/kernel.h>
 
-#include <linux/amlogic/media/sound/spdif_info.h>
 #include "earc_hw.h"
 
 void earcrx_pll_refresh(struct regmap *top_map)
@@ -126,12 +125,12 @@ void earcrx_cmdc_hpd_detect(struct regmap *cmdc_map, bool st)
 		/* soft reset */
 		mmio_update_bits(cmdc_map,
 				 EARC_RX_CMDC_TOP_CTRL1,
-				 0xf << 0,
-				 0xf << 0);
+				 0xf << 1,
+				 0xf << 1);
 		mmio_update_bits(cmdc_map,
 				 EARC_RX_CMDC_TOP_CTRL1,
-				 0xf << 0,
-				 0x0 << 0);
+				 0xf << 1,
+				 0x0 << 1);
 	}
 }
 
@@ -140,7 +139,7 @@ void earcrx_dmac_init(struct regmap *top_map, struct regmap *dmac_map)
 	mmio_write(top_map, EARCRX_DMAC_INT_MASK,
 		   (0x0 << 17) | /* earcrx_ana_rst c_new_format_set */
 		   (0x0 << 16) | /* earcrx_ana_rst c_earcrx_div2_hold_set */
-		   (0x0 << 15) | /* earcrx_err_correct c_bcherr_int_set */
+		   (0x1 << 15) | /* earcrx_err_correct c_bcherr_int_set */
 		   (0x0 << 14) | /* earcrx_err_correct r_afifo_overflow_set */
 		   (0x0 << 13) | /* earcrx_err_correct r_fifo_overflow_set */
 		   (0x0 << 12) | /* earcrx_user_bit_check r_fifo_overflow */
@@ -499,9 +498,13 @@ void earctx_dmac_init(struct regmap *top_map, struct regmap *dmac_map)
 			);
 
 	mmio_update_bits(dmac_map, EARCTX_ERR_CORRT_CTRL0,
+			 0x1 << 23 | /* reg_bch_in_reverse */
+			 0x1 << 21 | /* reg_bch_out_data_reverse */
 			 0x1 << 16 | /* reg_ubit_fifo_init_n */
 			 0x7 << 8  | /* r channel select */
 			 0x7 << 4,   /* l channel select */
+			 0x1 << 23 |
+			 0x1 << 21 |
 			 0x1 << 16 |
 			 0x1 << 8 |
 			 0x0 << 4);
@@ -598,6 +601,7 @@ int earctx_dmac_get_irqs(struct regmap *top_map)
 void earctx_enable(struct regmap *top_map,
 		   struct regmap *cmdc_map,
 		   struct regmap *dmac_map,
+		   enum aud_codec_types codec_type,
 		   bool enable)
 {
 	mmio_update_bits(dmac_map, EARCTX_SPDIFOUT_CTRL0,
@@ -622,7 +626,7 @@ void earctx_enable(struct regmap *top_map,
 			   );
 
 	if (earctx_cmdc_get_attended_type(cmdc_map) == ATNDTYP_EARC) {
-		if (spdifout_is_raw()) {
+		if (codec_is_raw(codec_type)) {
 			mmio_update_bits(dmac_map, EARCTX_ERR_CORRT_CTRL3,
 					 0x1 << 29,
 					 enable << 29);
@@ -715,11 +719,20 @@ void earcrx_cmdc_get_cds(struct regmap *cmdc_map, u8 *cds)
 
 void earcrx_cmdc_set_cds(struct regmap *cmdc_map, u8 *cds)
 {
+	u8 cap_chng = 0x1 << 3 | 0x1 << 0;
+
 	earcrx_cmdc_set_reg(cmdc_map,
 			    CAP_DEV_ID,
 			    0x0,
 			    cds,
 			    CDS_MAX_BYTES);
+
+	/* set CAP_CHNG and EARC_HPD to Notify eARC TX to re-read CDS */
+	earcrx_cmdc_set_reg(cmdc_map,
+			    STAT_CTRL_DEV_ID,
+			    EARCRX_STAT_REG,
+			    &cap_chng,
+			    0x1);
 }
 
 static int earctx_cmdc_get_reg(struct regmap *cmdc_map, int dev_id, int offset,

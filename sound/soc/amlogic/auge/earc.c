@@ -82,6 +82,9 @@ struct earc {
 	struct extcon_dev *rx_edev;
 	struct extcon_dev *tx_edev;
 
+	/* audio codec type for tx */
+	enum aud_codec_types tx_aud_codec_type;
+
 	bool rx_dmac_clk_on;
 	bool tx_dmac_clk_on;
 
@@ -209,6 +212,8 @@ static irqreturn_t earc_rx_isr(int irq, void *data)
 		if (status1)
 			earcrx_dmac_clr_irqs(p_earc->rx_top_map, status1);
 
+		if (status1 & INT_EARCRX_ERR_CORRECT_C_BCHERR_INT_SET)
+			pr_debug("%s EARCRX_ERR_CORRECT_BCHERR\n", __func__);
 		if (status1 & INT_ARCRX_BIPHASE_DECODE_C_FIND_PAPB)
 			pr_debug("%s ARCRX_C_FIND_PAPB\n", __func__);
 		if (status1 & INT_ARCRX_BIPHASE_DECODE_C_VALID_CHANGE)
@@ -564,7 +569,9 @@ static int earc_dai_prepare(
 				       frddr_type);
 
 		/* check and set channel status info */
-		spdif_get_channel_status_info(&chsts, runtime->rate);
+		iec_get_channel_status_info(&chsts,
+					    p_earc->tx_aud_codec_type,
+					    runtime->rate);
 		earctx_set_channel_status_info(p_earc->tx_dmac_map, &chsts);
 	} else {
 		struct toddr *to = p_earc->tddr;
@@ -631,6 +638,7 @@ static int earc_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			earctx_enable(p_earc->tx_top_map,
 				      p_earc->tx_cmdc_map,
 				      p_earc->tx_dmac_map,
+				      p_earc->tx_aud_codec_type,
 				      true);
 		} else {
 			dev_info(substream->pcm->card->dev, "eARC/ARC RX enable\n");
@@ -650,6 +658,7 @@ static int earc_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			earctx_enable(p_earc->tx_top_map,
 				      p_earc->tx_cmdc_map,
 				      p_earc->tx_dmac_map,
+				      p_earc->tx_aud_codec_type,
 				      false);
 			aml_frddr_enable(p_earc->fddr, false);
 		} else {
@@ -680,14 +689,14 @@ static int earc_dai_hw_params(
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		int freq = rate * 128 * 5; /* 5, falling edge */
 
-		if (spdif_is_4x_clk()) {
+		if (raw_is_4x_clk(p_earc->tx_aud_codec_type)) {
 			pr_debug("set 4x audio clk for 958\n");
 			freq *= 4;
 		} else {
 			pr_debug("set normal 512 fs /4 fs\n");
 		}
 
-		clk_set_rate(p_earc->clk_tx_dmac_srcpll, freq * 4);
+		clk_set_rate(p_earc->clk_tx_dmac_srcpll, freq);
 		clk_set_rate(p_earc->clk_tx_dmac, freq);
 
 		pr_info("%s, tx dmac clk, rate:%d, set freq: %d, get freq:%lu\n",
@@ -1119,6 +1128,34 @@ static int earctx_get_cds(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+int earctx_get_aud_codec_type(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct earc *p_earc = dev_get_drvdata(component->dev);
+
+	if (!p_earc || IS_ERR(p_earc->tx_top_map))
+		return 0;
+
+	ucontrol->value.integer.value[0] = p_earc->tx_aud_codec_type;
+
+	return 0;
+}
+
+int earctx_set_aud_codec_type(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct earc *p_earc = dev_get_drvdata(component->dev);
+
+	if (!p_earc || IS_ERR(p_earc->tx_top_map))
+		return 0;
+
+	p_earc->tx_aud_codec_type = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
 static const struct snd_kcontrol_new earc_controls[] = {
 	SOC_SINGLE_BOOL_EXT("eARC ARC Switch",
 			    0,
@@ -1152,6 +1189,11 @@ static const struct snd_kcontrol_new earc_controls[] = {
 			  CDS_MAX_BYTES,
 			  earctx_get_cds,
 			  NULL),
+
+	SOC_ENUM_EXT("eARC_TX Audio Codec Type",
+		     aud_codec_type_enum,
+		     earctx_get_aud_codec_type,
+		     earctx_set_aud_codec_type),
 };
 
 static const struct snd_soc_component_driver earc_component = {

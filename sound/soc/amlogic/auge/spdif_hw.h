@@ -20,7 +20,7 @@
 #include "audio_io.h"
 #include "regs.h"
 
-#include <linux/amlogic/media/sound/spdif_info.h>
+#include <linux/amlogic/media/sound/iec_info.h>
 
 unsigned int aml_spdif_ctrl_read(struct aml_audio_controller *actrl,
 				 int stream,

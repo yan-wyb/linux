@@ -44,7 +44,9 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 	/* spdif to hdmitx */
 	spdifout_to_hdmitx_ctrl(separated, spdif_id);
 	/* check and set channel status */
-	spdif_get_channel_status_info(&chsts, runtime->rate);
+	iec_get_channel_status_info(&chsts,
+				    AUD_CODEC_TYPE_STEREO_PCM,
+				    runtime->rate);
 	spdif_set_channel_status_info(&chsts, spdif_id);
 
 	/* for samesource case, always 2ch substream to hdmitx */

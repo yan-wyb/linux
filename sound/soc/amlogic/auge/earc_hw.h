@@ -20,7 +20,7 @@
 #include "regs.h"
 #include "iomap.h"
 #include <linux/amlogic/media/sound/iomapres.h>
-#include <linux/amlogic/media/sound/spdif_info.h>
+#include <linux/amlogic/media/sound/iec_info.h>
 
 #define INT_EARCRX_CMDC_IDLE2               (0x1 << 15)
 #define INT_EARCRX_CMDC_IDLE1               (0x1 << 14)
@@ -162,6 +162,7 @@ int earctx_dmac_get_irqs(struct regmap *top_map);
 void earctx_enable(struct regmap *top_map,
 		   struct regmap *cmdc_map,
 		   struct regmap *dmac_map,
+		   enum aud_codec_types codec_type,
 		   bool enable);
 
 void earcrx_cmdc_get_latency(struct regmap *cmdc_map, u8 *latency);
