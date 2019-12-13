@@ -41,6 +41,7 @@ struct am_meson_logo {
 	u32 bpp;
 	u32 alloc_flag;
 	u32 info_loaded_mask;
+	u32 osd_reverse;
 	char *outputmode_t;
 	char outputmode[VMODE_NAME_LEN_MAX];
 };

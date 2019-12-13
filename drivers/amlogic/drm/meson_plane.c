@@ -64,6 +64,7 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 {
 	u32 dst_w, dst_h, src_w, src_h, scan_mode_out;
 	struct drm_display_mode *mode;
+	struct am_osd_plane *amp;
 
 	if (!IS_ERR_OR_NULL(state->crtc) && state->crtc->mode.hdisplay &&
 	    state->crtc->mode.vdisplay)
@@ -72,8 +73,8 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 		mode = disp_mode;
 
 	scan_mode_out = mode->flags & DRM_MODE_FLAG_INTERLACE;
-	plane_info->src_x = state->src_x;
-	plane_info->src_y = state->src_y;
+	plane_info->src_x = state->src_x >> 16;
+	plane_info->src_y = state->src_y >> 16;
 	plane_info->src_w = (state->src_w >> 16) & 0xffff;
 	plane_info->src_h = (state->src_h >> 16) & 0xffff;
 
@@ -81,6 +82,13 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 	plane_info->dst_y = state->crtc_y;
 	plane_info->dst_w = state->crtc_w;
 	plane_info->dst_h = state->crtc_h;
+	plane_info->rotation = state->rotation;
+	if (state->plane) {
+		amp = to_am_osd_plane(state->plane);
+		if (plane_info->rotation != amp->osd_reverse) {
+			plane_info->rotation = amp->osd_reverse;
+		}
+	}
 	if (scan_mode_out) {
 		plane_info->dst_y >>= 1;
 		plane_info->dst_h >>= 1;
@@ -124,6 +132,13 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 		else
 			plane_info->dst_h = mode->vdisplay - plane_info->dst_y;
 	}
+	/*reverse process*/
+	if (plane_info->rotation & DRM_REFLECT_X)
+		plane_info->dst_x = mode->hdisplay - plane_info->dst_w -
+			plane_info->dst_x;
+	if (plane_info->rotation & DRM_REFLECT_Y)
+		plane_info->dst_y = mode->vdisplay - plane_info->dst_h -
+			plane_info->dst_y;
 }
 
 static void
@@ -141,8 +156,8 @@ meson_video_plane_position_calc(struct meson_vpu_video_layer_info *plane_info,
 		mode = disp_mode;
 
 	scan_mode_out = mode->flags & DRM_MODE_FLAG_INTERLACE;
-	plane_info->src_x = state->src_x;
-	plane_info->src_y = state->src_y;
+	plane_info->src_x = state->src_x >> 16;
+	plane_info->src_y = state->src_y >> 16;
 	plane_info->src_w = (state->src_w >> 16) & 0xffff;
 	plane_info->src_h = (state->src_h >> 16) & 0xffff;
 
@@ -763,6 +778,10 @@ static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 
 	osd_plane->drv = priv;
 	osd_plane->plane_index = i;
+	if (logo.osd_reverse)
+		osd_plane->osd_reverse = DRM_REFLECT_MASK;
+	else
+		osd_plane->osd_reverse = DRM_ROTATE_0;
 
 	plane = &osd_plane->base;
 	sprintf(plane_name, "osd%d", i);
@@ -775,6 +794,10 @@ static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 				 type, plane_name);
 
 	drm_plane_create_premult_en_property(plane);
+	priv->drm->mode_config.rotation_property =
+		drm_mode_create_rotation_property(priv->drm,
+						  DRM_ROTATE_0 |
+						  DRM_REFLECT_MASK);
 	drm_plane_helper_add(plane, &am_osd_helper_funcs);
 	osd_drm_debugfs_add(&osd_plane->plane_debugfs_dir,
 			    plane_name, osd_plane->plane_index);

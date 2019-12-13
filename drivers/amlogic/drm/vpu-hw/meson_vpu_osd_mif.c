@@ -235,6 +235,22 @@ void osd_alpha_div_enable(struct osd_mif_reg_s *reg, bool flag)
 	VSYNCOSD_WR_MPEG_REG_BITS(reg->viu_osd_mali_unpack_ctrl, flag, 28, 1);
 }
 
+/*osd x reverse en
+ *reverse read in X direction
+ */
+void osd_reverse_x_enable(struct osd_mif_reg_s *reg, bool flag)
+{
+	VSYNCOSD_WR_MPEG_REG_BITS(reg->viu_osd_blk0_cfg_w0, flag, 28, 1);
+}
+
+/*osd y reverse en
+ *reverse read in Y direction
+ */
+void osd_reverse_y_enable(struct osd_mif_reg_s *reg, bool flag)
+{
+	VSYNCOSD_WR_MPEG_REG_BITS(reg->viu_osd_blk0_cfg_w0, flag, 29, 1);
+}
+
 /*osd ctrl config*/
 void osd_ctrl_set(struct osd_mif_reg_s *reg)
 {
@@ -363,6 +379,7 @@ static int osd_check_state(struct meson_vpu_block *vblk,
 	mvos->pixel_format = plane_info->pixel_format;
 	mvos->fb_size = plane_info->fb_size;
 	mvos->premult_en = plane_info->premult_en;
+	mvos->rotation = plane_info->rotation;
 	return 0;
 }
 
@@ -380,7 +397,7 @@ static void osd_set_state(struct meson_vpu_block *vblk,
 	u32 pixel_format, canvas_index, src_h, byte_stride, phy_addr;
 	struct osd_scope_s scope_src = {0, 1919, 0, 1079};
 	struct osd_mif_reg_s *reg = osd->reg;
-	bool alpha_div_en;
+	bool alpha_div_en, reverse_x, reverse_y;
 
 	crtc = vblk->pipeline->crtc;
 	amc = to_am_meson_crtc(crtc);
@@ -402,6 +419,10 @@ static void osd_set_state(struct meson_vpu_block *vblk,
 	/*Toto: need to separate*/
 	if (0)
 		osd_ctrl_set(osd->reg);
+	reverse_x = (mvos->rotation & DRM_REFLECT_X) ? 1 : 0;
+	reverse_y = (mvos->rotation & DRM_REFLECT_Y) ? 1 : 0;
+	osd_reverse_x_enable(reg, reverse_x);
+	osd_reverse_y_enable(reg, reverse_y);
 	canvas_config(canvas_index, phy_addr, byte_stride, src_h,
 		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
 	osd_canvas_index[vblk->index] ^= 1;

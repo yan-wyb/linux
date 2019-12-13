@@ -39,6 +39,7 @@ struct am_osd_plane {
 	struct meson_drm *drv; //point to struct parent.
 	struct dentry *plane_debugfs_dir;
 	int plane_index;
+	u32 osd_reverse;
 	struct drm_property *prop_premult_en;
 };
 

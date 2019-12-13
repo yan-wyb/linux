@@ -42,6 +42,7 @@
 #include "meson_drv.h"
 #include "meson_vpu.h"
 #include "meson_vpu_pipeline.h"
+#include "meson_crtc.h"
 
 #define DRIVER_NAME "meson"
 #define DRIVER_DESC "Amlogic Meson DRM driver"
@@ -119,6 +120,7 @@ core_param(fb_width, logo.width, uint, 0644);
 core_param(fb_height, logo.height, uint, 0644);
 core_param(display_bpp, logo.bpp, uint, 0644);
 core_param(outputmode, logo.outputmode_t, charp, 0644);
+core_param(osd_reverse, logo.osd_reverse, uint, 0644);
 
 static struct drm_framebuffer *am_meson_logo_init_fb(struct drm_device *dev)
 {
@@ -128,7 +130,8 @@ static struct drm_framebuffer *am_meson_logo_init_fb(struct drm_device *dev)
 
 	DRM_INFO("width=%d,height=%d,start_addr=0x%pa,size=%d\n",
 		 logo.width, logo.height, &logo.start, logo.size);
-	DRM_INFO("bpp=%d,alloc_flag=%d\n", logo.bpp, logo.alloc_flag);
+	DRM_INFO("bpp=%d,alloc_flag=%d, osd_reverse=%d\n",
+		 logo.bpp, logo.alloc_flag, logo.osd_reverse);
 	DRM_INFO("outputmode=%s\n", logo.outputmode);
 	if (logo.bpp == 16)
 		mode_cmd.pixel_format = DRM_FORMAT_RGB565;
@@ -306,6 +309,10 @@ static int __am_meson_drm_set_config(struct drm_mode_set *set,
 	primary_state->crtc_h = vdisplay;
 	primary_state->src_x = set->x << 16;
 	primary_state->src_y = set->y << 16;
+	if (logo.osd_reverse)
+		primary_state->rotation = DRM_REFLECT_MASK;
+	else
+		primary_state->rotation = DRM_ROTATE_0;
 	if (drm_rotation_90_or_270(primary_state->rotation)) {
 		primary_state->src_w = set->fb->height << 16;
 		primary_state->src_h = set->fb->width << 16;
@@ -404,6 +411,7 @@ static void am_meson_load_logo(struct drm_device *dev)
 	set.x = 0;
 	set.y = 0;
 	set.mode = mode;
+	set.crtc->mode = *mode;
 	set.connectors = connector_set;
 	set.num_connectors = 1;
 	set.fb = fb;
