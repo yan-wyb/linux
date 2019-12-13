@@ -452,63 +452,79 @@ static const DECLARE_TLV_DB_SCALE(lr_vol_tlv, -12750, 50, 1);
 static const struct snd_kcontrol_new snd_effect_controls[] = {
 
 	SOC_SINGLE_EXT("AED DC cut enable",
-		AED_DC_EN, 0, 0x1, 0,
-		mixer_aed_read, mixer_aed_write),
+		       AED_DC_EN, 0, 0x1, 0,
+		       mixer_aed_read, mixer_aed_write),
 
 	SOC_SINGLE_EXT("AED Noise Detect enable",
-		AED_ND_CNTL, 0, 0x1, 0,
-		mixer_aed_read, mixer_aed_write),
+		       AED_ND_CNTL, 0, 0x1, 0,
+		       mixer_aed_read, mixer_aed_write),
 
 	SOC_SINGLE_EXT("AED EQ enable",
-		AED_EQ_EN, 0, 0x1, 0,
-		mixer_aed_read, mixer_aed_write),
+		       AED_EQ_EN, 0, 0x1, 0,
+		       mixer_aed_read, mixer_aed_write),
 
 	SND_SOC_BYTES_EXT("AED EQ Parameters",
-		(EQ_FILTER_SIZE_CH * 4),
-		mixer_get_EQ_params,
-		mixer_set_EQ_params),
+			  (EQ_FILTER_SIZE_CH * 4),
+			  mixer_get_EQ_params,
+			  mixer_set_EQ_params),
 
 	SOC_SINGLE_EXT("AED Multi-band DRC enable",
-		AED_MDRC_CNTL, 8, 0x1, 0,
-		mixer_aed_read, mixer_aed_write),
+		       AED_MDRC_CNTL, 8, 0x1, 0,
+		       mixer_aed_read, mixer_aed_write),
 
 	SND_SOC_BYTES_EXT("AED Crossover Filter Parameters",
-		(CROSSOVER_FILTER_SIZE * 4),
-		mixer_get_crossover_params,
-		mixer_set_crossover_params),
+			  (CROSSOVER_FILTER_SIZE * 4),
+			  mixer_get_crossover_params,
+			  mixer_set_crossover_params),
 
 	SND_SOC_BYTES_EXT("AED Multi-band DRC Parameters",
-		(AED_MULTIBAND_DRC_SIZE * 4),
-		mixer_get_multiband_DRC_params,
-		mixer_set_multiband_DRC_params),
+			  (AED_MULTIBAND_DRC_SIZE * 4),
+			  mixer_get_multiband_DRC_params,
+			  mixer_set_multiband_DRC_params),
 
 	SOC_SINGLE_EXT("AED Full-band DRC enable",
-		AED_DRC_CNTL, 0, 0x1, 0,
-		mixer_aed_read, mixer_aed_write),
+		       AED_DRC_CNTL, 0, 0x1, 0,
+		       mixer_aed_read, mixer_aed_write),
 
 	SND_SOC_BYTES_EXT("AED Full-band DRC Parameters",
-		AED_FULLBAND_DRC_BYTES,
-		mixer_get_fullband_DRC_params,
-		mixer_set_fullband_DRC_params),
+			  AED_FULLBAND_DRC_BYTES,
+			  mixer_get_fullband_DRC_params,
+			  mixer_set_fullband_DRC_params),
 
 	SOC_SINGLE_EXT_TLV("AED Lch volume",
-		AED_EQ_VOLUME, 0, 0xFF, 1,
-		mixer_aed_read, mixer_aed_write,
-		lr_vol_tlv),
+			   AED_EQ_VOLUME, 0, 0xFF, 1,
+			   mixer_aed_read, mixer_aed_write,
+			   lr_vol_tlv),
 
 	SOC_SINGLE_EXT_TLV("AED Rch volume",
-		AED_EQ_VOLUME, 8, 0xFF, 1,
-		mixer_aed_read, mixer_aed_write,
-		lr_vol_tlv),
+			   AED_EQ_VOLUME, 8, 0xFF, 1,
+			   mixer_aed_read, mixer_aed_write,
+			   lr_vol_tlv),
 
 	SOC_SINGLE_EXT_TLV("AED master volume",
-		AED_EQ_VOLUME, 16, 0x3FF, 1,
-		mixer_aed_read, mixer_aed_write,
-		master_vol_tlv),
+			   AED_EQ_VOLUME, 16, 0x3FF, 1,
+			   mixer_aed_read, mixer_aed_write,
+			   master_vol_tlv),
 
 	SOC_SINGLE_EXT("AED Clip THD",
-		AED_CLIP_THD, 0, 0x7FFFFF, 0,
-		mixer_aed_read, mixer_aed_write),
+		       AED_CLIP_THD, 0, 0x7FFFFF, 0,
+		       mixer_aed_read, mixer_aed_write),
+
+	SOC_SINGLE_EXT("AED Mixer Gain LL",
+		       AED_MIX0_LL, 0, 0x3ffffff, 0,
+		       mixer_aed_read, mixer_aed_write),
+
+	SOC_SINGLE_EXT("AED Mixer Gain RL",
+		       AED_MIX0_RL, 0, 0x3ffffff, 0,
+		       mixer_aed_read, mixer_aed_write),
+
+	SOC_SINGLE_EXT("AED Mixer Gain LR",
+		       AED_MIX0_LR, 0, 0x3ffffff, 0,
+		       mixer_aed_read, mixer_aed_write),
+
+	SOC_SINGLE_EXT("AED Mixer Gain RR",
+		       AED_MIX0_RR, 0, 0x3ffffff, 0,
+		       mixer_aed_read, mixer_aed_write),
 };
 
 int card_add_effect_v2_kcontrols(struct snd_soc_card *card)
