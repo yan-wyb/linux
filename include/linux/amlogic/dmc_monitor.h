@@ -43,6 +43,7 @@ struct dmc_mon_ops {
 };
 
 struct dmc_monitor {
+	void __iomem *io_mem;
 	unsigned long io_base;
 	unsigned long addr_start;
 	unsigned long addr_end;
@@ -87,8 +88,10 @@ extern unsigned long dmc_rw(unsigned long addr, unsigned long value, int rw);
 
 extern char *to_ports(int id);
 extern char *to_sub_ports(int mid, int sid, char *id_str);
+void show_violation_mem(unsigned long addr);
 
 extern struct dmc_mon_ops gx_dmc_mon_ops;
 extern struct dmc_mon_ops g12_dmc_mon_ops;
+extern struct dmc_mon_ops tm2_dmc_mon_ops;
 
 #endif /* __DMC_MONITOR_H__ */

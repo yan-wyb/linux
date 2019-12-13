@@ -29,6 +29,7 @@
 #include <linux/irqreturn.h>
 #include <linux/module.h>
 #include <linux/mm.h>
+#include <linux/highmem.h>
 
 #include <linux/cpu.h>
 #include <linux/smp.h>
@@ -75,10 +76,39 @@ unsigned long dmc_rw(unsigned long addr, unsigned long value, int rw)
 {
 	struct arm_smccc_res smccc;
 
-	arm_smccc_smc(DMC_MON_RW, addr + dmc_mon->io_base,
-		      value, rw, 0, 0, 0, 0, &smccc);
+	if (dmc_mon->io_mem) {
+		if (rw == DMC_WRITE) {
+			writel(value, dmc_mon->io_mem + addr);
+			return 0;
+		} else {
+			return readl(dmc_mon->io_mem + addr);
+		}
+	} else {
+		arm_smccc_smc(DMC_MON_RW, addr + dmc_mon->io_base,
+			      value, rw, 0, 0, 0, 0, &smccc);
+		return smccc.a0;
+	}
+}
 
-	return smccc.a0;
+void show_violation_mem(unsigned long addr)
+{
+	struct page *page;
+	unsigned long *p, *q;
+
+	if (!pfn_valid(__phys_to_pfn(addr)))
+		return;
+
+	page = phys_to_page(addr);
+	p = kmap_atomic(page);
+	if (!p)
+		return;
+
+	q = p + ((addr & (PAGE_SIZE - 1)) / sizeof(*p));
+	pr_info(DMC_TAG "[%08lx]:%016lx, f:%8lx, m:%p, a:%ps\n",
+		(unsigned long)q, *q, page->flags & 0xffffffff,
+		page->mapping,
+		(void *)get_page_trace(page));
+	kunmap_atomic(p);
 }
 
 static int dev_name_to_id(const char *dev_name)
@@ -170,6 +200,9 @@ static size_t dump_reg(char *buf)
 	sz += sprintf(buf + sz, "IO_BASE:%lx\n", dmc_mon->io_base);
 	sz += sprintf(buf + sz, "RANGE:%lx - %lx\n",
 		      dmc_mon->addr_start, dmc_mon->addr_end);
+	sz += sprintf(buf + sz, "CHIP:%d, ver:%d\n",
+		      dmc_mon->chip,
+		      get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR));
 	sz += sprintf(buf + sz, "MONITOR DEVICE:\n");
 	for (i = 0; i < sizeof(dmc_mon->device) * 8; i++) {
 		if (dmc_mon->device & (1 << i))
@@ -328,6 +361,7 @@ static int dmc_monitor_probe(struct platform_device *pdev)
 	unsigned int io;
 	struct device_node *node = pdev->dev.of_node;
 	struct ddr_port_desc *desc = NULL;
+	struct resource *res;
 
 	pr_info("%s\n", __func__);
 	r = get_cpu_type();
@@ -343,10 +377,15 @@ static int dmc_monitor_probe(struct platform_device *pdev)
 	dmc_mon->chip = r;
 	dmc_mon->port_num = ports;
 	dmc_mon->port = desc;
-	if (dmc_mon->chip >= MESON_CPU_MAJOR_ID_G12A)
-		dmc_mon->ops = &g12_dmc_mon_ops;
-	else
+	if (dmc_mon->chip >= MESON_CPU_MAJOR_ID_G12A) {
+		if ((dmc_mon->chip == MESON_CPU_MAJOR_ID_TM2) &&
+		    is_meson_rev_b())
+			dmc_mon->ops = &tm2_dmc_mon_ops;
+		else
+			dmc_mon->ops = &g12_dmc_mon_ops;
+	} else {
 		dmc_mon->ops = &gx_dmc_mon_ops;
+	}
 
 	r = of_property_read_u32(node, "reg_base", &io);
 	if (r < 0) {
@@ -355,6 +394,11 @@ static int dmc_monitor_probe(struct platform_device *pdev)
 	}
 
 	dmc_mon->io_base = io;
+
+	/* for register not in secure world */
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (res)
+		dmc_mon->io_mem = ioremap(res->start, res->end - res->start);
 
 	irq = of_irq_get(node, 0);
 	r = request_irq(irq, dmc_monitor_irq_handler,

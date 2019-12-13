@@ -1700,9 +1700,10 @@
 
 	dmc_monitor {
 		compatible = "amlogic, dmc_monitor";
-		status = "disabled";
+		status = "okay";
+		reg = <0x0 0xff638000 0x0 0x100>;
 		reg_base = <0xff639000>;
-		interrupts = <GIC_SPI 51 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 52 IRQ_TYPE_EDGE_RISING>;
 	};
 
 	efuse: efuse{
