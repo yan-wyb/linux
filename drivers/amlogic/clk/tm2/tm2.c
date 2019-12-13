@@ -161,6 +161,23 @@ PNAME(dspb_parent_names) = { "dspb_clk_a_gate",
 static MESON_MUX(dspb_clk_mux, HHI_DSP_CLK_CNTL, 0x1, 31,
 	dspb_parent_names, CLK_GET_RATE_NOCACHE);
 
+PNAME(vipnanoq_parent_names) = { "xtal", "gp0_pll", "hifi_pll", "fclk_div2p5",
+	"fclk_div3", "fclk_div4", "fclk_div5", "fclk_div5" };
+
+static MUX(vipnanoq_core_mux, HHI_VIPNANOQ_CLK_CNTL, 0x7, 9,
+	vipnanoq_parent_names, CLK_GET_RATE_NOCACHE);
+static DIV(vipnanoq_core_div, HHI_VIPNANOQ_CLK_CNTL, 0, 7, "vipnanoq_core_mux",
+	CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT);
+static GATE(vipnanoq_core_gate, HHI_VIPNANOQ_CLK_CNTL, 8, "vipnanoq_core_div",
+	CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT);
+
+static MUX(vipnanoq_axi_mux, HHI_VIPNANOQ_CLK_CNTL, 0x7, 25,
+	vipnanoq_parent_names, CLK_GET_RATE_NOCACHE);
+static DIV(vipnanoq_axi_div, HHI_VIPNANOQ_CLK_CNTL, 16, 7, "vipnanoq_axi_mux",
+	CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT);
+static GATE(vipnanoq_axi_gate, HHI_VIPNANOQ_CLK_CNTL, 24, "vipnanoq_axi_div",
+	CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT);
+
 static struct clk_gate *tm2_clk_gates[] = {
 	&tm2_vipnanoq,
 	&tm2_pcie1,
@@ -180,6 +197,8 @@ static struct clk_gate *tm2_clk_gates[] = {
 	&tm2_pcie1_gate,
 	&tm2_pcie0,
 	&tm2_pcie01_enable,
+	&vipnanoq_core_gate,
+	&vipnanoq_axi_gate,
 };
 
 static struct clk_mux *tm2_clk_mux[] = {
@@ -189,6 +208,8 @@ static struct clk_mux *tm2_clk_mux[] = {
 	&dspb_clk_b_mux,
 	&dspa_clk_mux,
 	&dspb_clk_mux,
+	&vipnanoq_core_mux,
+	&vipnanoq_axi_mux,
 };
 
 static struct clk_divider *tm2_clk_divs[] = {
@@ -196,6 +217,8 @@ static struct clk_divider *tm2_clk_divs[] = {
 	&dspa_clk_b_div,
 	&dspb_clk_a_div,
 	&dspb_clk_b_div,
+	&vipnanoq_core_div,
+	&vipnanoq_axi_div,
 };
 
 /* Array of all clocks provided by this provider */
@@ -229,6 +252,12 @@ static struct clk_hw *tm2_clk_hws[] = {
 	[CLKID_PCIE01_ENABLE] = &tm2_pcie01_enable.hw,
 	[CLKID_PCIE0_GATE]	= &tm2_pcie0_gate.hw,
 	[CLKID_PCIE1_GATE]	= &tm2_pcie1_gate.hw,
+	[CLKID_VIPNANOQ_CORE_MUX]	= &vipnanoq_core_mux.hw,
+	[CLKID_VIPNANOQ_CORE_DIV]	= &vipnanoq_core_div.hw,
+	[CLKID_VIPNANOQ_CORE_GATE]	= &vipnanoq_core_gate.hw,
+	[CLKID_VIPNANOQ_AXI_MUX]	= &vipnanoq_axi_mux.hw,
+	[CLKID_VIPNANOQ_AXI_DIV]	= &vipnanoq_axi_div.hw,
+	[CLKID_VIPNANOQ_AXI_GATE]	= &vipnanoq_axi_gate.hw,
 };
 
 static void __init tm2_clkc_init(struct device_node *np)
