@@ -778,6 +778,8 @@ int genEBZCurve(
 			curvex[i] = kx + step_alpha;
 			temp = curvey[i] << GAIN_BIT;
 			gain[i] = div64_u64(temp, curvex[i]);
+			if (gain[i] < (1 << GAIN_BIT))
+				gain[i] = 1 << GAIN_BIT;
 		}
 	}
 	gain[POINTS - 1] = 1 << GAIN_BIT;
