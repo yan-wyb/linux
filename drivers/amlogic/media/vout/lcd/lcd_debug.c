@@ -37,11 +37,12 @@
 #include "lcd_tablet/mipi_dsi_util.h"
 #endif
 #include "lcd_debug.h"
+#include "lcd_tcon.h"
 
 static struct lcd_debug_info_reg_s *lcd_debug_info_reg;
 static struct lcd_debug_info_if_s *lcd_debug_info_if;
 
-#define PR_BUF_MAX          4096
+#define PR_BUF_MAX          (8 * 1024)
 
 static void lcd_debug_parse_param(char *buf_orig, char **parm)
 {
@@ -3393,7 +3394,12 @@ static const char *lcd_p2p_debug_usage_str = {
 static const char *lcd_debug_tcon_usage_str = {
 	"Usage:\n"
 	"    echo reg > tcon ; print tcon system regs\n"
-	"    echo reg save <path> > tcon ; save tcon system regs to bin file\n"
+	"    echo reg rb <reg> > tcon ; read tcon byte reg\n"
+	"    echo reg wb <reg> <val> > tcon ; write tcon byte reg\n"
+	"    echo reg db <reg> <cnt> > tcon ; dump tcon byte regs\n"
+	"    echo reg r <reg> > tcon ; write tcon reg\n"
+	"    echo reg w <reg> <val> > tcon ; write tcon reg\n"
+	"    echo reg d <reg> <cnt> > tcon ; dump tcon regs\n"
 	"\n"
 	"    echo table > tcon ; print tcon reg table\n"
 	"    echo table r <index> > tcon ; read tcon reg table by specified index\n"
@@ -3405,11 +3411,15 @@ static const char *lcd_debug_tcon_usage_str = {
 	"    <len>      : dec number\n"
 	"\n"
 	"    echo table update > tcon ; update tcon reg table into tcon system regs\n"
-	"    echo table save <path> > tcon ; save tcon reg table to bin file\n"
 	"\n"
 	"    echo od <en> > tcon ; tcon over driver control\n"
 	"data format:\n"
 	"    <en>       : 0=disable, 1=enable\n"
+	"\n"
+	"    echo save <str> <path> > tcon ; tcon mem save to file\n"
+	"data format:\n"
+	"    <str>       : table, reg, vac, demura, acc\n"
+	"    <path>      : save file path\n"
 };
 
 static ssize_t lcd_ttl_debug_show(struct class *class,
@@ -3994,7 +4004,7 @@ static ssize_t lcd_vx1_status_show(struct class *class,
 		       ((lcd_vcbus_read(VBO_STATUS_L) >> 6) & 0x1));
 }
 
-static void lcd_tcon_reg_table_save(char *path, unsigned char *reg_table,
+static int lcd_tcon_buf_save(char *path, unsigned char *save_buf,
 		unsigned int size)
 {
 	struct file *filp = NULL;
@@ -4002,22 +4012,41 @@ static void lcd_tcon_reg_table_save(char *path, unsigned char *reg_table,
 	void *buf = NULL;
 	mm_segment_t old_fs = get_fs();
 
+	if (!save_buf) {
+		LCDERR("%s: save_buf is null\n", __func__);
+		return -1;
+	}
+	if (size == 0) {
+		LCDERR("%s: size is zero\n", __func__);
+		return -1;
+	}
+
 	set_fs(KERNEL_DS);
 	filp = filp_open(path, O_RDWR|O_CREAT, 0666);
 
 	if (IS_ERR(filp)) {
 		LCDERR("%s: create %s error\n", __func__, path);
 		set_fs(old_fs);
-		return;
+		return -1;
 	}
 
 	pos = 0;
-	buf = (void *)reg_table;
+	buf = (void *)save_buf;
 	vfs_write(filp, buf, size, &pos);
 
 	vfs_fsync(filp, 0);
 	filp_close(filp, NULL);
 	set_fs(old_fs);
+
+	return 0;
+}
+
+static void lcd_tcon_reg_table_save(char *path, unsigned char *reg_table,
+		unsigned int size)
+{
+	int ret;
+
+	ret = lcd_tcon_buf_save(path, reg_table, size);
 
 	LCDPR("save tcon reg table to %s finished\n", path);
 }
@@ -4066,6 +4095,89 @@ static void lcd_tcon_reg_save(char *path, unsigned int size)
 	kfree(temp);
 
 	LCDPR("save tcon reg to %s success\n", path);
+}
+
+static void lcd_tcon_rmem_save(char *path, unsigned int flag)
+{
+	struct tcon_rmem_s *rmem;
+	char *str = NULL;
+	int ret;
+
+	rmem = lcd_tcon_rmem_get();
+	if (!rmem) {
+		LCDPR("%s: tcon_rmem is null\n", __func__);
+		return;
+	}
+
+	str = kcalloc(512, sizeof(char), GFP_KERNEL);
+	if (!str) {
+		LCDERR("%s: str malloc failed\n", __func__);
+		return;
+	}
+
+	switch (flag) {
+	case 0: /* axi */
+		if (rmem->axi_mem_size) {
+			sprintf(str, "%s.bin", path);
+			ret = lcd_tcon_buf_save(str, rmem->axi_mem_vaddr,
+						rmem->axi_mem_size);
+			if (ret == 0) {
+				LCDPR("save tcon axi mem to %s finished\n",
+				      str);
+			}
+		} else {
+			pr_info("axi mem invalid\n");
+		}
+		break;
+	case 1: /* vac */
+		if (rmem->vac_valid) {
+			sprintf(str, "%s.bin", path);
+			ret = lcd_tcon_buf_save(str, rmem->vac_mem_vaddr,
+						rmem->vac_mem_size);
+			if (ret == 0)
+				LCDPR("save tcon vac to %s finished\n", str);
+		} else {
+			pr_info("vac invalid\n");
+		}
+		break;
+	case 2: /* demura */
+		if (rmem->demura_valid) {
+			sprintf(str, "%s_set.bin", path);
+			ret = lcd_tcon_buf_save(str, rmem->demura_set_vaddr,
+						rmem->demura_set_mem_size);
+			if (ret == 0) {
+				LCDPR("save tcon demura_set to %s finished\n",
+				      str);
+			}
+			sprintf(str, "%s_lut.bin", path);
+			ret = lcd_tcon_buf_save(str, rmem->demura_lut_vaddr,
+						rmem->demura_lut_mem_size);
+			if (ret == 0) {
+				LCDPR("save tcon demura_lut to %s finished\n",
+				      str);
+			}
+		} else {
+			pr_info("demura invalid\n");
+		}
+		break;
+	case 3: /* acc */
+		if (rmem->acc_valid) {
+			sprintf(str, "%s.bin", path);
+			ret = lcd_tcon_buf_save(str, rmem->acc_lut_vaddr,
+						rmem->acc_lut_mem_size);
+			if (ret == 0) {
+				LCDPR("save tcon acc_lut to %s finished\n",
+				      str);
+			}
+		} else {
+			pr_info("acc invalid\n");
+		}
+		break;
+	default:
+		break;
+	}
+
+	kfree(str);
 }
 
 static ssize_t lcd_tcon_debug_store(struct class *class,
@@ -4139,7 +4251,7 @@ static ssize_t lcd_tcon_debug_store(struct class *class,
 				pr_info(
 			"write tcon byte [0x%04x] = 0x%02x\n", temp, data);
 			}
-		} else if (strcmp(parm[1], "wlb") == 0) {
+		} else if (strcmp(parm[1], "wlb") == 0) { /*long write byte*/
 			if (parm[3] != NULL) {
 				ret = kstrtouint(parm[2], 16, &temp);
 				if (ret) {
@@ -4170,6 +4282,25 @@ static ssize_t lcd_tcon_debug_store(struct class *class,
 					(temp + i), data);
 				}
 			}
+		} else if (strcmp(parm[1], "db") == 0) {
+			if (parm[3] != NULL) {
+				ret = kstrtouint(parm[2], 16, &temp);
+				if (ret) {
+					pr_info("invalid parameters\n");
+					goto lcd_tcon_debug_store_err;
+				}
+				ret = kstrtouint(parm[3], 10, &size);
+				if (ret) {
+					pr_info("invalid parameters\n");
+					goto lcd_tcon_debug_store_err;
+				}
+				for (i = 0; i < size; i++) {
+					pr_info("dump tcon byte:\n");
+					pr_info("  [0x%04x] = 0x%02x\n",
+						(temp + i),
+						lcd_tcon_read_byte(temp + i));
+				}
+			}
 		} else if (strcmp(parm[1], "r") == 0) {
 			if (parm[2] != NULL) {
 				ret = kstrtouint(parm[2], 16, &temp);
@@ -4196,7 +4327,7 @@ static ssize_t lcd_tcon_debug_store(struct class *class,
 				pr_info("write tcon [0x%04x] = 0x%08x\n",
 					temp, val);
 			}
-		} else if (strcmp(parm[1], "wl") == 0) {
+		} else if (strcmp(parm[1], "wl") == 0) { /*long write*/
 			if (parm[3] != NULL) {
 				ret = kstrtouint(parm[2], 16, &temp);
 				if (ret) {
@@ -4225,6 +4356,25 @@ static ssize_t lcd_tcon_debug_store(struct class *class,
 					pr_info(
 					"write tcon [0x%04x] = 0x%08x\n",
 					(temp + i), val);
+				}
+			}
+		} else if (strcmp(parm[1], "d") == 0) {
+			if (parm[3] != NULL) {
+				ret = kstrtouint(parm[2], 16, &temp);
+				if (ret) {
+					pr_info("invalid parameters\n");
+					goto lcd_tcon_debug_store_err;
+				}
+				ret = kstrtouint(parm[3], 10, &size);
+				if (ret) {
+					pr_info("invalid parameters\n");
+					goto lcd_tcon_debug_store_err;
+				}
+				for (i = 0; i < size; i++) {
+					pr_info("dump tcon:\n");
+					pr_info("  [0x%04x] = 0x%08x\n",
+						(temp + i),
+						lcd_tcon_read(temp + i));
 				}
 			}
 		}
@@ -4319,6 +4469,42 @@ static ssize_t lcd_tcon_debug_store(struct class *class,
 					else
 						lcd_tcon_od_set(0);
 				}
+			}
+		}
+	} else if (strcmp(parm[0], "save") == 0) { /* save buf to bin */
+		if (parm[1] != NULL) {
+			if (strcmp(parm[1], "table") == 0) {
+				if (parm[2] != NULL) {
+					lcd_tcon_reg_table_save(parm[2],
+								table, size);
+				} else {
+					pr_info("invalid save path\n");
+				}
+			} else if (strcmp(parm[1], "reg") == 0) {
+				if (parm[2] != NULL)
+					lcd_tcon_reg_save(parm[2], size);
+				else
+					pr_info("invalid save path\n");
+			} else if (strcmp(parm[1], "axi") == 0) {
+				if (parm[2] != NULL)
+					lcd_tcon_rmem_save(parm[2], 0);
+				else
+					pr_info("invalid save path\n");
+			} else if (strcmp(parm[1], "vac") == 0) {
+				if (parm[2] != NULL)
+					lcd_tcon_rmem_save(parm[2], 1);
+				else
+					pr_info("invalid save path\n");
+			} else if (strcmp(parm[1], "demura") == 0) {
+				if (parm[2] != NULL)
+					lcd_tcon_rmem_save(parm[2], 2);
+				else
+					pr_info("invalid save path\n");
+			} else if (strcmp(parm[1], "acc") == 0) {
+				if (parm[2] != NULL)
+					lcd_tcon_rmem_save(parm[2], 3);
+				else
+					pr_info("invalid save path\n");
 			}
 		}
 	} else {
