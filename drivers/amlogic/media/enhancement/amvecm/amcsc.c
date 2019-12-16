@@ -46,6 +46,10 @@
 
 uint debug_csc;
 static int cur_mvc_type[2];
+static int cur_rgb_type[2];
+static int rgb_type_proc[2];
+#define FORCE_RGB_PROCESS 1
+
 module_param(debug_csc, uint, 0664);
 MODULE_PARM_DESC(debug_csc, "\n debug_csc\n");
 
@@ -4034,6 +4038,30 @@ int signal_type_changed(struct vframe_s *vf,
 		pr_csc(1, "ootf curve changed.\n");
 	}
 
+	if (vf->type & VIDTYPE_RGB_444) {
+		if (cur_rgb_type[vd_path] !=
+		   (vf->type & VIDTYPE_RGB_444)) {
+			change_flag |= SIG_SRC_CHG;
+			rgb_type_proc[vd_path] = FORCE_RGB_PROCESS;
+			cur_rgb_type[vd_path] = vf->type & VIDTYPE_RGB_444;
+			pr_csc(
+				1, "VIDTYPE RGB changed. vf->type = 0x%x\n",
+				vf->type);
+		}
+	} else {
+		if (cur_rgb_type[vd_path] != 0) {
+			change_flag |= SIG_SRC_CHG;
+			rgb_type_proc[vd_path] = FORCE_RGB_PROCESS;
+			cur_rgb_type[vd_path] = 0;
+			pr_csc(
+				1, "VIDTYPE YUV changed. vf->type = 0x%x\n",
+				vf->type);
+		}
+	}
+
+	if (rgb_type_proc[vd_path] == FORCE_RGB_PROCESS)
+		change_flag |= SIG_SRC_CHG;
+
 	return change_flag;
 }
 
@@ -5669,6 +5697,57 @@ static void bypass_hdr_process(
 	vpp_set_mtx_en_write();
 }
 
+static void rgb_mode_process(
+	enum vpp_matrix_csc_e csc_type,
+	struct vinfo_s *vinfo,
+	enum vd_path_e vd_path,
+	enum hdr_type_e *source_type)
+{
+	struct matrix_s m = {
+		{0, 0, 0},
+		{
+			{0x0400, 0x0, 0x0},
+			{0x0, 0x0400, 0x0},
+			{0x0, 0x0, 0x0400},
+		},
+		{0, 0, 0},
+		1
+	};
+
+	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) &&
+	    (vinfo->viu_color_fmt == COLOR_FMT_RGB444)) {
+		if (gamut_conv_enable)
+			gamut_convert_process(
+				vinfo, source_type,
+				vd_path, &m, 10);
+
+		if (vd_path == VD1_PATH)
+			hdr_func(
+			VD1_HDR,
+			gamut_conv_enable ? SDR_RGB_GMT_CONV : RGB_YUVF,
+			vinfo,
+			gamut_conv_enable ? &m : NULL);
+		else
+			hdr_func(
+			VD2_HDR,
+			gamut_conv_enable ? SDR_RGB_GMT_CONV : RGB_YUVF,
+			vinfo,
+			gamut_conv_enable ? &m : NULL);
+		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+		    ((vinfo->hdr_info.hdr_support & 0xc) &&
+			(vinfo->viu_color_fmt != COLOR_FMT_RGB444))) {
+			if (get_hdr_type() & HLG_FLAG)
+				hdr_func(OSD1_HDR, SDR_HLG, vinfo, NULL);
+			else
+				hdr_func(OSD1_HDR, SDR_HDR, vinfo, NULL);
+			pr_csc(1, "\t osd sdr->hdr/hlg\n");
+		} else {
+			hdr_func(OSD1_HDR, RGB_YUVF, vinfo, NULL);
+		}
+	}
+	pr_csc(1, "\t rgb_mode_process\n");
+}
+
 static void set_bt2020csc_process(
 	enum vpp_matrix_csc_e csc_type,
 	struct vinfo_s *vinfo,
@@ -7184,9 +7263,23 @@ static void video_process(
 				&& tx_op_color_primary)
 				set_bt2020csc_process(csc_type,
 				vinfo, p, vd_path);
-			else
-				bypass_hdr_process(csc_type,
-				vinfo, p, vd_path, source_type);
+			else {
+				if ((vf->type & VIDTYPE_RGB_444) &&
+				    (get_cpu_type() >=
+					MESON_CPU_MAJOR_ID_G12A) &&
+					(vinfo->viu_color_fmt ==
+					COLOR_FMT_RGB444))
+					rgb_mode_process(
+					csc_type,
+					vinfo,
+					vd_path,
+					source_type);
+				else
+					bypass_hdr_process(
+					csc_type,
+					vinfo, p,
+					vd_path, source_type);
+			}
 			pr_csc(1, "vd_path = %d\n"
 				"\tcsc_type = 0x%x\n"
 				"\thdr_process_mode = %d.\n"
@@ -7203,9 +7296,16 @@ static void video_process(
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
 			mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
-		else
-			mtx_setting(POST2_MTX,
-				csc_type/*MATRIX_YUV709_RGB*/, MTX_ON);
+		else {
+			if (vf->type & VIDTYPE_RGB_444)
+				mtx_setting(
+				POST2_MTX,
+				MATRIX_YUV709F_RGB, MTX_ON);
+			else
+				mtx_setting(
+				POST2_MTX,
+				csc_type, MTX_ON);
+		}
 	}
 
 	if (cur_hdr_process_mode[vd_path] !=
@@ -7347,7 +7447,7 @@ static int vpp_matrix_update(
 			sizeof(struct hdr_info));
 
 	if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) ||
-	(get_cpu_type() == MESON_CPU_MAJOR_ID_TL1))
+	    (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1))
 		hdr_support_process(vinfo, vd_path);
 
 	if (vf && vinfo)
@@ -7475,6 +7575,9 @@ static int vpp_matrix_update(
 	/* eye protection mode */
 	if (signal_change_flag & SIG_WB_CHG)
 		vpp_eye_protection_process(csc_type, vinfo, vd_path);
+
+	if (rgb_type_proc[vd_path] == FORCE_RGB_PROCESS)
+		rgb_type_proc[vd_path] &= ~FORCE_RGB_PROCESS;
 
 	return 0;
 }
@@ -7815,6 +7918,7 @@ int amvecm_matrix_process(
 				fake_vframe.prop.
 				master_display_colour.present_flag
 					= 0x80000000;
+				fake_vframe.type = 0;
 				memset(
 				&fake_vframe.prop.master_display_colour,
 				0,
