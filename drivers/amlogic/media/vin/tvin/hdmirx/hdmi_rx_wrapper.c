@@ -208,6 +208,10 @@ static int esd_phy_rst_max;
 static int cec_dev_info;
 struct rx_s rx;
 static bool term_flag = 1;
+/* vpp mute when signal change, used
+ * in companion with vlock phase = 84
+ */
+bool vpp_mute_enable;
 
 void hdmirx_init_params(void)
 {
@@ -246,6 +250,21 @@ int cec_set_dev_info(uint8_t dev_idx)
 	return 0;
 }
 EXPORT_SYMBOL(cec_set_dev_info);
+
+static bool video_mute_enabled(void)
+{
+	if ((rx.state != FSM_SIG_READY) ||
+	    !already_start_dec)
+		return false;
+
+	/* for debug with flicker issues, especially
+	 * unplug or switch timing under game mode
+	 */
+	if (vpp_mute_enable)
+		return true;
+	else
+		return false;
+}
 
 /*
  *func: irq tasklet
@@ -526,6 +545,11 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT);
 	/* top interrupt handler */
 	if (rx.chip_id >= CHIP_ID_TL1) {
 		if (hdmirx_top_intr_stat & (1 << 29)) {
+			if (video_mute_enabled()) {
+				set_video_mute(true);
+				if (log_level & 0x100)
+					rx_pr("vpp mute\n");
+			}
 			skip_frame(skip_frame_cnt);
 			if (log_level & 0x100)
 				rx_pr("[isr] sqofclk_fall\n");
@@ -1787,6 +1811,8 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(eq_dbg_lvl, index);
 	if (set_pr_var(tmpbuf, edid_select, value, &index, ret))
 		return pr_var(edid_select, index);
+	if (set_pr_var(tmpbuf, vpp_mute_enable, value, &index, ret))
+		return pr_var(vpp_mute_enable, index);
 	return 0;
 }
 
@@ -1902,6 +1928,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(hdcp_hpd_ctrl_en, i++);
 	pr_var(eq_dbg_lvl, i++);
 	pr_var(edid_select, i++);
+	pr_var(vpp_mute_enable, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -2478,6 +2505,11 @@ void rx_main_state_machine(void)
 			sig_unready_cnt = 0;
 			if (rx.skip > 0)
 				rx.skip--;
+			else if (video_mute_enabled()) {
+				/* clear vpp mute after signal stable */
+				if (get_video_mute())
+					set_video_mute(false);
+			}
 		}
 		if (rx.pre.sw_dvi == 1)
 			break;
@@ -3075,7 +3107,14 @@ int hdmirx_debug(const char *buf, int size)
 		hdmirx_audio_fifo_rst();
 	} else if (strncmp(tmpbuf, "eqcal", 5) == 0)
 		rx_phy_rt_cal();
-
+	else if (strncmp(tmpbuf, "muteget", 7) == 0) {
+		rx_pr("mute sts: %x\n", get_video_mute());
+	} else if (strncmp(tmpbuf, "muteset", 7) == 0) {
+		if (tmpbuf[7] == '0')
+			set_video_mute(false);
+		else
+			set_video_mute(true);
+	}
 	return 0;
 }
 

@@ -154,7 +154,7 @@ static bool early_suspend_flag;
 #endif
 
 struct reg_map reg_maps[MAP_ADDR_MODULE_NUM];
-
+bool already_start_dec;
 
 static struct notifier_block aml_hdcp22_pm_notifier = {
 	.notifier_call = aml_hdcp22_pm_notify,
@@ -351,6 +351,7 @@ void hdmirx_dec_start(struct tvin_frontend_s *fe, enum tvin_sig_fmt_e fmt)
 	parm = &devp->param;
 	parm->info.fmt = fmt;
 	parm->info.status = TVIN_SIG_STATUS_STABLE;
+	already_start_dec = true;
 	rx_pr("%s fmt:%d ok\n", __func__, fmt);
 }
 
@@ -369,6 +370,12 @@ void hdmirx_dec_stop(struct tvin_frontend_s *fe, enum tvin_port_e port)
 	parm = &devp->param;
 	/* parm->info.fmt = TVIN_SIG_FMT_NULL; */
 	/* parm->info.status = TVIN_SIG_STATUS_NULL; */
+	already_start_dec = false;
+	/* clear vpp mute, such as after switch timing */
+	if (vpp_mute_enable) {
+		if (get_video_mute())
+			set_video_mute(false);
+	}
 	rx_pr("%s ok\n", __func__);
 }
 
@@ -397,6 +404,11 @@ void hdmirx_dec_close(struct tvin_frontend_s *fe)
 	hdmirx_close_port();
 	parm->info.fmt = TVIN_SIG_FMT_NULL;
 	parm->info.status = TVIN_SIG_STATUS_NULL;
+	/* clear vpp mute, such as after unplug */
+	if (vpp_mute_enable) {
+		if (get_video_mute())
+			set_video_mute(false);
+	}
 	rx_pr("%s ok\n", __func__);
 }
 
