@@ -675,7 +675,7 @@ void spdifout_play_with_zerodata(unsigned int spdif_id, bool reenable)
 		spdif_set_channel_status_info(&chsts, spdif_id);
 
 		/* notify hdmitx audio */
-		aout_notifier_call_chain(0x1, &substream);
+		aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM, &substream);
 
 		/* init frddr to output zero data. */
 		frddr_init_without_mngr(frddr_index, src0_sel);

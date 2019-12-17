@@ -29,6 +29,8 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int bit_depth;
 	struct iec958_chsts chsts;
+	struct snd_pcm_substream substream_tmp;
+	struct snd_pcm_runtime runtime_tmp;
 
 	bit_depth = snd_pcm_format_width(runtime->format);
 
@@ -44,8 +46,15 @@ static int sharebuffer_spdifout_prepare(struct snd_pcm_substream *substream,
 	/* check and set channel status */
 	spdif_get_channel_status_info(&chsts, runtime->rate);
 	spdif_set_channel_status_info(&chsts, spdif_id);
+
+	/* for samesource case, always 2ch substream to hdmitx */
+	substream_tmp.runtime = &runtime_tmp;
+	memcpy((void *)&runtime_tmp, (void *)(substream->runtime),
+	       sizeof(struct snd_pcm_runtime));
+	runtime_tmp.channels = 2;
+
 	/* notify hdmitx audio */
-	aout_notifier_call_chain(0x1, substream);
+	aout_notifier_call_chain(AOUT_EVENT_IEC_60958_PCM, &substream_tmp);
 
 	return 0;
 }
