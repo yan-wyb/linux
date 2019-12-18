@@ -533,6 +533,9 @@
 		 */
 		 vlock_pll_m_limit = <1>;
 		 vlock_line_limit = <2>;
+
+		 interrupts = <0 56 1>;
+		 interrupt-names = "vsync2";
 	};
 
 	vdin@0 {
