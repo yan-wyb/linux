@@ -47,8 +47,15 @@ int resample_ctrl_read(enum resample_idx id);
 void resample_ctrl_write(enum resample_idx id, int value);
 int resample_set_hw_pause_thd(enum resample_idx id, unsigned int thd);
 
+#ifdef AA_FILTER_DEBUG
+void check_ram_coeff_aa(enum resample_idx id, int len,
+			unsigned int *params);
+void check_ram_coeff_sinc(enum resample_idx id, int len,
+			  unsigned int *params);
 void new_resample_set_ram_coeff_aa(enum resample_idx id, int len,
 				   unsigned int *params);
+#endif
+
 void new_resample_set_ram_coeff_sinc(enum resample_idx id, int len,
 				     unsigned int *params);
 void new_resample_init_param(enum resample_idx id);

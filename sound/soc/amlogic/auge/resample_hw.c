@@ -46,6 +46,44 @@ static u32 resample_coef_parameters_table[7][5] = {
 };
 
 #ifdef AA_FILTER_DEBUG
+/* only can read sam coeff on tm2_revB */
+void check_ram_coeff_aa(enum resample_idx id, int len,
+			unsigned int *params)
+{
+	int i;
+	unsigned int *p = params;
+	unsigned int val = 0;
+
+	new_resample_write(id, AUDIO_RSAMP_SINC_COEF_ADDR,
+			   SINC8_FILTER_COEF_ADDR);
+
+	for (i = 0; i < len; i++, p++) {
+		val = new_resample_read(id, AUDIO_RSAMP_AA_COEF_DATA);
+		if (val != *p)
+			pr_err("error ram coeff read[%d]:0x%08x, write:0x%08x\n",
+			       i, val, *p);
+	}
+}
+
+/* only can read sam coeff on tm2_revB */
+void check_ram_coeff_sinc(enum resample_idx id, int len,
+			  unsigned int *params)
+{
+	int i;
+	unsigned int *p = params;
+	unsigned int val = 0;
+
+	new_resample_write(id, AUDIO_RSAMP_SINC_COEF_ADDR,
+			   SINC8_FILTER_COEF_ADDR);
+
+	for (i = 0; i < len; i++, p++) {
+		val = new_resample_read(id, AUDIO_RSAMP_SINC_COEF_DATA);
+		if (val != *p)
+			pr_err("error ram coeff read[%d]:0x%08x, write:0x%08x\n",
+			       i, val, *p);
+	}
+}
+
 void new_resample_set_ram_coeff_aa(enum resample_idx id, int len,
 				   unsigned int *params)
 {
@@ -55,6 +93,8 @@ void new_resample_set_ram_coeff_aa(enum resample_idx id, int len,
 	new_resample_write(id, AUDIO_RSAMP_AA_COEF_ADDR, AA_FILTER_COEF_ADDR);
 	for (i = 0; i < len; i++, p++)
 		new_resample_write(id, AUDIO_RSAMP_AA_COEF_DATA, *p);
+
+	check_ram_coeff_aa(id, len, params);
 }
 #endif
 
@@ -68,6 +108,10 @@ void new_resample_set_ram_coeff_sinc(enum resample_idx id, int len,
 			   SINC8_FILTER_COEF_ADDR);
 	for (i = 0; i < len; i++, p++)
 		new_resample_write(id, AUDIO_RSAMP_SINC_COEF_DATA, *p);
+
+#ifdef AA_FILTER_DEBUG
+	check_ram_coeff_sinc(id, len, params);
+#endif
 }
 
 void new_resample_init_param(enum resample_idx id)
