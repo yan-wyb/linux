@@ -1676,7 +1676,9 @@ static void lcd_extern_init_table_dynamic_size_print(
 						"%d,", table[i+2+j]);
 				}
 			} else if ((table[i] == LCD_EXT_CMD_TYPE_CMD) ||
-				(table[i] == LCD_EXT_CMD_TYPE_CMD2)) {
+				   (table[i] == LCD_EXT_CMD_TYPE_CMD2) ||
+				   (table[i] == LCD_EXT_CMD_TYPE_CMD_BIN) ||
+				   (table[i] == LCD_EXT_CMD_TYPE_CMD2_BIN)) {
 				for (j = 0; j < cmd_size; j++) {
 					k += snprintf(str+k, EXT_LEN_MAX,
 						"0x%02x,", table[i+2+j]);

@@ -211,14 +211,16 @@ static int lcd_extern_power_cmd_dynamic_size(unsigned char *table, int flag)
 					delay_ms += table[i+2+j];
 				if (delay_ms > 0)
 					mdelay(delay_ms);
-			} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			} else if ((type == LCD_EXT_CMD_TYPE_CMD) ||
+				   (type == LCD_EXT_CMD_TYPE_CMD_BIN)) {
 				if (i2c0_dev == NULL) {
 					EXTERR("invalid i2c0 device\n");
 					return -1;
 				}
 				ret = lcd_extern_i2c_write(i2c0_dev->client,
 					&table[i+2], cmd_size);
-			} else if (type == LCD_EXT_CMD_TYPE_CMD2) {
+			} else if ((type == LCD_EXT_CMD_TYPE_CMD2) ||
+				   (type == LCD_EXT_CMD_TYPE_CMD2_BIN)) {
 				if (i2c1_dev == NULL) {
 					EXTERR("invalid i2c1 device\n");
 					return -1;
@@ -291,7 +293,8 @@ power_cmd_dynamic_i2c_next:
 					delay_ms += table[i+2+j];
 				if (delay_ms > 0)
 					mdelay(delay_ms);
-			} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			} else if ((type == LCD_EXT_CMD_TYPE_CMD) ||
+				   (type == LCD_EXT_CMD_TYPE_CMD_BIN)) {
 				ret = lcd_extern_spi_write(&table[i+2],
 					cmd_size);
 			} else if (type == LCD_EXT_CMD_TYPE_CMD_DELAY) {
@@ -363,14 +366,16 @@ static int lcd_extern_power_cmd_fixed_size(unsigned char *table, int flag)
 					delay_ms += table[i+1+j];
 				if (delay_ms > 0)
 					mdelay(delay_ms);
-			} else if (type == LCD_EXT_CMD_TYPE_CMD) {
+			} else if ((type == LCD_EXT_CMD_TYPE_CMD) ||
+				   (type == LCD_EXT_CMD_TYPE_CMD_BIN)) {
 				if (i2c0_dev == NULL) {
 					EXTERR("invalid i2c0 device\n");
 					return -1;
 				}
 				ret = lcd_extern_i2c_write(i2c0_dev->client,
 					&table[i+1], (cmd_size-1));
-			} else if (type == LCD_EXT_CMD_TYPE_CMD2) {
+			} else if ((type == LCD_EXT_CMD_TYPE_CMD2) ||
+				   (type == LCD_EXT_CMD_TYPE_CMD2_BIN)) {
 				if (i2c1_dev == NULL) {
 					EXTERR("invalid i2c1 device\n");
 					return -1;
