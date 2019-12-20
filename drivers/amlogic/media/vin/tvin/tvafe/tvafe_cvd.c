@@ -2774,6 +2774,13 @@ void tvafe_snow_config(unsigned int onoff)
 
 void tvafe_snow_config_clamp(unsigned int onoff)
 {
+	if ((tvafe_cpu_type() == CPU_TYPE_TM2) && onoff) {
+		/* 0x6d is tm2 adjust snow gain */
+		W_APB_REG(ACD_REG_6D, 0x03000000);
+	} else if ((tvafe_cpu_type() == CPU_TYPE_TM2) && !onoff) {
+		W_APB_REG(ACD_REG_6D, 0x00000000);
+	}
+
 	if (tvafe_cpu_type() == CPU_TYPE_TL1 ||
 	    tvafe_cpu_type() == CPU_TYPE_TM2) {
 		if (onoff)
