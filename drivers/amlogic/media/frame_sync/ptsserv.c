@@ -460,6 +460,7 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 			pTable->first_checkin_pts = val;
 			pTable->first_checkin_pts_uS64 = uS64;
 			timestamp_checkin_firstapts_set(val);
+			timestamp_checkin_firstaoffset_set(offset);
 			/*
 			 *if (tsync_get_debug_pts_checkin() &&
 			 * tsync_get_debug_apts()) {

@@ -451,6 +451,19 @@ void tsync_pcr_pcrscr_set(void)
 				tsync_use_demux_pcr);
 			return;
 		}
+		if (cur_checkin_vpts < cur_pcr &&
+		    cur_checkin_vpts < cur_checkin_apts) {
+			ref_pcr = cur_checkin_vpts -
+				tsync_pcr_ref_latency;
+			tsync_set_pcr_mode(0, ref_pcr);
+			tsync_pcr_inited_mode =
+				INIT_PRIORITY_VIDEO;
+			tsync_pcr_inited_flag |= TSYNC_PCR_INITCHECK_VPTS;
+			pr_info("tsync_set:pcrsrc %x,vpts %x, mode %d, ref_pcr %x\n",
+				timestamp_pcrscr_get(), timestamp_vpts_get(),
+				tsync_use_demux_pcr, ref_pcr);
+			return;
+		}
 	}
 	/* decide use which para to init */
 	if (cur_pcr && !(tsync_pcr_inited_flag & complete_init_flag)
@@ -692,7 +705,8 @@ static void tsync_process_discontinue(void)
 					tsync_pcr_ref_latency;
 			else
 				ref_pcr = tsync_pcr_get_min_checkinpts();
-			tsync_set_pcr_mode(0, cur_checkin_vpts);
+			tsync_set_pcr_mode(0, cur_checkin_vpts -
+				tsync_pcr_ref_latency);
 			tsync_pcr_tsdemuxpcr_discontinue = 0;
 		}
 		return;
@@ -1335,6 +1349,9 @@ void tsync_pcr_stop(void)
 	tsync_video_state = 0;
 	timestamp_vpts_set(0);
 	timestamp_pcrscr_set(0);
+	timestamp_apts_set(0);
+	timestamp_checkin_firstapts_set(0);
+	timestamp_checkin_firstaoffset_set(0);
 }
 EXPORT_SYMBOL(tsync_pcr_stop);
 
@@ -1431,6 +1448,34 @@ static ssize_t tsync_video_state_show(struct class *cla,
 				      char *buf)
 {
 	return sprintf(buf, "%d\n", tsync_video_state);
+}
+
+static ssize_t tsync_checkin_apts_show(struct class *cla,
+				       struct class_attribute *attr,
+				       char *buf)
+{
+	return sprintf(buf, "0x%x\n", last_pcr_checkin_apts);
+}
+
+static ssize_t tsync_checkin_vpts_show(struct class *cla,
+				       struct class_attribute *attr,
+				       char *buf)
+{
+	return sprintf(buf, "0x%x\n", last_pcr_checkin_vpts);
+}
+
+static ssize_t tsync_checkin_aoffset_show(struct class *cla,
+					  struct class_attribute *attr,
+					  char *buf)
+{
+	return sprintf(buf, "0x%x\n", timestamp_checkin_firstaoffset_get());
+}
+
+static ssize_t tsync_pcr_inited_mode_show(struct class *cla,
+					  struct class_attribute *attr,
+					  char *buf)
+{
+	return sprintf(buf, "%d\n", tsync_pcr_inited_mode);
 }
 
 static ssize_t tsync_audio_mode_store(struct class *cla,
@@ -1668,6 +1713,14 @@ static struct class_attribute tsync_pcr_class_attrs[] = {
 	       tsync_audio_state_show, NULL),
 	__ATTR(tsync_video_state, 0644,
 	       tsync_video_state_show, NULL),
+	__ATTR(tsync_checkin_apts, 0644,
+	       tsync_checkin_apts_show, NULL),
+	__ATTR(tsync_checkin_vpts, 0644,
+	       tsync_checkin_vpts_show, NULL),
+	__ATTR(tsync_checkin_aoffset, 0644,
+	       tsync_checkin_aoffset_show, NULL),
+	__ATTR(tsync_pcr_inited_mode, 0644,
+	       tsync_pcr_inited_mode_show, NULL),
 	__ATTR(tsync_disable_demux_pcr, 0644,
 	tsync_disable_pcr_show, tsync_disable_pcr_store),
 

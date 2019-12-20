@@ -39,6 +39,7 @@ static u32 audio_pts_started;
 static u32 first_vpts;
 static u32 first_checkin_vpts;
 static u32 first_checkin_apts;
+static u32 first_checkin_aoffset;
 static u32 first_apts;
 static u32 pcrscr_lantcy = 200*90;
 static u32 video_pts;
@@ -316,6 +317,18 @@ u32 timestamp_checkin_firstapts_get(void)
 	return first_checkin_apts;
 }
 EXPORT_SYMBOL(timestamp_checkin_firstapts_get);
+
+void timestamp_checkin_firstaoffset_set(u32 offset)
+{
+	first_checkin_aoffset = offset;
+}
+EXPORT_SYMBOL(timestamp_checkin_firstaoffset_set);
+
+u32 timestamp_checkin_firstaoffset_get(void)
+{
+	return first_checkin_aoffset;
+}
+EXPORT_SYMBOL(timestamp_checkin_firstaoffset_get);
 
 void timestamp_firstapts_set(u32 pts)
 {

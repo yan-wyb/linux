@@ -169,6 +169,8 @@ extern u32 timestamp_get_pts_latency(u8 type);
 extern void timestamp_clean_pts_latency(u8 type);
 extern int tsync_get_vpts_adjust(void);
 void tsync_set_av_state(u8 type, int state);
+void timestamp_checkin_firstaoffset_set(u32 offset);
+u32 timestamp_checkin_firstaoffset_get(void);
 
 static inline u32 tsync_vpts_discontinuity_margin(void)
 {
