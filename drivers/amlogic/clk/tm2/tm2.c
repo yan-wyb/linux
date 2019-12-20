@@ -138,7 +138,7 @@ PNAME(dspa_parent_names) = { "dspa_clk_a_gate",
 				"dspa_clk_b_gate" };
 
 static MESON_MUX(dspa_clk_mux, HHI_DSP_CLK_CNTL, 0x1, 15,
-	dspa_parent_names, CLK_GET_RATE_NOCACHE);
+	dspa_parent_names, CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT);
 
 
 static MUX(dspb_clk_a_mux, HHI_DSP_CLK_CNTL, 0x7, 20,
@@ -159,7 +159,7 @@ PNAME(dspb_parent_names) = { "dspb_clk_a_gate",
 				"dspb_clk_b_gate" };
 
 static MESON_MUX(dspb_clk_mux, HHI_DSP_CLK_CNTL, 0x1, 31,
-	dspb_parent_names, CLK_GET_RATE_NOCACHE);
+	dspb_parent_names, CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT);
 
 PNAME(vipnanoq_parent_names) = { "xtal", "gp0_pll", "hifi_pll", "fclk_div2p5",
 	"fclk_div3", "fclk_div4", "fclk_div5", "fclk_div5" };
