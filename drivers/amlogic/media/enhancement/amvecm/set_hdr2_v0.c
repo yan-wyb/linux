@@ -1862,11 +1862,30 @@ void set_c_gain(
 
 u32 hdr_hist[NUM_HDR_HIST][128];
 static u32 hdr_max_rgb;
-static u8 percentile_percent[7] = {
-	1, 25, 50, 75, 90, 95, 99
+static u8 percentile_percent[9] = {
+	1, 5, 10, 25, 50, 75, 90, 95, 99
 };
 
-static u32 percentile[7];
+u32 percentile[9];
+
+u32 hist_maxrgb_luminance[128] = {
+	0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 1, 1, 1, 1,
+	1, 2, 2, 2, 3, 3, 4, 4,
+	5, 5, 6, 7, 7, 8, 9, 10, 11,
+	12, 14, 15, 17, 18, 20, 22, 24,
+	26, 29, 31, 34, 37, 41, 44, 48,
+	52, 57, 62, 67, 72, 78, 85, 92,
+	99, 107, 116, 125, 135, 146, 158, 170,
+	183, 198, 213, 229, 247, 266, 287, 308,
+	332, 357, 384, 413, 445, 478, 514, 553, 594,
+	639, 686, 737, 792, 851, 915, 983, 1056, 1134,
+	1219, 1309, 1406, 1511, 1623, 1744, 1873, 2012,
+	2162, 2323, 2496, 2683, 2883, 3098, 3330, 3580,
+	3849, 4138, 4450, 4786, 5148, 5539, 5959, 6413,
+	6903, 7431, 8001, 8616, 9281, 10000
+};
 
 void set_hist(
 	enum hdr_module_sel module_sel, int enable,
@@ -1936,14 +1955,26 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 			num_pixel += hdr_hist[NUM_HDR_HIST - 1][i];
 			if (num_pixel * 100 / total_pixel >=
 			percentile_percent[percentile_index]) {
-				percentile[percentile_index] =
+				if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
+					percentile[percentile_index] =
 					(i + 1) * 10000 / 128;
+				else
+					percentile[percentile_index] =
+						hist_maxrgb_luminance[i];
+				if (percentile[percentile_index] == 0)
+					percentile[percentile_index] = 1;
 				percentile_index++;
 			}
 			if (hdr_hist[NUM_HDR_HIST - 1][i])
 				hdr_max_rgb =
 					(i + 1) * 10000 / 128;
 		}
+		/*fix the last bins have error value*/
+		if (percentile_index < 9) {
+			for (i = percentile_index; i < 9; i++)
+				percentile[i] = percentile[i - 1] + 1;
+		}
+		percentile[1] = percentile[8];
 	}
 
 #ifdef HDR2_PRINT
@@ -1959,11 +1990,11 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 5],
 				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 6],
 				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 7]);
-			pr_info("max=%d percentile=%d %d %d %d %d %d %d\n",
+			pr_info("max=%d percentile=%d %d %d %d %d %d %d %d %d\n",
 				hdr_max_rgb,
 				percentile[0], percentile[1], percentile[2],
 				percentile[3], percentile[4], percentile[5],
-				percentile[6]);
+				percentile[6], percentile[7], percentile[8]);
 		}
 	}
 #endif
@@ -2657,7 +2688,10 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 
 	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param, NULL);
 
-	set_ootf_lut(module_sel, &hdr_lut_param);
+	if (!
+	    (hdr_process_select == HDR_SDR ||
+	    hdr_process_select == HDR10P_SDR))
+		set_ootf_lut(module_sel, &hdr_lut_param);
 
 	set_oetf_lut(module_sel, &hdr_lut_param);
 
@@ -2737,6 +2771,45 @@ int hdr10p_ebzcurve_update(
 	set_hdr_matrix(
 		module_sel, HDR_GAMUT_MTX,
 		&hdr_mtx_param, p_hdr10pgen_param);
+
+	set_ootf_lut(module_sel, &hdr_lut_param);
+
+	return 0;
+}
+
+int hdr10_tm_update(
+	enum hdr_module_sel module_sel,
+	enum hdr_process_sel hdr_process_select)
+{
+	int bit_depth;
+	unsigned int i = 0;
+	struct hdr_proc_mtx_param_s hdr_mtx_param;
+
+	memset(&hdr_mtx_param, 0, sizeof(struct hdr_proc_mtx_param_s));
+	memset(&hdr_lut_param, 0, sizeof(struct hdr_proc_lut_param_s));
+
+	if (module_sel == VD1_HDR ||
+	    module_sel == VD2_HDR ||
+	    module_sel == OSD1_HDR)
+		bit_depth = 12;
+	else if (
+		module_sel == VDIN0_HDR ||
+	    module_sel == VDIN1_HDR ||
+	    module_sel == DI_HDR)
+		bit_depth = 10;
+	else
+		return 0;
+
+	if (is_meson_tl1_cpu())
+		bit_depth = 10;
+
+	if (hdr_process_select == HDR_SDR) {
+		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++)
+			hdr_lut_param.ogain_lut[i] = oo_y_lut_hdr_sdr[i];
+		hdr_lut_param.lut_on = LUT_ON;
+	} else {
+		return 0;
+	}
 
 	set_ootf_lut(module_sel, &hdr_lut_param);
 

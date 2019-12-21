@@ -43,6 +43,7 @@
 #include "hdr/am_hdr10_plus.h"
 #include "hdr/am_hdr10_plus_ootf.h"
 #include "hdr/gamut_convert.h"
+#include "hdr/am_hdr10_tm.h"
 
 uint debug_csc;
 static int cur_mvc_type[2];
@@ -308,7 +309,7 @@ struct hdr_osd_reg_s hdr_osd_reg = {
 	-1 /* shadow mode */
 };
 
-#define HDR_VERSION   "----gxl_20180830---g12a_20191015-----\n"
+#define HDR_VERSION   "----gxl_20180830---hdrv2_20200106-----\n"
 
 static struct vframe_s *dbg_vf;
 static struct master_display_info_s dbg_hdr_send;
@@ -6751,6 +6752,12 @@ void hdr10_plus_process_update(int force_source_lumin)
 }
 EXPORT_SYMBOL(hdr10_plus_process_update);
 
+static void hdr10_tm_process_update(struct vframe_master_display_colour_s *p)
+{
+	hdr10_tm_dynamic_proc(p);
+	hdr10_tm_update(VD1_HDR, HDR_SDR);
+}
+
 static struct hdr10plus_para hdmitx_hdr10plus_params[VD_PATH_MAX];
 static int hdr10_plus_pkt_update;
 static bool hdr10_plus_pkt_on;
@@ -7516,10 +7523,10 @@ static int vpp_matrix_update(
 
 		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC) ||
 		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB)) {
-			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
 				get_hist(VD1_HDR, HIST_O_BEFORE);
-			else
-				get_hist(VD1_HDR, HIST_E_LUMA);
+			else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+				get_hist(VD1_HDR, HIST_E_RGBMAX);
 		}
 	}
 
@@ -7569,8 +7576,12 @@ static int vpp_matrix_update(
 	}
 
 	if (hdr10p_meta_updated &&
-	    hdr10_plus_process_mode[vd_path] == PROC_MATCH)
+		hdr10_plus_process_mode[vd_path] == PROC_MATCH)
 		hdr10_plus_process_update(0);
+
+	if ((hdr_process_mode[vd_path] == PROC_MATCH) &&
+	    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB))
+		hdr10_tm_process_update(p);
 
 	/* eye protection mode */
 	if (signal_change_flag & SIG_WB_CHG)
