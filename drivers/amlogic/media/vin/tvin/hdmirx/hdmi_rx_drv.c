@@ -791,6 +791,13 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 					rx_pr("dv10 timeout\n");
 			}
 		}
+		if (rx.vs_info_details.dolby_vision) {
+			memcpy(&prop->dv_vsif_raw,
+			       &rx_pkt.vs_info, 3);
+			memcpy((char *)(&prop->dv_vsif_raw) + 3,
+			       &rx_pkt.vs_info.PB0,
+			       sizeof(struct tvin_dv_vsif_raw_s) - 4);
+		}
 		break;
 	case E_VSI_4K3D:
 	case E_VSI_VSI21:

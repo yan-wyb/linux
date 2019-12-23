@@ -448,6 +448,13 @@ struct tvin_hdr_info_s {
 	unsigned int hdr_check_cnt;
 };
 
+struct tvin_dv_vsif_raw_s {
+	u8 pkttype;
+	u8 version;
+	u8 length;
+	u8 PB[29];
+};
+
 struct tvin_hdr10plus_info_s {
 	bool hdr10p_on;
 	struct tvin_hdr10p_data_s hdr10p_data;
@@ -489,6 +496,7 @@ struct tvin_sig_property_s {
 	enum tvin_color_fmt_range_e color_fmt_range;
 	struct tvin_hdr_info_s hdr_info;
 	struct tvin_dv_vsif_s dv_vsif;/*dolby vsi info*/
+	struct tvin_dv_vsif_raw_s dv_vsif_raw;
 	bool dolby_vision;/*is signal dolby version*/
 	bool low_latency;/*is low latency dolby mode*/
 	uint8_t fps;

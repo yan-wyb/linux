@@ -672,26 +672,24 @@ static void rx_pktdump_drm(void *pdata)
 
 	rx_pr(">---drm infoframe detail -------->\n");
 	rx_pr("type: 0x%x\n", pktdata->pkttype);
-	rx_pr("ver: %d\n", pktdata->version);
-	rx_pr("length: %d\n", pktdata->length);
+	rx_pr("ver: %x\n", pktdata->version);
+	rx_pr("length: %x\n", pktdata->length);
 
 	rx_pr("b1 eotf: 0x%x\n", pktdata->des_u.tp1.eotf);
 	rx_pr("b2 meta des id: 0x%x\n", pktdata->des_u.tp1.meta_des_id);
 
-	rx_pr("dis_pri_x0: %d\n", pktdata->des_u.tp1.dis_pri_x0);
-	rx_pr("dis_pri_y0: %d\n", pktdata->des_u.tp1.dis_pri_y0);
-	rx_pr("dis_pri_x1: %d\n", pktdata->des_u.tp1.dis_pri_x1);
-	rx_pr("dis_pri_y1: %d\n", pktdata->des_u.tp1.dis_pri_y1);
-	rx_pr("dis_pri_x2: %d\n", pktdata->des_u.tp1.dis_pri_x2);
-	rx_pr("dis_pri_y2: %d\n", pktdata->des_u.tp1.dis_pri_y2);
-	rx_pr("white_points_x: %d\n",
-		pktdata->des_u.tp1.white_points_x);
-	rx_pr("white_points_y: %d\n",
-		pktdata->des_u.tp1.white_points_y);
-	rx_pr("max_dislum: %d\n", pktdata->des_u.tp1.max_dislum);
-	rx_pr("min_dislum: %d\n", pktdata->des_u.tp1.min_dislum);
-	rx_pr("max_light_lvl: %d\n", pktdata->des_u.tp1.max_light_lvl);
-	rx_pr("max_fa_light_lvl: %d\n", pktdata->des_u.tp1.max_fa_light_lvl);
+	rx_pr("dis_pri_x0: %x\n", pktdata->des_u.tp1.dis_pri_x0);
+	rx_pr("dis_pri_y0: %x\n", pktdata->des_u.tp1.dis_pri_y0);
+	rx_pr("dis_pri_x1: %x\n", pktdata->des_u.tp1.dis_pri_x1);
+	rx_pr("dis_pri_y1: %x\n", pktdata->des_u.tp1.dis_pri_y1);
+	rx_pr("dis_pri_x2: %x\n", pktdata->des_u.tp1.dis_pri_x2);
+	rx_pr("dis_pri_y2: %x\n", pktdata->des_u.tp1.dis_pri_y2);
+	rx_pr("white_points_x: %x\n", pktdata->des_u.tp1.white_points_x);
+	rx_pr("white_points_y: %x\n", pktdata->des_u.tp1.white_points_y);
+	rx_pr("max_dislum: %x\n", pktdata->des_u.tp1.max_dislum);
+	rx_pr("min_dislum: %x\n", pktdata->des_u.tp1.min_dislum);
+	rx_pr("max_light_lvl: %x\n", pktdata->des_u.tp1.max_light_lvl);
+	rx_pr("max_fa_light_lvl: %x\n", pktdata->des_u.tp1.max_fa_light_lvl);
 	rx_pr(">------------------>end\n");
 }
 
@@ -1129,7 +1127,7 @@ void rx_pkt_get_vsi_ex(void *pktinfo)
 	pkt->checksum = (st0 >> 24) & 0xff;
 	pkt->ieee = st0 & 0xffffff;
 
-	pkt->ver_st.version = 0;
+	pkt->ver_st.version = 1;
 	pkt->ver_st.chgbit = 0;
 
 	if (rx.chip_id != CHIP_ID_TXHD) {
