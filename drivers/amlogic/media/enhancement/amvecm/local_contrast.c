@@ -47,6 +47,7 @@ int lc_en = 1;
 int lc_demo_mode;
 int lc_en_chflg = 0xff;
 static int lc_flag = 0xff;
+static int lc_bypass_flag = 0xff;
 int osd_iir_en = 1;
 int amlc_iir_debug_en;
 /*osd related setting */
@@ -1722,6 +1723,7 @@ void lc_process(struct vframe_s *vf,
 		if (lc_flag == 0xff) {
 			lc_disable();
 			lc_flag = 0x0;
+			lc_bypass_flag = 0x0;
 		}
 		return;
 	}
@@ -1735,6 +1737,13 @@ void lc_process(struct vframe_s *vf,
 	blk_vnum = (dwTemp) & 0x1f;
 	lc_config(lc_en, vf, sps_h_en, sps_v_en,
 		sps_w_in, sps_h_in, bitdepth);
+
+	if (lc_bypass_flag <= 0) {
+		set_lc_curve(1, 0);
+		lc_bypass_flag++;
+		return;
+	}
+
 	/*get hist & curve node*/
 	lc_read_region(blk_vnum, blk_hnum);
 	/*do time domain iir*/
@@ -1756,6 +1765,7 @@ void lc_process(struct vframe_s *vf,
 	}
 
 	lc_flag = 0xff;
+	lc_bypass_flag = 0xff;
 }
 
 void lc_free(void)
