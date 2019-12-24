@@ -250,7 +250,7 @@
 
 	tl1_codec:codec {
 		#sound-dai-cells = <0>;
-		compatible = "amlogic, tl1_acodec";
+		compatible = "amlogic, tm2_revb_acodec";
 		status = "okay";
 		reg = <0x0 0xff632000 0x0 0x1c>;
 		tdmout_index = <0>;
