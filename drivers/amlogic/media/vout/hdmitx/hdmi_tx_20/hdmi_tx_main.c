@@ -136,7 +136,8 @@ static inline void hdmitx_notify_hpd(int hpd)
 	else
 		hdmitx_event_notify(HDMITX_UNPLUG, NULL);
 }
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 #include <linux/amlogic/pm.h>
 static void hdmitx_early_suspend(struct early_suspend *h)
 {
@@ -229,6 +230,14 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	pr_info(SYS "HDMITX: Late Resume\n");
 }
 
+static struct early_suspend hdmitx_early_suspend_handler = {
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 10,
+	.suspend = hdmitx_early_suspend,
+	.resume = hdmitx_late_resume,
+	.param = &hdmitx_device,
+};
+#endif
+
 /* Set avmute_set signal to HDMIRX */
 static int hdmitx_reboot_notifier(struct notifier_block *nb,
 	unsigned long action, void *data)
@@ -244,14 +253,6 @@ static int hdmitx_reboot_notifier(struct notifier_block *nb,
 
 	return NOTIFY_OK;
 }
-
-static struct early_suspend hdmitx_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 10,
-	.suspend = hdmitx_early_suspend,
-	.resume = hdmitx_late_resume,
-	.param = &hdmitx_device,
-};
-#endif
 
 #define INIT_FLAG_VDACOFF		0x1
 	/* unplug powerdown */
@@ -6049,7 +6050,7 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_hdmi_hsty_config_info);
 	ret = device_create_file(dev, &dev_attr_drm_mode_setting);
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 	register_early_suspend(&hdmitx_early_suspend_handler);
 #endif
 	hdmitx_device.nb.notifier_call = hdmitx_reboot_notifier;

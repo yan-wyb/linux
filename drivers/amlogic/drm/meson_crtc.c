@@ -186,6 +186,7 @@ static void am_meson_crtc_disable(struct drm_crtc *crtc)
 {
 	struct am_meson_crtc *amcrtc = to_am_meson_crtc(crtc);
 	unsigned long flags;
+	enum vmode_e mode;
 
 	DRM_INFO("%s\n", __func__);
 	if (crtc->state->event && !crtc->state->active) {
@@ -198,8 +199,16 @@ static void am_meson_crtc_disable(struct drm_crtc *crtc)
 	spin_lock_irqsave(&amcrtc->vblank_irq_lock, flags);
 	amcrtc->vblank_enable = 0;
 	spin_unlock_irqrestore(&amcrtc->vblank_irq_lock, flags);
-
 	disable_irq(amcrtc->vblank_irq);
+	/*disable output by config null
+	 *Todo: replace or delete it if have new method
+	 */
+	mode = validate_vmode("null");
+	if (mode == VMODE_MAX) {
+		DRM_ERROR("no matched vout mode\n");
+		return;
+	}
+	set_vout_init(mode);
 }
 
 static void am_meson_crtc_commit(struct drm_crtc *crtc)

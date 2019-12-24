@@ -66,6 +66,7 @@ struct meson_drm {
 	struct meson_vpu_pipeline *pipeline;
 	struct meson_vpu_funcs *funcs;
 	struct am_meson_logo *logo;
+	struct drm_atomic_state *state;
 
 	u32 num_crtcs;
 	struct am_meson_crtc *crtcs[MESON_MAX_CRTC];

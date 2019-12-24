@@ -44,7 +44,7 @@
 /* Local Headers */
 #include "vout_func.h"
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 #include <linux/amlogic/pm.h>
 static struct early_suspend early_suspend;
 static int early_suspend_flag;
@@ -790,7 +790,7 @@ static void vout_fops_remove(void)
 #ifdef CONFIG_PM
 static int aml_vout_suspend(struct platform_device *pdev, pm_message_t state)
 {
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 
 	if (early_suspend_flag)
 		return 0;
@@ -810,7 +810,7 @@ static int aml_vout_resume(struct platform_device *pdev)
 	}
 
 #endif
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 
 	if (early_suspend_flag)
 		return 0;
@@ -858,7 +858,7 @@ static int aml_vout_pm_resume(struct device *dev)
 #ifdef CONFIG_SCREEN_ON_EARLY
 void resume_vout_early(void)
 {
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 	early_suspend_flag = 0;
 	early_resume_flag = 1;
 	vout_resume();
@@ -867,7 +867,7 @@ void resume_vout_early(void)
 EXPORT_SYMBOL(resume_vout_early);
 #endif
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 static void aml_vout_early_suspend(struct early_suspend *h)
 {
 	if (early_suspend_flag)
@@ -1044,7 +1044,7 @@ static int aml_vout_probe(struct platform_device *pdev)
 {
 	int ret = -1;
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 	early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	early_suspend.suspend = aml_vout_early_suspend;
 	early_suspend.resume = aml_vout_late_resume;
@@ -1067,7 +1067,7 @@ static int aml_vout_probe(struct platform_device *pdev)
 
 static int aml_vout_remove(struct platform_device *pdev)
 {
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && !defined(CONFIG_AMLOGIC_DRM)
 	unregister_early_suspend(&early_suspend);
 #endif
 
