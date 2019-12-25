@@ -1561,13 +1561,13 @@
 
 	canvas: canvas {
 		compatible = "amlogic, meson, canvas";
-		status = "disabled";
+		status = "okay";
 		reg = <0xff638000 0x2000>;
 	};
 
 	codec_io: codec_io {
 		compatible = "amlogic, codec_io";
-		status = "disabled";
+		status = "okay";
 		#address-cells=<1>;
 		#size-cells=<1>;
 		ranges;
@@ -1596,7 +1596,7 @@
 
 	rdma {
 		compatible = "amlogic, meson-tl1, rdma";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 89 1>;
 		interrupt-names = "rdma";
 	};
