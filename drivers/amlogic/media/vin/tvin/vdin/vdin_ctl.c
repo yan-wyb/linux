@@ -4636,7 +4636,6 @@ int vdin_event_cb(int type, void *data, void *op_arg)
 		req->low_latency = p->low_latency;
 		memcpy(&req->dv_vsif,
 			&p->dv_vsif, sizeof(struct tvin_dv_vsif_s));
-
 		if (req->bot_flag)
 			index = (req->vf->index >> 8) & 0xff;
 		if (index != 0xff
@@ -4874,6 +4873,9 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 
 	/* hdr10+ check */
 	vdin_hdr10plus_check(devp, vf);
+
+	vf->vsif.addr = &devp->prop.dv_vsif_raw;
+	vf->vsif.size = sizeof(struct tvin_dv_vsif_raw_s);
 }
 
 

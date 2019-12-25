@@ -331,6 +331,16 @@ struct codec_mm_box_s {
 	int     bmmu_idx;
 };
 
+struct vsif_info {
+	void *addr;
+	unsigned int size;
+};
+
+struct emp_info {
+	void *addr;
+	unsigned int size;
+};
+
 struct vframe_s {
 	u32 index;
 	u32 index_disp;
@@ -452,6 +462,8 @@ struct vframe_s {
 	u32 di_gmv;
 
 	struct codec_mm_box_s mm_box;
+	struct vsif_info vsif;
+	struct emp_info emp;
 } /*vframe_t */;
 
 #if 0
