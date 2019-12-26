@@ -2935,6 +2935,195 @@ void rx_debug_help(void)
 	rx_pr("*****************\n");
 }
 
+void rx_bist_test(void)
+{
+	int data32;
+	int bist_mode = 3;
+	int port;
+	int lock_sts;
+
+	for (port = 0; port < 3; port++) {
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, 0x10034079);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, 0x100347f9);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, 0x007f8fc0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2, 0x02200000);
+
+		data32 = 0;
+		data32 |= 1 << 6; /* ports eln*/
+		data32 |= port << 1;/*selector clock to digital from data ch*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, 0x00000050);
+
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0, 0x000002a2);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, 0x07000000);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2, 0x1d00cc31);//0x1d004451
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0, 0x003e714a);//0x002c714a
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1, 0x1e040460);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2, 0x00018000);
+		usleep_range(1000, 1100);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL0, 0x200904f8);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL0, 0x300904f8);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL1, 0x00000000);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL2, 0x00001108);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL3, 0x10058f30);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL4, 0x090100c0);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL4, 0x098100c0);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL0, 0x340904f8);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL0, 0x140904f8);
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL2, 0x00003008);
+		usleep_range(1000, 1100);
+		/* Reset */
+		data32	= 0x0;
+		data32	|=	1 << 8;
+		data32	|=	1 << 7;
+		/* Configure BIST analyzer before BIST path out of reset */
+		hdmirx_wr_top(TOP_SW_RESET, data32);
+
+		// Configure BIST analyzer before BIST path out of reset
+		data32 = 0;
+		// [23:22] prbs_ana_ch2_prbs_mode:
+		// 0=prbs11; 1=prbs15; 2=prbs7; 3=prbs31.
+		data32	|=	bist_mode << 22;
+		// [21:20] prbs_ana_ch2_width:3=10-bit pattern
+		data32	|=	3 << 20;
+		// [   19] prbs_ana_ch2_clr_ber_meter	//0
+		data32	|=	1 << 19;
+		// [   18] prbs_ana_ch2_freez_ber
+		data32	|=	0 << 18;
+		// [	17] prbs_ana_ch2_bit_reverse
+		data32	|=	1 << 17;
+		// [15:14] prbs_ana_ch1_prbs_mode:
+		// 0=prbs11; 1=prbs15; 2=prbs7; 3=prbs31.
+		data32	|=	bist_mode << 14;
+		// [13:12] prbs_ana_ch1_width:3=10-bit pattern
+		data32	|=	3 << 12;
+		// [	 11] prbs_ana_ch1_clr_ber_meter //0
+		data32	|=	1 << 11;
+		// [   10] prbs_ana_ch1_freez_ber
+		data32	|=	0 << 10;
+		// [	9] prbs_ana_ch1_bit_reverse
+		data32	|=	1 << 9;
+		// [ 7: 6] prbs_ana_ch0_prbs_mode:
+		// 0=prbs11; 1=prbs15; 2=prbs7; 3=prbs31.
+		data32	|=	bist_mode << 6;
+		// [ 5: 4] prbs_ana_ch0_width:3=10-bit pattern
+		data32	|=	3 << 4;
+		// [	 3] prbs_ana_ch0_clr_ber_meter	//0
+		data32	|=	1 << 3;
+		// [	  2] prbs_ana_ch0_freez_ber
+		data32	|=	0 << 2;
+		// [    1] prbs_ana_ch0_bit_reverse
+		data32	|=	1 << 1;
+		hdmirx_wr_top(TOP_PRBS_ANA_0,  data32);
+
+		data32          = 0;
+		// [19: 8] prbs_ana_time_window
+		data32	|=	255 << 8;
+		// [ 7: 0] prbs_ana_err_thr
+		data32	|=	0;
+		hdmirx_wr_top(TOP_PRBS_ANA_1,  data32);
+
+		// Configure channel switch
+		data32          = 0;
+		data32	|=	2 << 28;// [29:28] source_2
+		data32	|=	1 << 26;// [27:26] source_1
+		data32	|=	0 << 24;// [25:24] source_0
+		data32	|=	0 << 22;// [22:20] skew_2
+		data32	|=	0 << 16;// [18:16] skew_1
+		data32	|=	0 << 12;// [14:12] skew_0
+		data32	|=	0 << 10;// [   10] bitswap_2
+		data32	|=	0 << 9;// [    9] bitswap_1
+		data32	|=	0 << 8;// [    8] bitswap_0
+		data32	|=	0 << 6;// [    6] polarity_2
+		data32	|=	0 << 5;// [    5] polarity_1
+		data32	|=	0 << 4;// [    4] polarity_0
+		data32	|=	0;// [    0] enable
+		hdmirx_wr_top(TOP_CHAN_SWITCH_0, data32);
+
+		// Configure BIST generator
+		data32		   = 0;
+		data32	|=	0 << 8;// [    8] bist_loopback
+		data32	|=	3 << 5;// [ 7: 5] decoup_thresh
+		// [ 4: 3] prbs_gen_mode:0=prbs11; 1=prbs15; 2=prbs7; 3=prbs31.
+		data32	|=	bist_mode << 3;
+		data32	|=	3 << 1;// [ 2: 1] prbs_gen_width:3=10-bit.
+		data32	|=	0;// [	 0] prbs_gen_enable
+		hdmirx_wr_top(TOP_PRBS_GEN, data32);
+		usleep_range(1000, 1100);
+		/* Reset */
+		data32	= 0x0;
+		data32	&=	~(1 << 8);
+		data32	&=	~(1 << 7);
+		/* Configure BIST analyzer before BIST path out of reset */
+		hdmirx_wr_top(TOP_SW_RESET, data32);
+
+		// Configure channel switch
+		data32 = 0;
+		data32  |=	2 << 28;// [29:28] source_2
+		data32  |=	1 << 26;// [27:26] source_1
+		data32  |=	0 << 24;// [25:24] source_0
+		data32  |=	0 << 22;// [22:20] skew_2
+		data32  |=	0 << 16;// [18:16] skew_1
+		data32  |=	0 << 12;// [14:12] skew_0
+		data32  |=	0 << 10;// [   10] bitswap_2
+		data32	|=	0 << 9;// [    9] bitswap_1
+		data32	|=	0 << 8;// [    8] bitswap_0
+		data32	|=	0 << 6;// [    6] polarity_2
+		data32	|=	0 << 5;// [    5] polarity_1
+		data32	|=	0 << 4;// [    4] polarity_0
+		data32	|=	1;// [    0] enable
+		hdmirx_wr_top(TOP_CHAN_SWITCH_0, data32);
+
+		/* Configure BIST generator */
+		data32          = 0;
+		/* [    8] bist_loopback */
+		data32	|=	0 << 8;
+		/* [ 7: 5] decoup_thresh */
+		data32	|=	3 << 5;
+		// [ 4: 3] prbs_gen_mode:
+		// 0=prbs11; 1=prbs15; 2=prbs7; 3=prbs31.
+		data32	|=	bist_mode << 3;
+		/* [ 2: 1] prbs_gen_width:3=10-bit. */
+		data32	|=	3 << 1;
+		/* [    0] prbs_gen_enable */
+		data32	|=	1;
+		hdmirx_wr_top(TOP_PRBS_GEN, data32);
+
+		/* PRBS analyzer control */
+		hdmirx_wr_top(TOP_PRBS_ANA_0, 0xf6f6f6);
+		hdmirx_wr_top(TOP_PRBS_ANA_0, 0xf2f2f2);
+
+		//if ((hdmirx_rd_top(TOP_PRBS_GEN) & data32) != 0)
+			//return;
+		usleep_range(5000, 6000);
+
+		/* Check BIST analyzer BER counters */
+		if (port == 0)
+			rx_pr("BER_CH0 = %x\n",
+			      hdmirx_rd_top(TOP_PRBS_ANA_BER_CH0));
+		else if (port == 1)
+			rx_pr("BER_CH1 = %x\n",
+			      hdmirx_rd_top(TOP_PRBS_ANA_BER_CH1));
+		else if (port == 2)
+			rx_pr("BER_CH2 = %x\n",
+			      hdmirx_rd_top(TOP_PRBS_ANA_BER_CH2));
+
+		/* check BIST analyzer result */
+		lock_sts = hdmirx_rd_top(TOP_PRBS_ANA_STAT) & 0x3f;
+		if (lock_sts == 0x15) {
+			rx_pr("CH%d BIST OK\n", port);
+		} else {
+			if (((lock_sts & 3) != 1) && (port == 0))
+				rx_pr("ch0 NG\n");
+			if ((((lock_sts >> 2) & 3) != 1) && (port == 0))
+				rx_pr("ch1 NG\n");
+			if ((((lock_sts >> 4) & 3) != 1) && (port == 0))
+				rx_pr("ch2 NG\n");
+		}
+		usleep_range(1000, 1100);
+		}
+	rx_pr("bist done\n");
+}
+
 int hdmirx_debug(const char *buf, int size)
 {
 	char tmpbuf[128];
@@ -3060,7 +3249,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
-		rx_pr("Hdmirx version2: %s\n", "ver.2019/11/20");
+		rx_pr("Hdmirx version2: %s\n", "ver.2019/12/26");
 		rx_pr("------------------\n");
 	} else if (strncmp(input[0], "port0", 5) == 0) {
 		hdmirx_open_port(TVIN_PORT_HDMI0);
@@ -3114,6 +3303,9 @@ int hdmirx_debug(const char *buf, int size)
 			set_video_mute(false);
 		else
 			set_video_mute(true);
+	} else if (strncmp(tmpbuf, "bist", 4) == 0) {
+		rx_pr("bist start\n");
+		rx_bist_test();
 	}
 	return 0;
 }
