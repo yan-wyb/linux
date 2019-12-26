@@ -291,7 +291,7 @@
 
 	vpu {
 		compatible = "amlogic, vpu-tm2";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_VAPB_MUX>,
 			<&clkc CLKID_VPU_INTR>,
 			<&clkc CLKID_VPU_P0_COMP>,
@@ -1042,7 +1042,7 @@
 
 		ion_dev {
 			compatible = "amlogic, ion_dev";
-			status = "disabled";
+			status = "okay";
 			memory-region = <&ion_cma_reserved>;
 		};/* end of ion_dev*/
 	}; /* end of soc*/
@@ -1622,7 +1622,7 @@
 	amhdmitx: amhdmitx{
 		compatible = "amlogic, amhdmitx";
 		dev_name = "amhdmitx";
-		status = "disabled";
+		status = "okay";
 		vend-data = <&vend_data>;
 		pinctrl-names="default", "hdmitx_i2c";
 		pinctrl-0=<&hdmitx_hpd &hdmitx_ddc>;
