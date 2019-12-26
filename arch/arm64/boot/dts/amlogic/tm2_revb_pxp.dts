@@ -2102,3 +2102,6 @@
 	status = "disabled";
 };
 
+&lut_dma {
+	status = "okay";
+};

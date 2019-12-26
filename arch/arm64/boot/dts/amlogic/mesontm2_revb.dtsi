@@ -1769,7 +1769,10 @@
 		dsp-cnt = <2>;
 		status = "disabled";
 	};
-
+	lut_dma:lut_dma {
+		compatible = "amlogic, meson, lut_dma";
+		status = "disabled";
+	};
 }; /* end of / */
 
 &pinctrl_aobus {
