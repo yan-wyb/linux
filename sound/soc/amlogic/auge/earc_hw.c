@@ -743,10 +743,10 @@ static int earctx_cmdc_get_reg(struct regmap *cmdc_map, int dev_id, int offset,
 			 offset << 0);
 
 	/* wait read from rx done */
-	while (!(val & (1 << 29))) {
+	do {
 		usleep_range(500, 1500);
 		val = mmio_read(cmdc_map, EARC_TX_CMDC_MASTER_CTRL);
-	}
+	} while (!(val & (1 << 29)));
 
 	mmio_update_bits(cmdc_map, EARC_TX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 31 | /* apb_write */
@@ -816,10 +816,10 @@ static int earctx_cmdc_set_reg(struct regmap *cmdc_map, int dev_id, int offset,
 			 offset << 0);
 
 	/* wait write done */
-	while (!(val & (1 << 29))) {
+	do {
 		usleep_range(500, 1500);
 		val = mmio_read(cmdc_map, EARC_TX_CMDC_MASTER_CTRL);
-	}
+	} while (!(val & (1 << 29)));
 
 	mmio_update_bits(cmdc_map, EARC_TX_CMDC_DEVICE_ID_CTRL,
 			 0x1 << 29, 0x1 << 29);
@@ -859,4 +859,46 @@ void earctx_cmdc_get_cds(struct regmap *cmdc_map, u8 *cds)
 			    0x0,
 			    cds,
 			    CDS_MAX_BYTES);
+}
+
+/* eARC RX analog auto calibration */
+void earcrx_ana_auto_cal(struct regmap *top_map)
+{
+	int stat0 = 0;
+
+	mmio_update_bits(top_map,
+			 EARCRX_ANA_CTRL1,
+			 0x3 << 30,	/* earcrx_rterm_cal_rstn & enable */
+			 0x3 << 30);
+
+	do {
+		usleep_range(10, 30);
+		stat0 = mmio_read(top_map, EARCRX_ANA_STAT0);
+	} while (!(stat0 & (1 << 31)));
+
+	mmio_update_bits(top_map,
+			 EARCRX_ANA_CTRL0,
+			 0x1f << 15,
+			 (stat0 & 0x1f) << 15);
+}
+
+/* eARC RX analog auto calibration */
+void earctx_ana_auto_cal(struct regmap *top_map)
+{
+	int stat0 = 0;
+
+	mmio_update_bits(top_map,
+			 EARCTX_ANA_CTRL1,
+			 0x3 << 30, /* earctx_rterm_cal_rstn & enable */
+			 0x3 << 30);
+
+	do {
+		usleep_range(10, 30);
+		stat0 = mmio_read(top_map, EARCTX_ANA_STAT0);
+	} while (!(stat0 & (1 << 31)));
+
+	mmio_update_bits(top_map,
+			 EARCTX_ANA_CTRL0,
+			 0x1f << 12,
+			 (stat0 & 0x1f) << 12);
 }

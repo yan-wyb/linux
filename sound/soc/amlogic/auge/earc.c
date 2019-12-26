@@ -35,6 +35,7 @@
 #include <sound/control.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
+#include <linux/workqueue.h>
 
 #include <linux/amlogic/media/sound/hdmi_earc.h>
 #include <linux/amlogic/media/sound/mixer.h>
@@ -77,6 +78,12 @@ struct earc {
 
 	bool rx_dmac_clk_on;
 	bool tx_dmac_clk_on;
+
+	/* do analog auto calibration when bootup */
+	struct work_struct work;
+	enum work_event event;
+	bool rx_bootup_auto_cal;
+	bool tx_bootup_auto_cal;
 };
 
 static struct earc *s_earc;
@@ -846,8 +853,8 @@ const struct soc_enum attended_type_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(attended_type),
 			attended_type);
 
-int earcrx_get_attend_type(struct snd_kcontrol *kcontrol,
-			   struct snd_ctl_elem_value *ucontrol)
+static int earcrx_get_attend_type(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -859,8 +866,8 @@ int earcrx_get_attend_type(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earcrx_set_attend_type(struct snd_kcontrol *kcontrol,
-			   struct snd_ctl_elem_value *ucontrol)
+static int earcrx_set_attend_type(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -874,8 +881,7 @@ int earcrx_set_attend_type(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int earcrx_arc_get_enable(
-				 struct snd_kcontrol *kcontrol,
+static int earcrx_arc_get_enable(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
@@ -888,8 +894,7 @@ static int earcrx_arc_get_enable(
 	return 0;
 }
 
-static int earcrx_arc_set_enable(
-				 struct snd_kcontrol *kcontrol,
+static int earcrx_arc_set_enable(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
@@ -905,8 +910,8 @@ static int earcrx_arc_set_enable(
 	return 0;
 }
 
-int earctx_get_attend_type(struct snd_kcontrol *kcontrol,
-			   struct snd_ctl_elem_value *ucontrol)
+static int earctx_get_attend_type(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -922,8 +927,8 @@ int earctx_get_attend_type(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earctx_set_attend_type(struct snd_kcontrol *kcontrol,
-			   struct snd_ctl_elem_value *ucontrol)
+static int earctx_set_attend_type(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -942,8 +947,8 @@ int earctx_set_attend_type(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earcrx_get_latency(struct snd_kcontrol *kcontrol,
-		       struct snd_ctl_elem_value *ucontrol)
+static int earcrx_get_latency(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -964,8 +969,8 @@ int earcrx_get_latency(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earcrx_set_latency(struct snd_kcontrol *kcontrol,
-		       struct snd_ctl_elem_value *ucontrol)
+static int earcrx_set_latency(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -984,8 +989,8 @@ int earcrx_set_latency(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earcrx_get_cds(struct snd_kcontrol *kcontrol,
-		   struct snd_ctl_elem_value *ucontrol)
+static int earcrx_get_cds(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -1011,8 +1016,8 @@ int earcrx_get_cds(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earcrx_set_cds(struct snd_kcontrol *kcontrol,
-		   struct snd_ctl_elem_value *ucontrol)
+static int earcrx_set_cds(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -1039,8 +1044,8 @@ int earcrx_set_cds(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earctx_get_latency(struct snd_kcontrol *kcontrol,
-		       struct snd_ctl_elem_value *ucontrol)
+static int earctx_get_latency(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -1061,8 +1066,8 @@ int earctx_get_latency(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earctx_set_latency(struct snd_kcontrol *kcontrol,
-		       struct snd_ctl_elem_value *ucontrol)
+static int earctx_set_latency(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -1081,8 +1086,8 @@ int earctx_set_latency(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-int earctx_get_cds(struct snd_kcontrol *kcontrol,
-		   struct snd_ctl_elem_value *ucontrol)
+static int earctx_get_cds(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
@@ -1205,6 +1210,12 @@ void earc_hdmitx_hpdst(bool st)
 	/* ensure clock gate */
 	audiobus_update_bits(EE_AUDIO_CLK_GATE_EN1, 0x1 << 6, 0x1 << 6);
 
+	if (!p_earc->rx_bootup_auto_cal) {
+		p_earc->rx_bootup_auto_cal = true;
+		p_earc->event = EVENT_RX_ANA_AUTO_CAL;
+		schedule_work(&p_earc->work);
+	}
+
 	if (st)
 		earcrx_cmdc_int_mask(p_earc->rx_top_map);
 
@@ -1293,6 +1304,12 @@ void earc_hdmirx_hpdst(int earc_port, bool st)
 		earc_port,
 		st ? "plugin" : "plugout");
 
+	if (!p_earc->tx_bootup_auto_cal) {
+		p_earc->tx_bootup_auto_cal = true;
+		p_earc->event = EVENT_TX_ANA_AUTO_CAL;
+		schedule_work(&p_earc->work);
+	}
+
 	earctx_cmdc_arc_connect(p_earc->tx_cmdc_map, st);
 	earctx_cmdc_hpd_detect(p_earc->tx_top_map,
 			       p_earc->tx_cmdc_map,
@@ -1337,6 +1354,21 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 	earctx_cmdc_int_mask(p_earc->tx_top_map);
 
 	return ret;
+}
+
+static void earc_work_func(struct work_struct *work)
+{
+	struct earc *p_earc = container_of(work, struct earc, work);
+
+	/* RX */
+	if ((!IS_ERR(p_earc->rx_top_map)) &&
+	    (p_earc->event == EVENT_RX_ANA_AUTO_CAL))
+		earcrx_ana_auto_cal(p_earc->rx_top_map);
+
+	/* TX */
+	if ((!IS_ERR(p_earc->tx_top_map)) &&
+	    (p_earc->event == EVENT_TX_ANA_AUTO_CAL))
+		earctx_ana_auto_cal(p_earc->tx_top_map);
 }
 
 static int earc_platform_probe(struct platform_device *pdev)
@@ -1530,6 +1562,10 @@ static int earc_platform_probe(struct platform_device *pdev)
 		earctx_extcon_register(p_earc);
 		earctx_cmdc_setup(p_earc);
 	}
+
+	if ((!IS_ERR(p_earc->rx_top_map)) ||
+	    (!IS_ERR(p_earc->tx_top_map)))
+		INIT_WORK(&p_earc->work, earc_work_func);
 
 	pr_info("%s, register soc platform\n", __func__);
 

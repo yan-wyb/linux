@@ -83,6 +83,8 @@
 #define INT_EARCTX_ERRCORR_C_FIFO_OVERFLOW       (0x1 << 1)
 #define INT_EARCTX_ERRCORR_C_FIFO_EMPTY          (0x1 << 0)
 
+#define CDS_MAX_BYTES 256
+
 /* cmdc discovery and disconnect state */
 enum cmdc_st {
 	CMDC_ST_OFF,
@@ -123,7 +125,11 @@ enum reg_offset {
 	ERX_LATENCY_REQ_REG = 0xD3
 };
 
-#define CDS_MAX_BYTES 256
+enum work_event {
+	EVENT_NONE,
+	EVENT_RX_ANA_AUTO_CAL,
+	EVENT_TX_ANA_AUTO_CAL,
+};
 
 void earcrx_pll_refresh(struct regmap *top_map);
 void earcrx_cmdc_int_mask(struct regmap *top_map);
@@ -173,4 +179,6 @@ void earctx_cmdc_get_latency(struct regmap *cmdc_map, u8 *latency);
 void earctx_cmdc_set_latency(struct regmap *cmdc_map, u8 *latency);
 void earctx_cmdc_get_cds(struct regmap *cmdc_map, u8 *cds);
 
+void earcrx_ana_auto_cal(struct regmap *top_map);
+void earctx_ana_auto_cal(struct regmap *top_map);
 #endif
