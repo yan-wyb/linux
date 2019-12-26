@@ -322,27 +322,25 @@ struct tvin_info_s {
 	enum tvin_color_fmt_e cfmt;
 	unsigned int fps;
 	unsigned int is_dvi;
+
 	/*
+	 * bit 30: is_dv
 	 * bit 29: present_flag
 	 * bit 28-26: video_format
-	 * "component", "PAL", "NTSC", "SECAM",
-	 * "MAC", "unspecified"
+	 *	"component", "PAL", "NTSC", "SECAM", "MAC", "unspecified"
 	 * bit 25: range "limited", "full_range"
 	 * bit 24: color_description_present_flag
 	 * bit 23-16: color_primaries
-	 * unknown", "bt709", "undef", "bt601",
-	 * "bt470m", "bt470bg", "smpte170m", "smpte240m",
-	 * "film", "bt2020"
+	 *	"unknown", "bt709", "undef", "bt601", "bt470m", "bt470bg",
+	 *	"smpte170m", "smpte240m", "film", "bt2020"
 	 * bit 15-8: transfer_characteristic
-	 * "unknown", "bt709", "undef", "bt601",
-	 * "bt470m", "bt470bg", "smpte170m", "smpte240m",
-	 * "linear", "log100", "log316", "iec61966-2-4",
-	 * "bt1361e", "iec61966-2-1", "bt2020-10", "bt2020-12",
-	 * "smpte-st-2084", "smpte-st-428"
+	 *	"unknown", "bt709", "undef", "bt601", "bt470m", "bt470bg",
+	 *	"smpte170m", "smpte240m", "linear", "log100", "log316",
+	 *	"iec61966-2-4", "bt1361e", "iec61966-2-1", "bt2020-10",
+	 *	"bt2020-12", "smpte-st-2084", "smpte-st-428"
 	 * bit 7-0: matrix_coefficient
-	 * "GBR", "bt709", "undef", "bt601",
-	 * "fcc", "bt470bg", "smpte170m", "smpte240m",
-	 * "YCgCo", "bt2020nc", "bt2020c"
+	 *	"GBR", "bt709", "undef", "bt601", "fcc", "bt470bg",
+	 *	"smpte170m", "smpte240m", "YCgCo", "bt2020nc", "bt2020c"
 	 */
 	unsigned int signal_type;
 };

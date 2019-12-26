@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2019-1118: 1080p 10bit afbc green screen"
+#define VDIN_VER "ver:2020-0106: add HDR/HDR10+/HLG/DV intf for upper layer"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2

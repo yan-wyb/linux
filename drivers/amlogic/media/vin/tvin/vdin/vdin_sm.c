@@ -277,10 +277,12 @@ void tvin_smr_init_counter(int index)
 	sm_dev[index].exit_prestable_cnt = 0;
 }
 
-static void hdmirx_dv_check(struct vdin_dev_s *devp,
-	struct tvin_sig_property_s *prop)
+static void tvin_hdmirx_hdr_check(struct vdin_dev_s *devp,
+				  struct tvin_sig_property_s *prop)
 {
-	/*check hdmiin dolby input*/
+	unsigned int signal_type = devp->parm.info.signal_type;
+
+	/* check dv begin */
 	if (prop->dolby_vision != devp->dv.dv_flag) {
 		tvin_smr_init(devp->index);
 		devp->dv.dv_flag = prop->dolby_vision;
@@ -289,7 +291,82 @@ static void hdmirx_dv_check(struct vdin_dev_s *devp,
 	if (prop->low_latency != devp->dv.low_latency)
 		devp->dv.low_latency = prop->low_latency;
 	memcpy(&devp->dv.dv_vsif,
-			&prop->dv_vsif, sizeof(struct tvin_dv_vsif_s));
+	       &prop->dv_vsif, sizeof(struct tvin_dv_vsif_s));
+
+	if (devp->dv.dv_flag)
+		signal_type |= (1 << 30);
+	else
+		signal_type &= ~(1 << 30);
+	/* check dv end */
+
+	/* check HDR/HLG begin */
+	if (prop->hdr_info.hdr_state == HDR_STATE_GET) {
+		if (vdin_hdr_sei_error_check(devp) == 1) {
+			signal_type &= ~(1 << 29);
+			signal_type &= ~(1 << 25);
+			/* default is bt709,if change need sync */
+			signal_type = ((1 << 16) |
+				       (signal_type & (~0xFF0000)));
+			signal_type = ((1 << 8) | (signal_type & (~0xFF00)));
+		} else {
+			if ((prop->hdr_info.hdr_data.eotf ==
+			    EOTF_SMPTE_ST_2048) ||
+			    (prop->hdr_info.hdr_data.eotf == EOTF_HDR)) {
+				signal_type |= (1 << 29);
+				signal_type |= (0 << 25);/* 0:limit */
+				signal_type = ((9 << 16) |
+					(signal_type & (~0xFF0000)));
+				signal_type = ((16 << 8) |
+					(signal_type & (~0xFF00)));
+				signal_type = ((9 << 0) |
+					(signal_type & (~0xFF)));
+			} else if (devp->prop.hdr_info.hdr_data.eotf ==
+				   EOTF_HLG) {
+				signal_type |= (1 << 29);
+				signal_type |= (0 << 25);/* 0:limit */
+				signal_type = ((9 << 16) |
+					(signal_type & (~0xFF0000)));
+				signal_type = ((14 << 8) |
+					(signal_type & (~0xFF00)));
+				signal_type = ((9 << 0) |
+					(signal_type & (~0xFF)));
+			} else {
+				signal_type &= ~(1 << 29);
+				signal_type &= ~(1 << 25);
+				/* default is bt709,if change need sync */
+				signal_type = ((1 << 16) |
+					(signal_type & (~0xFF0000)));
+				signal_type = ((1 << 8) |
+					(signal_type & (~0xFF00)));
+			}
+		}
+	} else if (prop->hdr_info.hdr_state == HDR_STATE_NULL) {
+		signal_type &= ~(1 << 29);
+		signal_type &= ~(1 << 25);
+		signal_type |= (0 << 25);/* 0:limit */
+		/* default is bt709,if change need sync */
+		signal_type = ((1 << 16) | (signal_type & (~0xFF0000)));
+		signal_type = ((1 << 8) | (signal_type & (~0xFF00)));
+	}
+	/* check HDR/HLG end */
+
+	/* check HDR 10+ begin */
+	if (prop->hdr10p_info.hdr10p_on) {
+		signal_type |= (1 << 29);/* present_flag */
+		signal_type |= (0 << 25);/* 0:limited */
+
+		/* color_primaries */
+		signal_type = ((9 << 16) | (signal_type & (~0xFF0000)));
+
+		/*transfer_characteristic*/
+		signal_type = ((0x30 << 8) | (signal_type & (~0xFF00)));
+
+		/* matrix_coefficient */
+		signal_type = ((9 << 0) | (signal_type & (~0xFF)));
+	}
+	/* check HDR 10+ end */
+
+	devp->parm.info.signal_type = signal_type;
 }
 
 void reset_tvin_smr(unsigned int index)
@@ -333,7 +410,7 @@ void tvin_smr(struct vdin_dev_s *devp)
 	prop = &devp->prop;
 	pre_prop = &devp->pre_prop;
 
-	hdmirx_dv_check(devp, prop);
+	tvin_hdmirx_hdr_check(devp, prop);
 
 	switch (sm_p->state) {
 	case TVIN_SM_STATUS_NOSIG:

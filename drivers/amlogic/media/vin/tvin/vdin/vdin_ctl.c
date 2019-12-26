@@ -4609,7 +4609,7 @@ void set_invert_top_bot(bool invert_flag)
 	invert_top_bot = invert_flag;
 }
 
-static int vdin_hdr_sei_error_check(struct vdin_dev_s *devp)
+int vdin_hdr_sei_error_check(struct vdin_dev_s *devp)
 {
 	int primary_data[3][2];
 	int i;
@@ -4777,8 +4777,7 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 			(vf->signal_type & (~0xFF00)));
 	}
 
-	devp->parm.info.signal_type = vf->signal_type;
-	/*hdr10+ check*/
+	/* hdr10+ check */
 	vdin_hdr10plus_check(devp, vf);
 }
 

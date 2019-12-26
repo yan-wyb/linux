@@ -155,6 +155,7 @@ extern void vdin_set_wr_ctrl_vsync(struct vdin_dev_s *devp,
 	unsigned int rdma_enable);
 
 extern void vdin_urgent_patch_resume(unsigned int offset);
+int vdin_hdr_sei_error_check(struct vdin_dev_s *devp);
 extern void vdin_set_drm_data(struct vdin_dev_s *devp,
 		struct vframe_s *vf);
 extern u32 vdin_get_curr_field_type(struct vdin_dev_s *devp);
