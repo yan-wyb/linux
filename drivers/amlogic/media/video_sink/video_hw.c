@@ -4723,13 +4723,26 @@ int video_hw_init(void)
 		if (is_meson_tl1_cpu())
 			WRITE_VCBUS_REG_BITS(
 				DOLBY_PATH_CTRL, 0xf, 0, 6);
-		/* disable latch for sr core0/1 scaler */
-		WRITE_VCBUS_REG_BITS(
-			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
-		WRITE_VCBUS_REG_BITS(
-			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
-		WRITE_VCBUS_REG_BITS(
-			SRSHARP1_SHARP_SYNC_CTRL, 1, 8, 1);
+		if (is_meson_tm2_revb()) {
+			/* disable latch for sr core0/1 scaler */
+			WRITE_VCBUS_REG_BITS(
+				SRSHARP0_SHARP_SYNC_CTRL
+				+ 0x1200, 1, 0, 1);
+			WRITE_VCBUS_REG_BITS(
+				SRSHARP0_SHARP_SYNC_CTRL
+				+ 0x1200, 1, 8, 1);
+			WRITE_VCBUS_REG_BITS(
+				SRSHARP1_SHARP_SYNC_CTRL
+				+ 0x1300, 1, 8, 1);
+		} else {
+			/* disable latch for sr core0/1 scaler */
+			WRITE_VCBUS_REG_BITS(
+				SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
+			WRITE_VCBUS_REG_BITS(
+				SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
+			WRITE_VCBUS_REG_BITS(
+				SRSHARP1_SHARP_SYNC_CTRL, 1, 8, 1);
+		}
 	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B)) {
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
@@ -4781,8 +4794,11 @@ int video_early_init(void)
 			glayer_info[i].pps_support =
 				(i == 0) ? true : false;
 		} else if (is_meson_tm2_cpu()) {
-			glayer_info[i].afbc_support =
-				(i == 0) ? true : false;
+			if (is_meson_tm2_revb())
+				glayer_info[i].afbc_support = true;
+			else
+				glayer_info[i].afbc_support =
+					(i == 0) ? true : false;
 			glayer_info[i].pps_support = true;
 		} else {
 			glayer_info[i].afbc_support = true;

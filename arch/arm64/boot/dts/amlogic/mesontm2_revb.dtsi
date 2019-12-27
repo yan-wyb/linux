@@ -1658,8 +1658,8 @@
 	};
 
 	meson-amvideom {
-		compatible = "amlogic, amvideom";
-		status = "disabled";
+		compatible = "amlogic, amvideom-tm2-revb";
+		status = "okay";
 		interrupts = <0 3 1>;
 		interrupt-names = "vsync";
 	};
@@ -1671,7 +1671,7 @@
 
 	amlvideo {
 		compatible = "amlogic, amlvideo";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vdac {

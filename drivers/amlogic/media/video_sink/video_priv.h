@@ -254,6 +254,16 @@ struct video_layer_s {
 	u32 global_debug;
 };
 
+enum cpu_type_e {
+	MESON_CPU_MAJOR_ID_COMPATIBALE = 0x1,
+	MESON_CPU_MAJOR_ID_TM2_REVB,
+	MESON_CPU_MAJOR_ID_UNKNOWN,
+};
+
+struct amvideo_device_data_s {
+	enum cpu_type_e cpu_type;
+};
+
 /* from video_hw.c */
 extern struct video_layer_s vd_layer[MAX_VD_LAYER];
 extern struct disp_info_s glayer_info[MAX_VD_LAYER];
@@ -400,6 +410,6 @@ struct device *get_video_device(void);
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
 int ext_frame_capture_poll(int endflags);
 #endif
-
+bool is_meson_tm2_revb(void);
 #endif
 /*VIDEO_PRIV_HEADER_HH*/
