@@ -574,13 +574,21 @@ static void lcd_vbyone_hw_filter(int flag)
 			temp = (period >> 16) & 0xf;
 			lcd_vcbus_write(VBO_INFILTER_TICK_PERIOD_H, temp);
 			/* hpd */
-			temp = vx1_conf->hw_filter_cnt & 0xf;
-			temp = (temp == 0) ? 0x7 : temp;
-			lcd_vcbus_setb(VBO_INSGN_CTRL, temp, 8, 4);
+			temp = vx1_conf->hw_filter_cnt & 0xff;
+			if (temp == 0xff) {
+				lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 8, 4);
+			} else {
+				temp = (temp == 0) ? 0x7 : temp;
+				lcd_vcbus_setb(VBO_INSGN_CTRL, temp, 8, 4);
+			}
 			/* lockn */
-			temp = (vx1_conf->hw_filter_cnt >> 8) & 0xf;
-			temp = (temp == 0) ? 0x7 : temp;
-			lcd_vcbus_setb(VBO_INSGN_CTRL, temp, 12, 4);
+			temp = (vx1_conf->hw_filter_cnt >> 8) & 0xff;
+			if (temp == 0xff) {
+				lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 12, 4);
+			} else {
+				temp = (temp == 0) ? 0x7 : temp;
+				lcd_vcbus_setb(VBO_INSGN_CTRL, temp, 12, 4);
+			}
 		} else {
 			temp = (vx1_conf->hw_filter_time >> 8) & 0x1;
 			if (temp) {
@@ -588,15 +596,40 @@ static void lcd_vbyone_hw_filter(int flag)
 						0xff);
 				lcd_vcbus_write(VBO_INFILTER_TICK_PERIOD_H,
 						0x0);
-				lcd_vcbus_setb(VBO_INSGN_CTRL, 0x7, 8, 4);
-				lcd_vcbus_setb(VBO_INSGN_CTRL, 0x7, 12, 4);
-				LCDPR("%s: %d change to min for debug\n",
-				       __func__, flag);
+				lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 8, 4);
+				lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 12, 4);
+				LCDPR("%s: %d disable for debug\n",
+				      __func__, flag);
 			}
 		}
 		break;
 	default:
-		lcd_vcbus_write(VBO_INFILTER_CTRL, 0xff77);
+		if (flag) {
+			lcd_vcbus_setb(VBO_INFILTER_CTRL, 0xff, 8, 8);
+			/* hpd */
+			temp = vx1_conf->hw_filter_cnt & 0xff;
+			if (temp == 0xff) {
+				lcd_vcbus_setb(VBO_INFILTER_CTRL, 0, 0, 3);
+			} else {
+				temp = (temp == 0) ? 0x7 : temp;
+				lcd_vcbus_setb(VBO_INFILTER_CTRL, temp, 0, 3);
+			}
+			/* lockn */
+			temp = (vx1_conf->hw_filter_cnt >> 8) & 0xff;
+			if (temp == 0xff) {
+				lcd_vcbus_setb(VBO_INFILTER_CTRL, 0, 4, 3);
+			} else {
+				temp = (temp == 0) ? 0x7 : temp;
+				lcd_vcbus_setb(VBO_INFILTER_CTRL, temp, 4, 3);
+			}
+		} else {
+			temp = (vx1_conf->hw_filter_time >> 8) & 0x1;
+			if (temp) {
+				lcd_vcbus_write(VBO_INFILTER_CTRL, 0xff00);
+				LCDPR("%s: %d disable for debug\n",
+				      __func__, flag);
+			}
+		}
 		break;
 	}
 }
@@ -733,7 +766,7 @@ static void lcd_vbyone_control_set(struct lcd_config_s *pconf)
 	/* Mux pads in combo-phy: 0 for dsi; 1 for lvds or vbyone; 2 for edp */
 	/*lcd_hiu_write(HHI_DSI_LVDS_EDP_CNTL0, 0x1);*/
 
-	lcd_vbyone_hw_filter(0);
+	lcd_vbyone_hw_filter(1);
 	lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 2, 2);
 	lcd_vcbus_setb(VBO_CTRL_L, 1, 0, 1);
 
