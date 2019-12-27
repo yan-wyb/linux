@@ -249,6 +249,11 @@
 #define VDIN_LFIFO_CTRL             ((0x121a))/* + 0xd0100000) */
 #define LFIFO_BUF_SIZE_BIT	0
 #define LFIFO_BUF_SIZE_WID	12
+/* tm2 new add begin */
+#define CH0_OUT_EN_BIT	17
+#define CH1_OUT_EN_BIT	18
+#define CH_OUT_EN_WID	1
+/* tm2 new add end */
 
 #define VDIN_COM_GCLK_CTRL          ((0x121b))/* + 0xd0100000) */
 /* 12:0 VDIN input interface width minus 1,
@@ -318,6 +323,59 @@
 /* Bit 8 vdin write request enable */
 /* Bit 7:0 Write luma canvas address */
 #define VDIN_WR_CTRL                   ((0x1220))/* + 0xd0100000) */
+/* Applicable only bit[13:12]=0 or 10. */
+/* 0: Output every even pixels' CbCr; */
+/* 1: Output every odd pixels' CbCr; */
+/* 10: Output an average value per even&odd pair of pixels; */
+/* 11: Output all CbCr. (This does NOT apply to bit[13:12]=0 -- 4:2:2 mode.) */
+#define HCONV_MODE_BIT                  30
+#define HCONV_MODE_WID                  2
+/* 1:disable vid_wr_mif clock gating function */
+#define NO_CLOCK_GATE_BIT               29
+#define NO_CLOCK_GATE_WID                1
+#define WR_RESPONSE_CNT_CLR_BIT         28
+#define WR_RESPONSE_CNT_CLR_WID         1
+#define EOL_SEL_BIT                     27
+#define EOL_SEL_WID                     1
+#define VCP_NR_EN_BIT                   26/* ONLY VDIN0 */
+#define VCP_NR_EN_WID                   1
+#define VCP_WR_EN_BIT                   25/* ONLY VDIN0 */
+#define VCP_WR_EN_WID                   1
+#define VCP_IN_EN_BIT                   24/* ONLY VDIN0 */
+#define VCP_IN_EN_WID                   1
+/* #define WR_OUT_CTRL_BIT                 24 ? */
+/* #define WR_OUT_CTRL_WID                 8    //directly send out */
+#define FRAME_SOFT_RST_EN_BIT           23
+#define FRAME_SOFT_RST_EN_WID           1
+/* reset LFIFO on VS (Go_field) */
+#define LFIFO_SOFT_RST_EN_BIT           22
+#define LFIFO_SOFT_RST_EN_WID           1
+#define DIRECT_DONE_CLR_BIT             21   /* used by other modules */
+#define DIRECT_DONE_CLR_WID             1
+#define NR_DONE_CLR_BIT                 20   /* used by other modules */
+#define NR_DONE_CLR_WID                 1
+/* only [13:12]=10;0 output cbcr(nv12);1 output cbcr(nv21) */
+#define SWAP_CBCR_BIT                      18
+#define SWAP_CBCR_WID                      1
+/* 0: Output even lines' CbCr; 01: Output odd lines' CbCr;
+ * 10: Reserved; 11: Output all CbCr.
+ */
+#define VCONV_MODE_BIT                     16
+#define VCONV_MODE_WID                    2
+/* 0: 422;1: 444;10:Y to luma canvas cbcr to chroma canvas for NV12/21 */
+#define WR_FMT_BIT                      12
+#define WR_FMT_WID                     2
+/* vdin_wr_canvas = vdin_wr_canvas_dbuf_en ? wr_canvas_shadow :wr_canvas;  */
+/* shadow is latch by go_field */
+#define WR_CANVAS_DOUBLE_BUF_EN_BIT            11
+#define WR_CANVAS_DOUBLE_BUF_EN_WID            1
+#define WR_REQ_URGENT_BIT               9
+#define WR_REQ_URGENT_WID               1    /* directly send out */
+#define WR_REQ_EN_BIT                   8
+#define WR_REQ_EN_WID                   1    /* directly send out */
+#define WR_CANVAS_BIT                   0
+#define WR_CANVAS_WID                   8
+
 /* Bit 29, if true, horizontal reverse */
 /* Bit 28:16 start */
 /* Bit 12:0  end */
@@ -790,13 +848,13 @@
  */
 #define VDIN_TOP_DOUBLE_CTRL	0x410b
 #define VDIN_REORDER_SEL_WID	4
-/*[3:0] afbce sel*/
+/* [3:0] afbce sel */
 #define AFBCE_OUT_SEL_BIT	0
-/*[7:4] wr mif 0 sel*/
+/* [7:4] wr mif 0 sel */
 #define MIF0_OUT_SEL_BIT	4
-/*[11:8] wr mif 1 sel*/
+/* [11:8] wr mif 1 sel */
 #define MIF1_OUT_SEL_BIT	8
-/*[15:12] wr mif 2 sel*/
+/* [15:12] wr mif 2 sel */
 #define MIF2_OUT_SEL_BIT	12
 
 /*tm2 new add end*/
@@ -1222,61 +1280,6 @@
 /* Write chroma canvas address */
 #define WRITE_CHROMA_CANVAS_ADDR_BIT	0
 #define WRITE_CHROMA_CANVAS_ADDR_WID   8
-
-/* #define VDIN_WR_CTRL                            0x1220 */
-
-/* Applicable only bit[13:12]=0 or 10. */
-/* 0: Output every even pixels' CbCr; */
-/* 1: Output every odd pixels' CbCr; */
-/* 10: Output an average value per even&odd pair of pixels; */
-/* 11: Output all CbCr. (This does NOT apply to bit[13:12]=0 -- 4:2:2 mode.) */
-#define HCONV_MODE_BIT                  30
-#define HCONV_MODE_WID                  2
-/* 1:disable vid_wr_mif clock gating function */
-#define NO_CLOCK_GATE_BIT               29
-#define NO_CLOCK_GATE_WID                1
-#define WR_RESPONSE_CNT_CLR_BIT         28
-#define WR_RESPONSE_CNT_CLR_WID         1
-#define EOL_SEL_BIT                     27
-#define EOL_SEL_WID                     1
-#define VCP_NR_EN_BIT                   26/* ONLY VDIN0 */
-#define VCP_NR_EN_WID                   1
-#define VCP_WR_EN_BIT                   25/* ONLY VDIN0 */
-#define VCP_WR_EN_WID                   1
-#define VCP_IN_EN_BIT                   24/* ONLY VDIN0 */
-#define VCP_IN_EN_WID                   1
-/* #define WR_OUT_CTRL_BIT                 24 ? */
-/* #define WR_OUT_CTRL_WID                 8    //directly send out */
-#define FRAME_SOFT_RST_EN_BIT           23
-#define FRAME_SOFT_RST_EN_WID           1
-/* reset LFIFO on VS (Go_field) */
-#define LFIFO_SOFT_RST_EN_BIT           22
-#define LFIFO_SOFT_RST_EN_WID           1
-#define DIRECT_DONE_CLR_BIT             21   /* used by other modules */
-#define DIRECT_DONE_CLR_WID             1
-#define NR_DONE_CLR_BIT                 20   /* used by other modules */
-#define NR_DONE_CLR_WID                 1
-/* only [13:12]=10;0 output cbcr(nv12);1 output cbcr(nv21) */
-#define SWAP_CBCR_BIT                      18
-#define SWAP_CBCR_WID                      1
-/* 0: Output even lines' CbCr; 01: Output odd lines' CbCr;
- * 10: Reserved; 11: Output all CbCr.
- */
-#define VCONV_MODE_BIT                     16
-#define VCONV_MODE_WID                    2
-/* 0: 422;1: 444;10:Y to luma canvas cbcr to chroma canvas for NV12/21 */
-#define WR_FMT_BIT                      12
-#define WR_FMT_WID                     2
-/* vdin_wr_canvas = vdin_wr_canvas_dbuf_en ? wr_canvas_shadow :wr_canvas;  */
-/* shadow is latch by go_field */
-#define WR_CANVAS_DOUBLE_BUF_EN_BIT            11
-#define WR_CANVAS_DOUBLE_BUF_EN_WID            1
-#define WR_REQ_URGENT_BIT               9
-#define WR_REQ_URGENT_WID               1    /* directly send out */
-#define WR_REQ_EN_BIT                   8
-#define WR_REQ_EN_WID                   1    /* directly send out */
-#define WR_CANVAS_BIT                   0
-#define WR_CANVAS_WID                   8
 
 /* #define VDIN_WR_H_START_END                        0x1221 */
 

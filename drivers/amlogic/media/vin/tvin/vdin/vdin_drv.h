@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0315: force recycle when hist||screen cap=1"
+#define VDIN_VER "ver:2020-0316: add double write functionality"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -128,6 +128,11 @@ struct match_data_s {
 
 #define IS_HDMI_SRC(src) (((src) >= TVIN_PORT_HDMI0) && \
 				((src) <= TVIN_PORT_HDMI7))
+
+#define H_SHRINK_TIMES_4k	4
+#define V_SHRINK_TIMES_4k	4
+#define H_SHRINK_TIMES_1080	2
+#define V_SHRINK_TIMES_1080	2
 
 /*vdin write mem color-depth support*/
 enum VDIN_WR_COLOR_DEPTHe {
@@ -319,8 +324,6 @@ struct vdin_afbce_s {
 	unsigned long fm_table_paddr[VDIN_CANVAS_MAX_CNT];
 	/*every body head addr*/
 	unsigned long fm_body_paddr[VDIN_CANVAS_MAX_CNT];
-	//unsigned int cur_af;/*current afbce number*/
-	//unsigned int last_af;/*last afbce number*/
 };
 
 struct vdin_dev_s {
@@ -366,10 +369,15 @@ struct vdin_dev_s {
 	unsigned long vfmem_start[VDIN_CANVAS_MAX_CNT];
 	struct page *vfvenc_pages[VDIN_CANVAS_MAX_CNT];
 	unsigned int vfmem_size;
+	unsigned int vfmem_size_small;/* double write use */
 	unsigned int vfmem_max_cnt;
 
 	unsigned int h_active;
 	unsigned int v_active;
+	unsigned int h_shrink_out;/* double write use */
+	unsigned int v_shrink_out;/* double write use */
+	unsigned int h_shrink_times;/* double write use */
+	unsigned int v_shrink_times;/* double write use */
 	unsigned int h_active_org;/*vdin scaler in*/
 	unsigned int v_active_org;/*vdin scaler in*/
 	unsigned int canvas_h;
@@ -494,9 +502,12 @@ struct vdin_dev_s {
 	unsigned int keystone_vframe_ready;
 	struct vf_entry *keystone_entry[VDIN_CANVAS_MAX_CNT];
 	unsigned int canvas_config_mode;
-	bool	prehsc_en;
-	bool	vshrk_en;
-	bool	urgent_en;
+	bool prehsc_en;
+	bool vshrk_en;
+	bool urgent_en;
+	bool double_wr_cfg;
+	bool double_wr;
+	bool double_wr_10bit_sup;
 	bool black_bar_enable;
 	bool hist_bar_enable;
 	unsigned int ignore_frames;

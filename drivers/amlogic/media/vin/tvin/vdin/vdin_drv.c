@@ -401,8 +401,13 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 		vf = &master->vf;
 		memset(vf, 0, sizeof(struct vframe_s));
 		vf->index = i;
-		vf->width = devp->h_active;
-		vf->height = devp->v_active;
+		if (devp->vfmem_size_small) {
+			vf->width = devp->h_shrink_out;
+			vf->height = devp->v_shrink_out;
+		} else {
+			vf->width = devp->h_active;
+			vf->height = devp->v_active;
+		}
 		if (devp->game_mode != 0)
 			vf->flag |= VFRAME_FLAG_GAME_MODE;
 		scan_mode = devp->fmt_info_p->scan_mode;
@@ -565,6 +570,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	/*enable clk*/
 	vdin_clk_onoff(devp, true);
 	vdin_set_default_regmap(devp);
+
 	if (devp->urgent_en && (devp->index == 0))
 		vdin_urgent_patch_resume(devp->addr_offset);
 
@@ -577,6 +583,10 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	devp->canvas_config_mode = canvas_config_mode;
 	/* h_active/v_active will be recalculated by bellow calling */
 	vdin_set_decimation(devp);
+	/* check if need enable afbce */
+	vdin_afbce_mode_init(devp);
+	vdin_set_double_write_regs(devp);
+
 	if (de_fmt_flag == 1 &&
 		(devp->prop.vs != 0 ||
 		devp->prop.ve != 0 ||
@@ -607,9 +617,6 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	/*reverse / disable reverse write buffer*/
 	vdin_wr_reverse(devp->addr_offset,
 			devp->parm.h_reverse, devp->parm.v_reverse);
-
-	/* check if need enable afbce */
-	vdin_afbce_mode_init(devp);
 
 #ifdef CONFIG_CMA
 	vdin_cma_malloc_mode(devp);
@@ -808,10 +815,8 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	devp->dv.dv_config = 0;
 	vdin_dolby_desc_sc_enable(devp, 0);
 
-	if (devp->afbce_mode == 1) {
-		vdin_afbce_hw_disable();
+	if (devp->afbce_mode == 1)
 		vdin_afbce_soft_reset();
-	}
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	vdin_dolby_addr_release(devp, devp->vfp->size);
@@ -1905,8 +1910,12 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	    (devp->parm.info.fmt != TVIN_SIG_FMT_NULL))) ||
 	    (devp->parm.port == TVIN_PORT_CVBS3))
 		curr_wr_vf->height = devp->v_active<<1;
-	else
-		curr_wr_vf->height = devp->v_active;
+	else {
+		if (devp->vfmem_size_small)
+			curr_wr_vf->height = devp->v_shrink_out;
+		else
+			curr_wr_vf->height = devp->v_active;
+	}
 	/*new add for atv snow:avoid flick black on bottom when atv search*/
 	if ((devp->parm.port == TVIN_PORT_CVBS3) &&
 		(devp->flags & VDIN_FLAG_SNOW_FLAG))
@@ -1951,7 +1960,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	vdin_game_mode_transfer(devp);
 
-	if (devp->afbce_mode == 0) {
+	if (devp->afbce_mode == 0 || devp->double_wr) {
 		vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
 			(next_wr_vfe->vf.canvas0Addr&0xff));
 
@@ -1963,7 +1972,9 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_set_chma_canvas_id(devp,
 				(devp->flags&VDIN_FLAG_RDMA_ENABLE),
 				(next_wr_vfe->vf.canvas0Addr>>8)&0xff);
-	} else if (devp->afbce_mode == 1) {
+	}
+
+	if (devp->afbce_mode == 1 || devp->double_wr) {
 		vdin_afbce_set_next_frame(devp,
 			(devp->flags&VDIN_FLAG_RDMA_ENABLE), next_wr_vfe);
 	}
@@ -2299,7 +2310,7 @@ static int vdin_open(struct inode *inode, struct file *file)
 		return 0;
 	}
 
-	if ((is_meson_tl1_cpu() || is_meson_tm2_cpu()))
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
 		switch_vpu_mem_pd_vmod(VPU_AFBCE, VPU_MEM_POWER_ON);
 
 	devp->flags |= VDIN_FLAG_FS_OPENED;
@@ -2366,7 +2377,7 @@ static int vdin_release(struct inode *inode, struct file *file)
 		return 0;
 	}
 
-	if ((is_meson_tl1_cpu() || is_meson_tm2_cpu()))
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
 		switch_vpu_mem_pd_vmod(VPU_AFBCE, VPU_MEM_POWER_DOWN);
 
 	devp->flags &= (~VDIN_FLAG_FS_OPENED);
@@ -3500,6 +3511,8 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	else if (ret == 2)/*4k 10bit 10bit to video buffer*/
 		vdevp->output_color_depth = VDIN_COLOR_DEEPS_10BIT;
 
+	vdevp->double_wr_10bit_sup = (bit_mode >> 10) & 0x1;
+
 	if (vdevp->color_depth_support&VDIN_WR_COLOR_DEPTH_10BIT_FULL_PCAK_MODE)
 		vdevp->full_pack = VDIN_422_FULL_PK_EN;
 	else
@@ -3508,7 +3521,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	/*set afbce config*/
 	vdevp->afbce_flag = 0;
 	if (vdevp->index == 0) { /* just use afbce at vdin0 */
-		if (is_meson_tl1_cpu() || is_meson_tm2_cpu()) {
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
 			vdevp->afbce_info = devm_kzalloc(vdevp->dev,
 				sizeof(struct vdin_afbce_s), GFP_KERNEL);
 			if (!vdevp->afbce_info)
@@ -3535,9 +3548,12 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		pr_info("set_canvas_manual = %d\n", vdevp->set_canvas_manual);
 	}
 
-	/*vdin urgent en*/
 	vdevp->urgent_en = of_property_read_bool(pdev->dev.of_node,
 		"urgent_en");
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
+		vdevp->double_wr_cfg = of_property_read_bool(pdev->dev.of_node,
+			"double_write_en");
 
 	/* init vdin parameters */
 	vdevp->flags = VDIN_FLAG_NULL;

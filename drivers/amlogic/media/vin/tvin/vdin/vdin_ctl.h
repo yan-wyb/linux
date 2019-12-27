@@ -45,6 +45,10 @@ enum wr_sel_vdin_e {
 	WR_SEL_VDIN1_SML = 4,
 };
 
+enum vdin_mif_bits {
+	MIF_8BIT = 0,
+	MIF_10BIT = 1,
+};
 /* *************************************************** */
 /* *** structure definitions ************************* */
 /* *************************************************** */
@@ -117,7 +121,8 @@ extern void vdin_set_prob_xy(unsigned int offset, unsigned int x,
 extern void vdin_prob_get_rgb(unsigned int offset, unsigned int *r,
 		unsigned int *g, unsigned int *b);
 extern void vdin_set_all_regs(struct vdin_dev_s *devp);
-extern void vdin_set_default_regmap(struct vdin_dev_s *devp);
+void vdin_set_double_write_regs(struct vdin_dev_s *devp);
+void vdin_set_default_regmap(struct vdin_dev_s *devp);
 extern void vdin_set_def_wr_canvas(struct vdin_dev_s *devp);
 void vdin_hw_enable(struct vdin_dev_s *devp);
 void vdin_hw_disable(struct vdin_dev_s *devp);

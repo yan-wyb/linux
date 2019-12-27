@@ -2198,6 +2198,18 @@ void vdin_urgent_patch_resume(unsigned int offset)
 	wr(offset, VDIN_LFIFO_URG_CTRL, 0);
 	aml_write_vcbus(VPU_ARB_URG_CTRL, 0);
 }
+
+static unsigned int vdin_is_support_10bit_for_dw(struct vdin_dev_s *devp)
+{
+	if (devp->double_wr) {
+		if (devp->double_wr_10bit_sup)
+			return 1;
+		else
+			return 0;
+	} else
+		return 1;
+}
+
 /*set write ctrl regs:
  *VDIN_WR_H_START_END
  *VDIN_WR_V_START_END
@@ -2213,6 +2225,12 @@ static inline void vdin_set_wr_ctrl(struct vdin_dev_s *devp,
 	/* unsigned int def_canvas_id = offset?
 	 *  vdin_canvas_ids[1][0]:vdin_canvas_ids[0][0];
 	 */
+
+	if (devp->vfmem_size_small) {
+		h = devp->h_shrink_out;
+		v = devp->v_shrink_out;
+	}
+
 
 	switch (format_convert)	{
 	case VDIN_FORMAT_CONVERT_YUV_YUV422:
@@ -2233,13 +2251,17 @@ static inline void vdin_set_wr_ctrl(struct vdin_dev_s *devp,
 		write_format444 = 1;
 		break;
 	}
-	/*yuv422 full pack mode for 10bit*/
+
+	/* yuv422 full pack mode for 10bit
+	 * only support 8bit at vpp side when double write
+	 */
 	if (((format_convert == VDIN_FORMAT_CONVERT_YUV_YUV422) ||
-		(format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422) ||
-		(format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
-		(format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
-		full_pack == VDIN_422_FULL_PK_EN &&
-		(source_bitdeth > VDIN_COLOR_DEEPS_8BIT))
+	     (format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422) ||
+	     (format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
+	     (format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
+	    (full_pack == VDIN_422_FULL_PK_EN) &&
+	    (source_bitdeth > VDIN_COLOR_DEEPS_8BIT) &&
+	    vdin_is_support_10bit_for_dw(devp))
 		write_format444 = 3;
 
 	/* win_he */
@@ -2342,12 +2364,16 @@ void vdin_set_wr_ctrl_vsync(struct vdin_dev_s *devp,
 		write_format444 = 1;
 		break;
 	}
-	/*yuv422 full pack mode for 10bit*/
+
+	/* yuv422 full pack mode for 10bit
+	 * only support 8bit at vpp side when double write
+	 */
 	if (((format_convert == VDIN_FORMAT_CONVERT_YUV_YUV422) ||
-		(format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422) ||
-		(format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
-		(format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
-		full_pack == VDIN_422_FULL_PK_EN && (source_bitdeth > 8))
+	     (format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422) ||
+	     (format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
+	     (format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
+	    (full_pack == VDIN_422_FULL_PK_EN) && (source_bitdeth > 8) &&
+	    vdin_is_support_10bit_for_dw(devp))
 		write_format444 = 3;
 
 	/* hconv_mode */
@@ -2952,6 +2978,21 @@ static void vdin_delay_line(unsigned short num, unsigned int offset)
 			DLY_GO_FLD_EN_BIT, DLY_GO_FLD_EN_WID);
 }
 
+void vdin_set_double_write_regs(struct vdin_dev_s *devp)
+{
+	if (devp->double_wr) {
+		if (devp->index == 0) {
+			/* vdin0 normal->afbce, small->mif0 */
+			wr_bits(0, VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_NOR,
+				AFBCE_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+			wr_bits(0, VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_SML,
+				MIF0_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+			/* enable both channel for double wr */
+			wr(0, VDIN_LFIFO_CTRL, 0xc0060f00);
+		}
+	}
+}
+
 void vdin_set_default_regmap(struct vdin_dev_s *devp)
 {
 	unsigned int def_canvas_id;
@@ -3082,15 +3123,16 @@ void vdin_set_default_regmap(struct vdin_dev_s *devp)
 		is_meson_txlx_cpu() || is_meson_tl1_cpu())
 		wr(offset, VDIN_LFIFO_CTRL,     0x00000f00);
 	else if (is_meson_tm2_cpu()) {
+		/* only 1 channel is active as default */
 		wr(offset, VDIN_LFIFO_CTRL,     0xc0020f00);
-		/*set vdin0 out to mif0 normal begin*/
+		wr(offset, VDIN_VSHRK_CTRL, 0);
+
 		if (offset == 0) {
+			/* vdin0 normal->mif0 */
 			wr_bits(0, VDIN_TOP_DOUBLE_CTRL, WR_SEL_DIS,
 				AFBCE_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
 			wr_bits(0, VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_NOR,
 				MIF0_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
-
-			/*set vdin0 out to mif0 normal end*/
 			wr(offset, VDIN_HDR2_MATRIXI_EN_CTRL, 0);
 		}
 	} else
@@ -3741,13 +3783,14 @@ static void vdin_set_hshrink(struct vdin_dev_s *devp)
 {
 	unsigned int offset = devp->addr_offset;
 	unsigned int src_w = devp->h_active;
-	unsigned int dst_w = devp->prop.scaling4w;
+	unsigned int dst_w = devp->h_shrink_out;
 	unsigned int hshrk_mode = 0;
 	unsigned int i = 0;
 	unsigned int coef = 0;
 
-	if (!is_meson_tm2_cpu()) {
-		pr_err("vdin.%d only tm2 supports hshrink\n", devp->index);
+	if (!cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+		pr_err("vdin.%d don't supports hshrink before TM2\n",
+		       devp->index);
 		return;
 	}
 
@@ -3790,7 +3833,6 @@ static void vdin_set_hshrink(struct vdin_dev_s *devp)
 	/*h shrink enable*/
 	wr_bits(offset, VDIN_VSHRK_CTRL, 1, VDIN_HSHRK_EN_BIT,
 		VDIN_HSHRK_EN_WID);
-	devp->h_active /= hshrk_mode;
 	pr_info("vdin.%d set_hshrink done! hshk mode = %d\n", devp->index,
 		hshrk_mode);
 }
@@ -3805,23 +3847,28 @@ static void vdin_set_hshrink(struct vdin_dev_s *devp)
 static void vdin_set_vshrink(struct vdin_dev_s *devp)
 {
 	unsigned int offset = devp->addr_offset;
-	unsigned int src_w = devp->h_active;
+	unsigned int src_w = devp->h_shrink_out;
 	unsigned int src_h = devp->v_active;
 	unsigned int vshrk_mode = 0;
 
-	if (!is_meson_tm2_cpu() && devp->index == 0) {
-		pr_err("vdin.%d vshrink: only tm2 support vdin0\n",
+	if (!cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0) {
+		pr_err("vdin.%d don't support vshrink before TM2\n",
 		       devp->index);
 		return;
 	}
 
 	if (src_w > VDIN_VSHRINK_HLIMIT) {
-		pr_err("vdin.%d vshrink: only support h_active <= %d\n",
+		pr_err("vdin.%d vshrink: only support input width <= %d\n",
 		       devp->index, VDIN_VSHRINK_HLIMIT);
 		return;
 	}
 
-	vshrk_mode = src_h / devp->prop.scaling4h;
+	vshrk_mode = src_h / devp->v_shrink_out;
+
+	if (vshrk_mode < 2) {
+		pr_info("vdin.%d vshrink: out > in/2,return\n", devp->index);
+		return;
+	}
 
 	if (vshrk_mode >= 8)
 		vshrk_mode = 2;
@@ -3830,7 +3877,7 @@ static void vdin_set_vshrink(struct vdin_dev_s *devp)
 	else if (vshrk_mode >= 2)
 		vshrk_mode = 0;
 
-	pr_info("debug vshrk mode = %d\n", vshrk_mode);
+	pr_info("vdin.%d vshrk mode = %d\n", devp->index, vshrk_mode);
 
 	if (is_meson_tm2_cpu()) {
 		/*v shrink input h size*/
@@ -3856,9 +3903,7 @@ static void vdin_set_vshrink(struct vdin_dev_s *devp)
 		VDIN_VSHRK_MODE_BIT, VDIN_VSHRK_MODE_WID);
 	wr_bits(offset, VDIN_VSHRK_CTRL, 1,
 		VDIN_VSHRK_EN_BIT, VDIN_VSHRK_EN_WID);
-	devp->v_active >>= (vshrk_mode + 1);
-	pr_info("vdin.%d set_vshrink done! vshk mode = %d\n", devp->index,
-		vshrk_mode);
+	pr_info("vdin.%d set_vshrink done!\n", devp->index);
 }
 
 /*function:set horizontal and veritical scale
@@ -3882,18 +3927,12 @@ void vdin_set_hvscale(struct vdin_dev_s *devp)
 
 		if (devp->prop.scaling4w < devp->h_active)
 			vdin_set_hscale(devp, devp->prop.scaling4w);
-
-		if (devp->prop.scaling4w <= (devp->h_active >> 1))
-			vdin_set_hshrink(devp);
 	} else if (devp->h_active > VDIN_MAX_HACTIVE)
 		vdin_set_hscale(devp, VDIN_MAX_HACTIVE);
 
-	if (vdin_ctl_dbg)
-		pr_info("[vdin.%d] dst hactive:%u,",
-			devp->index, devp->h_active);
 	if ((devp->prop.scaling4h < devp->v_active) &&
 		(devp->prop.scaling4h > 0)) {
-		if (devp->vshrk_en &&
+		if (devp->vshrk_en && !cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
 		    (devp->prop.scaling4h <= (devp->v_active >> 1))) {
 			vdin_set_vshrink(devp);
 		}
@@ -3901,8 +3940,35 @@ void vdin_set_hvscale(struct vdin_dev_s *devp)
 		if (devp->prop.scaling4h < devp->v_active)
 			vdin_set_vscale(devp);
 	}
-	if (vdin_ctl_dbg)
-		pr_info(" dst vactive:%u.\n", devp->v_active);
+
+	if (devp->double_wr && devp->h_active > 1920 && devp->v_active > 1080) {
+		devp->h_shrink_times = H_SHRINK_TIMES_4k;
+		devp->v_shrink_times = V_SHRINK_TIMES_4k;
+	} else if (devp->double_wr && devp->h_active > 1280 &&
+		   devp->v_active > 720) {
+		devp->h_shrink_times = H_SHRINK_TIMES_1080;
+		devp->v_shrink_times = V_SHRINK_TIMES_1080;
+	} else {
+		devp->h_shrink_times = 1;
+		devp->v_shrink_times = 1;
+	}
+	devp->h_shrink_out = devp->h_active / devp->h_shrink_times;
+	devp->v_shrink_out = devp->v_active / devp->v_shrink_times;
+
+	if (devp->double_wr) {
+		if (devp->h_shrink_out < devp->h_active)
+			vdin_set_hshrink(devp);
+
+		if (devp->v_shrink_out < devp->v_active)
+			vdin_set_vshrink(devp);
+	}
+
+	if (vdin_ctl_dbg) {
+		pr_info("[vdin.%d] %s hactive:%u,vactive:%u.\n", devp->index,
+			__func__, devp->h_active, devp->v_active);
+		pr_info("[vdin.%d] %s shrink out h:%d,v:%d\n", devp->index,
+			__func__, devp->h_shrink_out, devp->v_shrink_out);
+	}
 }
 
 /*set source_bitdepth
@@ -4035,6 +4101,12 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
 		break;
 	}
+
+	/* only support 8bit mode at vpp side when double wr */
+	if (!vdin_is_support_10bit_for_dw(devp))
+		wr_bits(offset, VDIN_WR_CTRL2, MIF_8BIT,
+			VDIN_WR_10BIT_MODE_BIT,	VDIN_WR_10BIT_MODE_WID);
+
 }
 
 /*do horizontal reverse and veritical reverse
@@ -4652,53 +4724,56 @@ void vdin_dobly_mdata_write_en(unsigned int offset, unsigned int en)
 void vdin_dolby_desc_sc_enable(struct vdin_dev_s *devp,
 			       unsigned int onoff)
 {
-	unsigned int data;
-	unsigned int offset = 0;
+	unsigned int offset = devp->addr_offset;
+
+	/* only support vdin0 */
+	if (offset == 1)
+		return;
 
 	if (is_meson_tm2_cpu()) {
 		if (onoff) {
-			/*for test dolby vision de-scramble to scramble*/
-			/*dolby vision scramble locate in small path*/
-			data = (1 << 31) | /*Linebuffer soft reset enable*/
-				(1 << 30) | /*Frame reset enable*/
-				(1 << 18) | /*Discard data enable*/
-				(0 << 17) | /*
-					     * Vdin ch0 output enable :
-					     * normal size
-					     */
-				(0 << 16) | /*Pps_path_sel*/
-				(0xf00);   /*lfifo_buf_size*/
-			wr(offset, VDIN_LFIFO_CTRL, data);
-			wr(offset, VDIN_LFIFO_CTRL, 0xc0040f00);
+			if (!devp->double_wr) {
+				/* enable channel 1 for scramble */
+				wr_bits(offset, VDIN_LFIFO_CTRL, 0,
+					CH0_OUT_EN_BIT, CH_OUT_EN_WID);
+				wr_bits(offset, VDIN_LFIFO_CTRL, 1,
+					CH1_OUT_EN_BIT, CH_OUT_EN_WID);
+				/* switch vdin 0 wr mif to small */
+				wr_bits(0, VDIN_TOP_DOUBLE_CTRL,
+					WR_SEL_VDIN0_SML,
+					MIF0_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+			}
 
-			/*switch vdin 0 wr mif to small*/
-			data = (5 << 24) | /*Vdin1_interrupt mask*/
-				(5 << 20) | /*Vdin0_interrupt mask*/
-				(0 << 16) | /*Done flag clear*/
-				(0 << 12) | /*vdin2 wr mif sel*/
-				(3 << 8) | /*vdin1 wr mif sel*/
-				(2 << 4) | /*vdin0 wr mif sel*/
-				(0);/*afbce sel*/
-			wr(0, VDIN_TOP_DOUBLE_CTRL, data);
-			wr(0, VDIN_TOP_DOUBLE_CTRL, 0x5500320);
-
-			wr(0, VDIN_DSC_DETUNNEL_SEL, 0x2c2d0);
-			wr(0, VDIN_DSC_TUNNEL_SEL, 0x3d11);
+			wr(offset, VDIN_DSC_DETUNNEL_SEL, 0x2c2d0);
+			wr(offset, VDIN_DSC_TUNNEL_SEL, 0x3d11);
 
 			/*de-scramble h size in*/
-			wr_bits(0, VDIN_CFMT_W, devp->h_active_org / 2, 0, 13);
-			wr_bits(0, VDIN_CFMT_W, devp->h_active_org, 16, 13);
+			wr_bits(offset, VDIN_CFMT_W, devp->h_active_org / 2,
+				0, 13);
+			wr_bits(offset, VDIN_CFMT_W, devp->h_active_org,
+				16, 13);
 			/**/
-			wr_bits(0, VDIN_DSC_HSIZE, devp->h_active_org, 0, 13);
-			wr_bits(0, VDIN_DSC_HSIZE, devp->h_active_org, 16, 13);
+			wr_bits(offset, VDIN_DSC_HSIZE, devp->h_active_org,
+				0, 13);
+			wr_bits(offset, VDIN_DSC_HSIZE, devp->h_active_org,
+				16, 13);
 			/*scaler out size*/
-			wr_bits(0, VDIN_SCB_CTRL1, devp->v_active, 0, 13);
-			wr_bits(0, VDIN_SCB_CTRL1, devp->h_active, 16, 13);
+			wr_bits(offset, VDIN_SCB_CTRL1, devp->v_active, 0, 13);
+			wr_bits(offset, VDIN_SCB_CTRL1, devp->h_active,
+				16, 13);
 			/*enable descramble & scramble*/
-			wr_bits(0, VDIN_VSHRK_CTRL, 0x3, 28, 2);
+			wr_bits(offset, VDIN_VSHRK_CTRL, 0x3, 28, 2);
 		} else {
-			/*enable descramble & scramble*/
-			wr_bits(0, VDIN_VSHRK_CTRL, 0x0, 28, 2);
+			/* disable descramble & scramble */
+			wr_bits(offset, VDIN_VSHRK_CTRL, 0x0, 28, 2);
+
+			if (!devp->double_wr) {
+				/* enable channel 0 for normal TV path */
+				wr_bits(offset, VDIN_LFIFO_CTRL, 1,
+					CH0_OUT_EN_BIT, CH_OUT_EN_WID);
+				wr_bits(offset, VDIN_LFIFO_CTRL, 0,
+					CH1_OUT_EN_BIT, CH_OUT_EN_WID);
+			}
 		}
 	}
 }
@@ -5133,7 +5208,20 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 
 	if (devp->afbce_valid)
 		type |= VIDTYPE_SUPPORT_COMPRESS;
-	if (devp->afbce_mode_pre) {
+
+	if (devp->double_wr) {
+		type |= VIDTYPE_COMPRESS;
+		type &= ~VIDTYPE_NO_DW;
+		type |= VIDTYPE_SCATTER;
+
+		/* add only for TL1 switch mif/afbce dynamically */
+		type &= ~VIDTYPE_SUPPORT_COMPRESS;
+
+		if (devp->afbce_flag & VDIN_AFBCE_EN_LOOSY)
+			type |= VIDTYPE_COMPRESS_LOSS;
+		if (vdin_chk_is_comb_mode(devp))
+			type |= VIDTYPE_COMB_MODE;
+	} else if (devp->afbce_mode_pre) {
 		type |= VIDTYPE_COMPRESS;
 		type |= VIDTYPE_NO_DW;
 		type |= VIDTYPE_SCATTER;

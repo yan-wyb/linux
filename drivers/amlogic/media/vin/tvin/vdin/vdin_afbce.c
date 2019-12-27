@@ -82,7 +82,8 @@ void vdin_write_mif_or_afbce_init(struct vdin_dev_s *devp)
 {
 	enum vdin_output_mif_e sel;
 
-	if ((devp->afbce_flag & VDIN_AFBCE_EN) == 0)
+	if (((devp->afbce_flag & VDIN_AFBCE_EN) == 0) || (devp->index == 1) ||
+	    devp->double_wr)
 		return;
 
 	if (devp->afbce_mode == 0)
@@ -90,44 +91,47 @@ void vdin_write_mif_or_afbce_init(struct vdin_dev_s *devp)
 	else
 		sel = VDIN_OUTPUT_TO_AFBCE;
 
-	if (devp->index == 0) {
-		if (sel == VDIN_OUTPUT_TO_MIF) {
-			vdin_afbce_hw_disable();
+	if (sel == VDIN_OUTPUT_TO_MIF) {
+		W_VCBUS_BIT(AFBCE_ENABLE, 0, 8, 1);
 
-			W_VCBUS_BIT(VDIN_MISC_CTRL,
-				1, VDIN0_MIF_ENABLE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL,
-				0, VDIN0_OUT_AFBCE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL,
-				1, VDIN0_OUT_MIF_BIT, 1);
+		if (is_meson_tm2_cpu()) {
+			W_VCBUS_BIT(VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_NOR,
+				MIF0_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+			W_VCBUS_BIT(VDIN_TOP_DOUBLE_CTRL, WR_SEL_DIS,
+				AFBCE_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
 
 			/* axi write protection
 			 * for HDMI cable plug/unplug crash issue
 			 */
-			if (is_meson_tm2_cpu()) {
-				W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 0x8000,
-					    HOLD_NUM_BIT, HOLD_NUM_WID);
-				W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 1,
-					    PROTECT_EN1_BIT, PROTECT_EN_WID);
-				W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 1,
-					    PROTECT_EN21_BIT, PROTECT_EN_WID);
-			}
-		} else if (sel == VDIN_OUTPUT_TO_AFBCE) {
-			W_VCBUS_BIT(VDIN_MISC_CTRL,
-				1, VDIN0_MIF_ENABLE_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL,
-				0, VDIN0_OUT_MIF_BIT, 1);
-			W_VCBUS_BIT(VDIN_MISC_CTRL,
-				1, VDIN0_OUT_AFBCE_BIT, 1);
-
-			/* axi write protection
-			 * for HDMI cable plug/unplug crash issue
-			 */
-			if (is_meson_tm2_cpu())
-				W_VCBUS(VPU_AXI_WR_PROTECT, 0);
-
-			vdin_afbce_hw_enable();
+			W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 0x8000,
+				    HOLD_NUM_BIT, HOLD_NUM_WID);
+			W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 1,
+				    PROTECT_EN1_BIT, PROTECT_EN_WID);
+			W_VCBUS_BIT(VPU_AXI_WR_PROTECT, 1,
+				    PROTECT_EN21_BIT, PROTECT_EN_WID);
+		} else {
+			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_MIF_ENABLE_BIT, 1);
+			W_VCBUS_BIT(VDIN_MISC_CTRL, 0, VDIN0_OUT_AFBCE_BIT, 1);
+			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_OUT_MIF_BIT, 1);
 		}
+	} else if (sel == VDIN_OUTPUT_TO_AFBCE) {
+		if (is_meson_tm2_cpu()) {
+			W_VCBUS_BIT(VDIN_TOP_DOUBLE_CTRL, WR_SEL_DIS,
+				MIF0_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+			W_VCBUS_BIT(VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_NOR,
+				AFBCE_OUT_SEL_BIT, VDIN_REORDER_SEL_WID);
+
+			/* axi write protection
+			 * for HDMI cable plug/unplug crash issue
+			 */
+			W_VCBUS(VPU_AXI_WR_PROTECT, 0);
+		} else {
+			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_MIF_ENABLE_BIT, 1);
+			W_VCBUS_BIT(VDIN_MISC_CTRL, 0, VDIN0_OUT_MIF_BIT, 1);
+			W_VCBUS_BIT(VDIN_MISC_CTRL, 1, VDIN0_OUT_AFBCE_BIT, 1);
+		}
+
+		W_VCBUS_BIT(AFBCE_ENABLE, 1, 8, 1);
 	}
 }
 
@@ -136,10 +140,12 @@ void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
 	enum vdin_output_mif_e sel)
 {
 
-	if ((devp->afbce_flag & VDIN_AFBCE_EN) == 0)
+	if (((devp->afbce_flag & VDIN_AFBCE_EN) == 0) || devp->double_wr)
 		return;
 
 	if (sel == VDIN_OUTPUT_TO_MIF) {
+		rdma_write_reg_bits(devp->rdma_handle, AFBCE_ENABLE, 0, 8, 1);
+
 		if (is_meson_tm2_cpu()) {
 			rdma_write_reg_bits(devp->rdma_handle,
 				VDIN_TOP_DOUBLE_CTRL, WR_SEL_VDIN0_NOR,
@@ -160,13 +166,12 @@ void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
 			rdma_write_reg_bits(devp->rdma_handle,
 					    VPU_AXI_WR_PROTECT, 1,
 					    PROTECT_EN21_BIT, PROTECT_EN_WID);
+		} else {
+			rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
+				0, VDIN0_OUT_AFBCE_BIT, 1);
+			rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
+				1, VDIN0_OUT_MIF_BIT, 1);
 		}
-
-		rdma_write_reg_bits(devp->rdma_handle, AFBCE_ENABLE, 0, 8, 1);
-		rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
-			0, VDIN0_OUT_AFBCE_BIT, 1);
-		rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
-			1, VDIN0_OUT_MIF_BIT, 1);
 	} else if (sel == VDIN_OUTPUT_TO_AFBCE) {
 		if (is_meson_tm2_cpu()) {
 			rdma_write_reg_bits(devp->rdma_handle,
@@ -181,12 +186,16 @@ void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
 			 */
 			rdma_write_reg(devp->rdma_handle, VPU_AXI_WR_PROTECT,
 				       0);
+		} else {
+			rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
+				0, VDIN0_OUT_MIF_BIT, 1);
+			rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
+				1, VDIN0_OUT_AFBCE_BIT, 1);
 		}
 
-		rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
-			0, VDIN0_OUT_MIF_BIT, 1);
-		rdma_write_reg_bits(devp->rdma_handle, VDIN_MISC_CTRL,
-			1, VDIN0_OUT_AFBCE_BIT, 1);
+		if (devp->afbce_flag & VDIN_AFBCE_EN_LOOSY)
+			rdma_write_reg(devp->rdma_handle, AFBCE_QUANT_ENABLE,
+				       0xc11);
 		rdma_write_reg_bits(devp->rdma_handle, AFBCE_ENABLE, 1, 8, 1);
 	}
 }
@@ -453,7 +462,11 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	W_VCBUS_BIT(AFBCE_MMU_RMIF_SCOPE_X, 0x1c4f, 16, 13);
 
 	W_VCBUS_BIT(AFBCE_ENABLE, 1, 12, 1); //set afbce pulse mode
-	W_VCBUS_BIT(AFBCE_ENABLE, 0, 8, 1);//disable afbce
+
+	if (devp->double_wr)
+		W_VCBUS_BIT(AFBCE_ENABLE, 1, AFBCE_EN_BIT, AFBCE_EN_WID);
+	else
+		W_VCBUS_BIT(AFBCE_ENABLE, 0, AFBCE_EN_BIT, AFBCE_EN_WID);
 }
 
 void vdin_afbce_maptable_init(struct vdin_dev_s *devp)
@@ -571,31 +584,9 @@ int vdin_afbce_read_writedown_flag(void)
 		return 0;
 }
 
-void vdin_afbce_hw_disable(void)
-{
-	/*can not use RDMA*/
-	W_VCBUS_BIT(AFBCE_ENABLE, 0, 8, 1);//disable afbce
-}
-
-void vdin_afbce_hw_enable(void)
-{
-	W_VCBUS_BIT(AFBCE_ENABLE, 1, 8, 1);
-}
-
-void vdin_afbce_hw_disable_rdma(struct vdin_dev_s *devp)
-{
-	rdma_write_reg_bits(devp->rdma_handle, AFBCE_ENABLE, 0, 8, 1);
-}
-
-void vdin_afbce_hw_enable_rdma(struct vdin_dev_s *devp)
-{
-	if (devp->afbce_flag & VDIN_AFBCE_EN_LOOSY)
-		rdma_write_reg(devp->rdma_handle, AFBCE_QUANT_ENABLE, 0xc11);
-	rdma_write_reg_bits(devp->rdma_handle, AFBCE_ENABLE, 1, 8, 1);
-}
-
 void vdin_afbce_soft_reset(void)
 {
+	W_VCBUS_BIT(AFBCE_ENABLE, 0, 8, 1);
 	W_VCBUS_BIT(AFBCE_MODE, 0, 30, 1);
 	W_VCBUS_BIT(AFBCE_MODE, 1, 30, 1);
 	W_VCBUS_BIT(AFBCE_MODE, 0, 30, 1);
@@ -635,6 +626,12 @@ void vdin_afbce_mode_init(struct vdin_dev_s *devp)
 			devp->afbce_valid = false;
 	}
 
+	/* enable doule write only afbce is supported*/
+	if (devp->double_wr_cfg && devp->afbce_valid)
+		devp->double_wr = 1;
+	else
+		devp->double_wr = 0;
+
 	/* default non-afbce mode
 	 * switch to afbce_mode if need by vpp notify
 	 */
@@ -646,13 +643,10 @@ void vdin_afbce_mode_init(struct vdin_dev_s *devp)
 void vdin_afbce_mode_update(struct vdin_dev_s *devp)
 {
 	/* vdin mif/afbce mode update */
-	if (devp->afbce_mode) {
+	if (devp->afbce_mode)
 		vdin_write_mif_or_afbce(devp, VDIN_OUTPUT_TO_AFBCE);
-		vdin_afbce_hw_enable_rdma(devp);
-	} else {
-		vdin_afbce_hw_disable_rdma(devp);
+	else
 		vdin_write_mif_or_afbce(devp, VDIN_OUTPUT_TO_MIF);
-	}
 
 	if (vdin_dbg_en) {
 		pr_info("vdin.%d: change afbce_mode %d->%d\n",

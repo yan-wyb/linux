@@ -787,6 +787,12 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	struct vframe_s *vf = &devp->curr_wr_vfe->vf;
 	struct tvin_parm_s *curparm = &devp->parm;
 	struct vf_pool *vfp = devp->vfp;
+	unsigned int vframe_size;
+
+	if (devp->vfmem_size_small)
+		vframe_size = devp->vfmem_size_small;
+	else
+		vframe_size = devp->vfmem_size;
 
 	pr_info("flags=0x%x\n", devp->flags);
 	pr_info("h_active = %d, v_active = %d\n",
@@ -795,13 +801,15 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		devp->canvas_w, devp->canvas_h);
 	pr_info("canvas_alin_w = %d, canvas_active_w = %d\n",
 		devp->canvas_alin_w, devp->canvas_active_w);
+	pr_info("double write: %d,10bit sup: %d\n", devp->double_wr,
+		devp->double_wr_10bit_sup);
 	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x1))
 		pr_info("mem_start = %ld, mem_size = %d\n",
 			devp->mem_start, devp->mem_size);
 	else
 		for (i = 0; i < devp->canvas_max_num; i++)
-			pr_info("buf[%d]mem_start = %ld, mem_size = %d\n",
-			i, devp->vfmem_start[i], devp->vfmem_size);
+			pr_info("buf[%d]mem_start = 0x%lx, mem_size = 0x%x\n",
+			i, devp->vfmem_start[i], vframe_size);
 	pr_info("signal format	= %s(0x%x)\n",
 		tvin_sig_fmt_str(devp->parm.info.fmt),
 		devp->parm.info.fmt);
@@ -862,6 +870,9 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		pr_info("\t left_start_y %u, right_start_y %u, height_y %u\n",
 			vf->left_eye.start_y, vf->right_eye.start_y,
 			vf->left_eye.height);
+		pr_info("vf compwidth:%u,compheight:%u\n", vf->compWidth,
+			vf->compHeight);
+
 	}
 	if (vfp) {
 		pr_info("skip_vf_num:%d\n", vfp->skip_vf_num);
@@ -897,8 +908,9 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("game_mode cur:  0x%x\n", devp->game_mode);
 
 	pr_info("afbce_flag: 0x%x\n", devp->afbce_flag);
-	pr_info("afbce_mode: %d\n", devp->afbce_mode);
-	if (devp->afbce_mode == 1) {
+	pr_info("afbce_mode: %d, afbce_valid: %d\n", devp->afbce_mode,
+		devp->afbce_valid);
+	if (devp->afbce_mode == 1 || devp->double_wr) {
 		for (i = 0; i < devp->vfmem_max_cnt; i++) {
 			pr_info("head(%d) addr:0x%lx, size:0x%x\n",
 				i, devp->afbce_info->fm_head_paddr[i],
@@ -1554,6 +1566,9 @@ static void vdin_dump_regs(struct vdin_dev_s *devp)
 			(VDIN_DOLBY_DSC_STATUS3 + offset),
 			rd(offset, VDIN_DOLBY_DSC_STATUS3));
 		pr_info("vdin%d DV regs end----\n\n", devp->index);
+
+		reg = VDIN_TOP_DOUBLE_CTRL;
+		pr_info("0x%04x = 0x%08x\n\n", (reg), R_VCBUS(reg));
 	}
 
 	if (devp->afbce_flag & VDIN_AFBCE_EN) {
