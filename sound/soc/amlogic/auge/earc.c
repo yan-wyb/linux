@@ -44,6 +44,12 @@
 
 #define DRV_NAME "EARC"
 
+enum work_event {
+	EVENT_NONE,
+	EVENT_RX_ANA_AUTO_CAL = 0x1 << 0,
+	EVENT_TX_ANA_AUTO_CAL = 0x1 << 1,
+};
+
 struct earc {
 	struct aml_audio_controller *actrl;
 	struct device *dev;
@@ -1212,9 +1218,12 @@ void earc_hdmitx_hpdst(bool st)
 
 	if (!p_earc->rx_bootup_auto_cal) {
 		p_earc->rx_bootup_auto_cal = true;
-		p_earc->event = EVENT_RX_ANA_AUTO_CAL;
+		p_earc->event |= EVENT_RX_ANA_AUTO_CAL;
 		schedule_work(&p_earc->work);
 	}
+
+	/* rx cmdc init */
+	earcrx_cmdc_init(p_earc->rx_top_map, st);
 
 	if (st)
 		earcrx_cmdc_int_mask(p_earc->rx_top_map);
@@ -1254,8 +1263,6 @@ static int earcrx_cmdc_setup(struct earc *p_earc)
 		return ret;
 	}
 
-	/* rx cmdc init */
-	earcrx_cmdc_init(p_earc->rx_top_map);
 	/* Default: arc arc_initiated */
 	earcrx_cmdc_arc_connect(p_earc->rx_cmdc_map, true);
 
@@ -1306,9 +1313,12 @@ void earc_hdmirx_hpdst(int earc_port, bool st)
 
 	if (!p_earc->tx_bootup_auto_cal) {
 		p_earc->tx_bootup_auto_cal = true;
-		p_earc->event = EVENT_TX_ANA_AUTO_CAL;
+		p_earc->event |= EVENT_TX_ANA_AUTO_CAL;
 		schedule_work(&p_earc->work);
 	}
+
+	/* tx cmdc anlog init */
+	earctx_cmdc_init(p_earc->tx_top_map, st);
 
 	earctx_cmdc_arc_connect(p_earc->tx_cmdc_map, st);
 	earctx_cmdc_hpd_detect(p_earc->tx_top_map,
@@ -1346,8 +1356,6 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 		return ret;
 	}
 
-	/* tx cmdc init */
-	earctx_cmdc_init(p_earc->tx_top_map);
 	/* Default: no time out to connect RX */
 	earctx_cmdc_set_timeout(p_earc->tx_cmdc_map, 1);
 	/* Default: arc arc_initiated */
@@ -1362,13 +1370,17 @@ static void earc_work_func(struct work_struct *work)
 
 	/* RX */
 	if ((!IS_ERR(p_earc->rx_top_map)) &&
-	    (p_earc->event == EVENT_RX_ANA_AUTO_CAL))
+	    (p_earc->event & EVENT_RX_ANA_AUTO_CAL)) {
+		p_earc->event &= ~EVENT_RX_ANA_AUTO_CAL;
 		earcrx_ana_auto_cal(p_earc->rx_top_map);
+	}
 
 	/* TX */
 	if ((!IS_ERR(p_earc->tx_top_map)) &&
-	    (p_earc->event == EVENT_TX_ANA_AUTO_CAL))
+	    (p_earc->event & EVENT_TX_ANA_AUTO_CAL)) {
+		p_earc->event &= ~EVENT_TX_ANA_AUTO_CAL;
 		earctx_ana_auto_cal(p_earc->tx_top_map);
+	}
 }
 
 static int earc_platform_probe(struct platform_device *pdev)

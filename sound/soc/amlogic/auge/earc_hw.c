@@ -61,10 +61,10 @@ void earcrx_cmdc_int_mask(struct regmap *top_map)
 		  );
 }
 
-void earcrx_cmdc_init(struct regmap *top_map)
+void earcrx_cmdc_init(struct regmap *top_map, bool en)
 {
 	mmio_write(top_map, EARCRX_ANA_CTRL0,
-		   0x1  << 31 | /* earcrx_en_d2a */
+		   en  << 31 | /* earcrx_en_d2a */
 		   0x10 << 24 | /* earcrx_cmdcrx_reftrim */
 		   0x8  << 20 | /* earcrx_idr_trim */
 		   0x10 << 15 | /* earcrx_rterm_trim */
@@ -77,11 +77,11 @@ void earcrx_cmdc_init(struct regmap *top_map)
 	mmio_write(top_map, EARCRX_PLL_CTRL3,
 		   0x2 << 20 | /* earcrx_pll_bias_adj */
 		   0x4 << 16 | /* earcrx_pll_rou */
-		   0x1 << 13   /* earcrx_pll_dco_sdm_e */
+		   en << 13   /* earcrx_pll_dco_sdm_e */
 		  );
 
 	mmio_write(top_map, EARCRX_PLL_CTRL0,
-		   0x1 << 28 | /* earcrx_pll_en */
+		   en << 28 | /* earcrx_pll_en */
 		   0x1 << 23 | /* earcrx_pll_dmacrx_sqout_rstn_sel */
 		   0x1 << 10   /* earcrx_pll_n */
 		  );
@@ -375,18 +375,18 @@ void earctx_cmdc_int_mask(struct regmap *top_map)
 		  );
 }
 
-void earctx_cmdc_init(struct regmap *top_map)
+void earctx_cmdc_init(struct regmap *top_map, bool en)
 {
 	/* ana */
 	mmio_write(top_map, EARCTX_ANA_CTRL0,
-		   0x1 << 31 |  /* earctx_en_d2a */
-		   0x1 << 28 |  /* earctx_cmdcrx_rcfilter_sel */
-		   0x4 << 26 |  /* earctx_cmdcrx_hystrim */
-		   0x8 << 20 |  /* earctx_idr_trim */
-		   0x10 << 12 | /* earctx_rterm_trim */
-		   0x4 << 8 |   /* earctx_dmac_slew_con */
-		   0x4 << 5 |  /* earctx_cmdctx_ack_hystrim */
-		   0x10 << 0   /* earctx_cmdctx_ack_reftrim */
+		   en << 31   |  /* earctx_en_d2a */
+		   0x1 << 28  |  /* earctx_cmdcrx_rcfilter_sel */
+		   0x4 << 26  |  /* earctx_cmdcrx_hystrim */
+		   0x8 << 20  |  /* earctx_idr_trim */
+		   0x10 << 12 |  /* earctx_rterm_trim */
+		   0x4 << 8   |  /* earctx_dmac_slew_con */
+		   0x4 << 5   |  /* earctx_cmdctx_ack_hystrim */
+		   0x10 << 0     /* earctx_cmdctx_ack_reftrim */
 		  );
 }
 

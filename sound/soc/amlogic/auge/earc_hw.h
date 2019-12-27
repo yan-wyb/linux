@@ -125,15 +125,9 @@ enum reg_offset {
 	ERX_LATENCY_REQ_REG = 0xD3
 };
 
-enum work_event {
-	EVENT_NONE,
-	EVENT_RX_ANA_AUTO_CAL,
-	EVENT_TX_ANA_AUTO_CAL,
-};
-
 void earcrx_pll_refresh(struct regmap *top_map);
 void earcrx_cmdc_int_mask(struct regmap *top_map);
-void earcrx_cmdc_init(struct regmap *top_map);
+void earcrx_cmdc_init(struct regmap *top_map, bool en);
 void earcrx_cmdc_arc_connect(struct regmap *cmdc_map, bool init);
 void earcrx_cmdc_hpd_detect(struct regmap *cmdc_map, bool st);
 void earcrx_dmac_init(struct regmap *top_map, struct regmap *dmac_map);
@@ -148,7 +142,7 @@ void earcrx_enable(struct regmap *cmdc_map,
 		   struct regmap *dmac_map, bool enable);
 void earctx_cmdc_int_mask(struct regmap *top_map);
 
-void earctx_cmdc_init(struct regmap *top_map);
+void earctx_cmdc_init(struct regmap *top_map, bool en);
 void earctx_cmdc_set_timeout(struct regmap *cmdc_map, int no_timeout);
 void earctx_cmdc_arc_connect(struct regmap *cmdc_map, bool init);
 void earctx_cmdc_hpd_detect(struct regmap *top_map,
