@@ -25,8 +25,14 @@
 #include <ion/ion_priv.h>
 #endif
 
+#include <linux/amlogic/media/vfm/vframe.h>
+#include <linux/amlogic/media/vfm/vframe_provider.h>
+#include <linux/amlogic/media/vfm/vframe_receiver.h>
+#include <linux/amlogic/media/vfm/vfm_ext.h>
+
 #define MESON_MAX_CRTC		2
 #define MESON_MAX_OSD		4
+#define MESON_MAX_VIDEO		2
 
 /*
  * Amlogic drm private crtc funcs.
@@ -66,6 +72,7 @@ struct meson_drm {
 
 	u32 num_planes;
 	struct am_osd_plane *planes[MESON_MAX_OSD];
+	struct am_video_plane *video_planes[MESON_MAX_VIDEO];
 };
 
 static inline int meson_vpu_is_compatible(struct meson_drm *priv,
@@ -74,9 +81,9 @@ static inline int meson_vpu_is_compatible(struct meson_drm *priv,
 	return of_device_is_compatible(priv->dev->of_node, compat);
 }
 
-extern int am_meson_register_crtc_funcs(struct drm_crtc *crtc,
+int am_meson_register_crtc_funcs(struct drm_crtc *crtc,
 				 const struct meson_crtc_funcs *crtc_funcs);
-extern void am_meson_unregister_crtc_funcs(struct drm_crtc *crtc);
+void am_meson_unregister_crtc_funcs(struct drm_crtc *crtc);
 struct drm_connector *am_meson_hdmi_connector(void);
 
 #ifdef CONFIG_DEBUG_FS

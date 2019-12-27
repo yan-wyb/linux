@@ -24,6 +24,7 @@ meson-drm-y += meson_drv.o meson_plane.o meson_vpu_pipeline_traverse.o \
 		meson_debugfs.o	meson_vpu_util.o \
 
 meson-drm-y += \
+                vpu-hw/meson_vpu_video_wrapper.o \
                 vpu-hw/meson_vpu_osd_mif.o \
                 vpu-hw/meson_osd_afbc.o \
                 vpu-hw/meson_osd_scaler.o \

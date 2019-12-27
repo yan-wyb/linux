@@ -27,6 +27,10 @@
 #define to_am_meson_fb(x) container_of(x, struct am_meson_fb, base)
 
 #define VMODE_NAME_LEN_MAX    64
+/*gem object num for pre framebuffer,
+ *need seem with struct drm_mode_fb_cmd2->handles
+ */
+#define AM_MESON_GEM_OBJECT_NUM 4
 
 struct am_meson_logo {
 	struct page *logo_page;
@@ -43,7 +47,7 @@ struct am_meson_logo {
 
 struct am_meson_fb {
 	struct drm_framebuffer base;
-	struct am_meson_gem_object *bufp;
+	struct am_meson_gem_object *bufp[AM_MESON_GEM_OBJECT_NUM];
 	struct am_meson_logo *logo;
 };
 

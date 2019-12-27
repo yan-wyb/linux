@@ -42,10 +42,19 @@ struct am_osd_plane {
 	struct drm_property *prop_premult_en;
 };
 
+struct am_video_plane {
+	struct drm_plane base; //must be first element.
+	struct meson_drm *drv; //point to struct parent.
+	struct dentry *plane_debugfs_dir;
+	int plane_index;
+};
+
 #define to_am_osd_plane(x) container_of(x, \
 	struct am_osd_plane, base)
 #define to_am_meson_plane_state(x) container_of(x, \
 	struct am_meson_plane_state, base)
+#define to_am_video_plane(x) container_of(x, \
+	struct am_video_plane, base)
 
 int am_meson_plane_create(struct meson_drm *priv);
 

@@ -15261,3 +15261,8 @@ F:  drivers/amlogic/media/common/lut_dma/lut_dma_io.h
 F:  drivers/amlogic/media/common/lut_dma/lut_dma_mgr.c
 F:  drivers/amlogic/media/common/lut_dma/lut_dma_mgr.h
 F:  include/linux/amlogic/media/lut_dma/lut_dma.h
+
+AMLOGIC DRM DRIVER
+M:  Dezhi Kong <dezhi.kong@amlogic.com>
+F:  drivers/amlogic/drm/vpu-hw/meson_vpu_video_wrapper.c
+F:  drivers/amlogic/drm/vpu-hw/meson_vpu_video_wrapper.h
