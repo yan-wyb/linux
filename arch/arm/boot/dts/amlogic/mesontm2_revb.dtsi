@@ -445,10 +445,6 @@
 		pll-setting-8 = <0xe000c>;
 		version = <2>;
 		pwr-ctl = <1>;
-		u2-ctrl-sleep-shift = <17>;
-		u2-hhi-mem-pd-shift = <30>;
-		u2-hhi-mem-pd-mask = <0x3>;
-		u2-ctrl-iso-shift = <17>;
 	};
 
 	usb3_phy_v2: usb3phy@ffe09080 {
@@ -468,16 +464,6 @@
 				"pcie_refpll",
 				"pcie1_gate";
 		pwr-ctl = <1>;
-		u30-ctrl-sleep-shift = <18>;
-		u30-hhi-mem-pd-shift = <26>;
-		u30-hhi-mem-pd-mask = <0xf>;
-		u30-ctrl-iso-shift = <18>;
-		usb30-ctrl-a-rst-bit = <12>;
-		u31-ctrl-sleep-shift = <20>;
-		u31-hhi-mem-pd-shift = <4>;
-		u31-hhi-mem-pd-mask = <0xf>;
-		u31-ctrl-iso-shift = <20>;
-		usb31-ctrl-a-rst-bit = <28>;
 	};
 
 	usb_otg: usbotg@ffe09080 {
@@ -515,6 +501,12 @@
 					&clkc CLKID_USB1_TO_DDR>;
 		clock-names = "usb_general",
 					"usb1";
+	};
+
+	dolby_fw: dolby_fw {
+		compatible = "amlogic, dolby_fw";
+		mem_size = <0x100000>;
+		status = "disabled";
 	};
 
 	wdt: watchdog@0xffd0f0d0 {
@@ -626,10 +618,15 @@
 		quality = /bits/ 16 <1000>;
 	};
 
-	power_ctrl: power_ctrl@ff8000e8 {
-		compatible = "amlogic, sm1-powerctrl";
-		reg = <0xff8000e8 0x10>,
-		      <0xff63c100 0x10>;
+	pwrdm: power-domains {
+		compatible = "amlogic,tm2-power-domain";
+		reg = <0xff62fc00 0xd0>,
+		      <0xff8000e8 0x10>,
+		      <0xff63c100 0x40>,
+		      <0xffd01080 0x20>;
+		vpu_mempd_reg3 = <0x38>;
+		vpu_mempd_reg4 = <0x30>;
+		status = "okay";
 	};
 
 	soc {
@@ -1329,10 +1326,6 @@
 		pcie-phy-rst-bit = <14>;
 		pcie-ctrl-a-rst-bit = <12>;
 		pwr-ctl = <1>;
-		pcie-ctrl-sleep-shift = <18>;
-		pcie-hhi-mem-pd-shift = <26>;
-		pcie-hhi-mem-pd-mask = <0xf>;
-		pcie-ctrl-iso-shift = <18>;
 		status = "disabled";
 	};
 
@@ -1358,7 +1351,7 @@
 			0x82000000 0xfA700000 0x0 0xfA700000 0 0x1900000>;
 			/* non-prefetchable memory */
 		num-lanes = <1>;
-		pcie-num = <1>;
+		pcie-num = <2>;
 
 		clocks = <&clkc CLKID_PCIE1_GATE
 			&clkc CLKID_PCIE1
@@ -1372,10 +1365,6 @@
 		pcie-phy-rst-bit = <29>;
 		pcie-ctrl-a-rst-bit = <28>;
 		pwr-ctl = <1>;
-		pcie-ctrl-sleep-shift = <20>;
-		pcie-hhi-mem-pd-shift = <4>;
-		pcie-hhi-mem-pd-mask = <0xf>;
-		pcie-ctrl-iso-shift = <20>;
 		status = "disabled";
 	};
 	galcore {
@@ -1910,6 +1899,23 @@
 		};
 	};
 
+	i2c_ao_2_pins_slp_input:i2c_ao_2_slp_input {
+		mux {
+			groups = "GPIOAO_2", "GPIOAO_3";
+			function = "gpio_aobus";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c_ao_2_pins_slp_low:i2c_ao_2_slp_low {
+		mux {
+			groups = "GPIOAO_2", "GPIOAO_3";
+			function = "gpio_aobus";
+			output-low;
+		};
+	};
+
 	i2c_ao_e_pins:i2c_ao_e {
 		mux {
 			groups = "i2c_ao_sck_e",
@@ -1917,6 +1923,23 @@
 			function = "i2c_ao";
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	i2c_ao_e_pins_slp_input:i2c_ao_e_slp_input {
+		mux {
+			groups = "GPIOE_0", "GPIOE_1";
+			function = "gpio_aobus";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c_ao_e_pins_slp_low:i2c_ao_e_slp_low {
+		mux {
+			groups = "GPIOE_0", "GPIOE_1";
+			function = "gpio_aobus";
+			output-low;
 		};
 	};
 
@@ -2269,6 +2292,23 @@
 		};
 	};
 
+	i2c0_c_pins_slp_input:i2c0_c_slp_input {
+		mux {
+			groups = "GPIOC_8", "GPIOC_9";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c0_c_pins_slp_low:i2c0_c_slp_low {
+		mux {
+			groups = "GPIOC_8", "GPIOC_9";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+
 	i2c0_dv_pins:i2c0_dv {
 		mux {
 			groups = "i2c0_sda_dv",
@@ -2276,6 +2316,23 @@
 			function = "i2c0";
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	i2c0_dv_pins_slp_input:i2c0_dv_slp_input {
+		mux {
+			groups = "GPIODV_0", "GPIODV_1";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c0_dv_pins_slp_low:i2c0_dv_slp_low {
+		mux {
+			groups = "GPIODV_0", "GPIODV_1";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 
@@ -2289,6 +2346,31 @@
 		};
 	};
 
+	/*
+	 * i2c sleep mode1: set the gpio the input
+	 * in this scene, pull up power is off
+	 */
+	i2c1_z_pins_slp_input:i2c1_z_slp_input {
+		mux {
+			groups = "GPIOZ_1", "GPIOZ_2";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	/*
+	 * i2c sleep mode2: set the gpio low
+	 * in this scene, pull up power is on
+	 */
+	i2c1_z_pins_slp_low:i2c1_z_slp_low {
+		mux {
+			groups = "GPIOZ_1", "GPIOZ_2";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+
 	i2c1_h_pins:i2c1_h {
 		mux {
 			groups = "i2c1_sda_h",
@@ -2296,6 +2378,23 @@
 			function = "i2c1";
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	i2c1_h_pins_slp_input:i2c1_h_slp_input {
+		mux {
+			groups = "GPIOH_21", "GPIOH_22";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c1_h_pins_slp_low:i2c1_h_slp_low {
+		mux {
+			groups = "GPIOH_21", "GPIOH_22";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 
@@ -2309,6 +2408,23 @@
 		};
 	};
 
+	i2c2_h_pins_slp_input:i2c2_h_slp_input {
+		mux {
+			groups = "GPIOH_19", "GPIOH_20";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c2_h_pins_slp_low:i2c2_h_slp_low {
+		mux {
+			groups = "GPIOH_19", "GPIOH_20";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+
 	i2c2_z_pins:i2c2_z {
 		mux {
 			groups = "i2c2_sda_z",
@@ -2316,6 +2432,23 @@
 			function = "i2c2";
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	i2c2_z_pins_slp_input:i2c2_z_slp_input {
+		mux {
+			groups = "GPIOZ_9", "GPIOZ_10";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c2_z_pins_slp_low:i2c2_z_slp_low {
+		mux {
+			groups = "GPIOZ_9", "GPIOZ_10";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 
@@ -2329,6 +2462,23 @@
 		};
 	};
 
+	i2c3_h1_pins_slp_input:i2c3_h1_slp_input {
+		mux {
+			groups = "GPIOH_0", "GPIOH_1";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c3_h1_pins_slp_low:i2c3_h1_slp_low {
+		mux {
+			groups = "GPIOH_0", "GPIOH_1";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+
 	i2c3_h20_pins:i2c3_h3 {
 		mux {
 			groups = "i2c3_sda_h20",
@@ -2336,6 +2486,23 @@
 			function = "i2c3";
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	i2c3_h20_pins_slp_input:i2c3_h20_slp_input {
+		mux {
+			groups = "GPIOH_19", "GPIOH_20";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c3_h20_pins_slp_low:i2c3_h20_slp_low {
+		mux {
+			groups = "GPIOH_19", "GPIOH_20";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 
@@ -2349,6 +2516,23 @@
 		};
 	};
 
+	i2c3_dv_pins_slp_input:i2c3_dv_slp_input {
+		mux {
+			groups = "GPIODV_9", "GPIODV_10";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c3_dv_pins_slp_low:i2c3_dv_slp_low {
+		mux {
+			groups = "GPIODV_9", "GPIODV_10";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+
 	i2c3_c_pins:i2c3_c {
 		mux {
 			groups = "i2c3_sda_c",
@@ -2356,6 +2540,23 @@
 			function = "i2c3";
 			bias-pull-up;
 			drive-strength = <3>;
+		};
+	};
+
+	i2c3_c_pins_slp_input:i2c3_c_slp_input {
+		mux {
+			groups = "GPIOC_13", "GPIOC_14";
+			function = "gpio_periphs";
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	i2c3_c_pins_slp_low:i2c3_c_slp_low {
+		mux {
+			groups = "GPIOC_13", "GPIOC_14";
+			function = "gpio_periphs";
+			output-low;
 		};
 	};
 
@@ -2498,7 +2699,6 @@
 			function = "vx1";
 		};
 	};
-
 	lcd_vbyone_off_pins: lcd_vbyone_off_pin {
 		mux {
 			groups = "GPIOH_15","GPIOH_16";
@@ -2507,25 +2707,52 @@
 		};
 	};
 
-	lcd_tcon_pins: lcd_tcon_pin {
+	lcd_tcon_p2p_pins: lcd_tcon_p2p_pin {
 		mux {
 			groups = "tcon_0","tcon_1","tcon_2","tcon_3",
 				"tcon_4","tcon_5","tcon_6","tcon_7",
 				"tcon_8","tcon_9","tcon_10","tcon_11",
 				"tcon_12","tcon_13","tcon_14","tcon_15",
-				"tcon_lock","tcon_spi_mo","tcon_spi_mi",
-				"tcon_spi_clk","tcon_spi_ss";
+				"tcon_lock";
 			function = "tcon";
 		};
 	};
-	lcd_tcon_off_pins: lcd_tcon_off_pin {
+	lcd_tcon_p2p_usit_pins: lcd_tcon_p2p_usit_pin {
+		mux {
+			groups = "tcon_0","tcon_1","tcon_2","tcon_3",
+				"tcon_4","tcon_5","tcon_6","tcon_7",
+				"tcon_8","tcon_9","tcon_10","tcon_11",
+				"tcon_12","tcon_13","tcon_14","tcon_15",
+				"tcon_sfc_h16";
+			function = "tcon";
+		};
+	};
+	lcd_tcon_p2p_off_pins: lcd_tcon_p2p_off_pin {
 		mux {
 			groups = "GPIOH_0","GPIOH_1","GPIOH_2","GPIOH_3",
 				"GPIOH_4","GPIOH_5","GPIOH_6","GPIOH_7",
 				"GPIOH_8","GPIOH_9","GPIOH_10","GPIOH_11",
 				"GPIOH_12","GPIOH_13","GPIOH_14","GPIOH_15",
-				"GPIOH_16","GPIOH_17","GPIOH_18","GPIOH_19",
-				"GPIOH_20";
+				"GPIOH_16";
+			function = "gpio_periphs";
+			input-enable;
+		};
+	};
+	lcd_tcon_mlvds_pins: lcd_tcon_mlvds_pin {
+		mux {
+			groups = "tcon_0","tcon_1","tcon_2","tcon_3",
+				"tcon_4","tcon_5","tcon_6","tcon_7",
+				"tcon_8","tcon_9","tcon_10","tcon_11",
+				"tcon_12","tcon_13","tcon_14","tcon_15";
+			function = "tcon";
+		};
+	};
+	lcd_tcon_mlvds_off_pins: lcd_tcon_mlvds_off_pin {
+		mux {
+			groups = "GPIOH_0","GPIOH_1","GPIOH_2","GPIOH_3",
+				"GPIOH_4","GPIOH_5","GPIOH_6","GPIOH_7",
+				"GPIOH_8","GPIOH_9","GPIOH_10","GPIOH_11",
+				"GPIOH_12","GPIOH_13","GPIOH_14","GPIOH_15";
 			function = "gpio_periphs";
 			input-enable;
 		};
