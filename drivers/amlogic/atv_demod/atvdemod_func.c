@@ -1045,7 +1045,7 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 	/*FE PATH*/
 	pr_dbg("ATV-DMD configure mixer\n");
 	if (Broadcast_Standard == AML_ATV_DEMOD_VIDEO_MODE_PROP_DTV) {
-		tmp_int = (Tuner_IF_Frequency/125000);
+		tmp_int = (Tuner_IF_Frequency + 125000 / 2) / 125000;
 		if (Tuner_Input_IF_inverted == 0x0)
 			mixer1 = -tmp_int;
 		else
@@ -1054,13 +1054,16 @@ void configure_receiver(int Broadcast_Standard, unsigned int Tuner_IF_Frequency,
 		mixer3 = 0;
 		mixer3_bypass = 0;
 	} else {
-		tmp_int = (Tuner_IF_Frequency/125000);
+		/* step is 125KHz */
+		tmp_int = (Tuner_IF_Frequency + 125000 / 2) / 125000;
 		pr_dbg("ATV-DMD configure mixer 1\n");
 
+		/* the visual carrier frequency aligns at -3 MHz */
+		/* 24 = 3000000 / 125000 */
 		if (Tuner_Input_IF_inverted == 0x0)
-			mixer1 = 0xe8 - tmp_int;
+			mixer1 = -24 - tmp_int;
 		else
-			mixer1 = tmp_int - 0x18;
+			mixer1 = tmp_int - 24;
 
 		pr_dbg("ATV-DMD configure mixer 2\n");
 		mixer3 = 0x30;
@@ -1468,17 +1471,34 @@ void retrieve_frequency_offset(int *freq_offset)
 {
 	unsigned int data_h, data_l, data_exg;
 	int data_ret;
+	int mixer1_reg = 0;
 
 	data_h = atv_dmd_rd_byte(APB_BLOCK_ADDR_CARR_RCVY, 0x40);
 	data_l = atv_dmd_rd_byte(APB_BLOCK_ADDR_CARR_RCVY, 0x41);
 	data_exg = ((data_h & 0x7) << 8) | data_l;
+
+	/* 12-bits signed, step is 488Hz */
 	if (data_h & 0x8) {
-		data_ret = (((~data_exg) & 0x7ff) - 1);
+		data_ret = (((~data_exg) & 0x7ff) + 1);
 		*freq_offset = data_ret * 488 * (-1) / 1000;
 	} else {
 		data_ret = data_exg * 488 / 1000;
 		*freq_offset = data_ret;
 	}
+
+	/* Restore the lost accuracy of the calculation of mixer */
+	mixer1_reg = atv_dmd_rd_byte(APB_BLOCK_ADDR_MIXER_1, 0x0);
+
+	/* signed byte */
+	if (mixer1_reg & 0x80)
+		mixer1_reg = (((~mixer1_reg) & 0x7f) + 1) * (-1);
+
+	if (if_inv == 0x0)
+		mixer1_reg = (-24 - mixer1_reg);
+	else
+		mixer1_reg = 24 + mixer1_reg;
+
+	*freq_offset = *freq_offset + if_freq / 1000 - mixer1_reg * 125;
 }
 //EXPORT_SYMBOL(retrieve_frequency_offset);
 
