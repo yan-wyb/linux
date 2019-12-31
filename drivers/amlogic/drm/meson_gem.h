@@ -20,7 +20,7 @@
 #include <drm/drm_gem.h>
 #include <uapi/drm/meson_drm.h>
 #include <ion/ion_priv.h>
-
+#include <linux/amlogic/meson_uvm_core.h>
 #include "meson_drv.h"
 
 struct am_meson_gem_object {
@@ -34,6 +34,13 @@ struct am_meson_gem_object {
 	/* for buffer import form other driver */
 	phys_addr_t addr;
 	struct sg_table *sg;
+
+	/* for uvm related field */
+	bool is_uvm;
+	bool is_afbc;
+	bool is_secure;
+	struct uvm_handle *dma_handle;
+	struct uvm_buf_obj ubo;
 };
 
 /* GEM MANAGER CREATE*/
@@ -101,5 +108,12 @@ void am_meson_gem_prime_vunmap(
 int am_meson_gem_prime_mmap(
 	struct drm_gem_object *obj,
 	struct vm_area_struct *vma);
+
+struct dma_buf *am_meson_drm_gem_prime_export(struct drm_device *dev,
+					      struct drm_gem_object *obj,
+					      int flags);
+
+struct drm_gem_object *am_meson_drm_gem_prime_import(struct drm_device *dev,
+						  struct dma_buf *dmabuf);
 
 #endif /* __AM_MESON_GEM_H */

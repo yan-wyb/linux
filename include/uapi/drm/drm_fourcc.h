@@ -258,11 +258,6 @@ extern "C" {
 
 #define DRM_FORMAT_MOD_MESON_AFBC	fourcc_mod_code(AMLOGIC, 1)
 #define DRM_FORMAT_MOD_MESON_AFBC_WB	fourcc_mod_code(AMLOGIC, 2)
-#define DRM_FORMAT_MOD_MESON_YUV444_8BIT_WB	fourcc_mod_code(AMLOGIC, 3)
-#define DRM_FORMAT_MOD_MESON_YUV422_10BIT_WB	fourcc_mod_code(AMLOGIC, 4)
-#define DRM_FORMAT_MOD_MESON_YUV422_12BIT_WB	fourcc_mod_code(AMLOGIC, 5)
-#define DRM_FORMAT_MOD_MESON_YUV444_10BIT_WB	fourcc_mod_code(AMLOGIC, 6)
-
 
 #if defined(__cplusplus)
 }

@@ -236,6 +236,8 @@ struct meson_vpu_video_layer_info {
 	u32 afbc_en;
 	u32 fb_size;
 	u32 premult_en;
+	struct vframe_s *vf;
+	bool is_uvm;
 };
 
 struct meson_vpu_video {
@@ -281,6 +283,8 @@ struct meson_vpu_video_state {
 	u32 fb_size;
 	u32 premult_en;
 	u32 afbc_en;
+	struct vframe_s *vf;
+	bool is_uvm;
 };
 
 struct meson_vpu_afbc {

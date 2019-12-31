@@ -490,10 +490,10 @@ static struct drm_driver meson_driver = {
 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
 	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
 
-	.gem_prime_export	= drm_gem_prime_export,
+	.gem_prime_export	= am_meson_drm_gem_prime_export,
 	.gem_prime_get_sg_table	= am_meson_gem_prime_get_sg_table,
 
-	.gem_prime_import	= drm_gem_prime_import,
+	.gem_prime_import	= am_meson_drm_gem_prime_import,
 	/*
 	 * If gem_prime_import_sg_table is NULL,only buffer created
 	 * by meson driver can be imported ok.
@@ -550,7 +550,7 @@ static int am_meson_drm_bind(struct device *dev)
 
 	meson_driver.driver_features = DRIVER_HAVE_IRQ | DRIVER_GEM |
 		DRIVER_MODESET | DRIVER_PRIME |
-		DRIVER_ATOMIC | DRIVER_IRQ_SHARED;
+		DRIVER_ATOMIC | DRIVER_IRQ_SHARED | DRIVER_RENDER;
 
 	drm = drm_dev_alloc(&meson_driver, dev);
 	if (!drm)

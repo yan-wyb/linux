@@ -49,14 +49,6 @@ static u64 afbc_wb_modifier[] = {
 	DRM_FORMAT_MOD_INVALID
 };
 
-static u64 video_wb_modifier[] = {
-	DRM_FORMAT_MOD_MESON_YUV444_8BIT_WB,
-	DRM_FORMAT_MOD_MESON_YUV422_10BIT_WB,
-	DRM_FORMAT_MOD_MESON_YUV422_12BIT_WB,
-	DRM_FORMAT_MOD_MESON_YUV444_10BIT_WB,
-	DRM_FORMAT_MOD_INVALID
-};
-
 static void
 meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 			  struct drm_plane_state *state,
@@ -312,6 +304,7 @@ static int meson_video_plane_fb_check(struct drm_plane *plane,
 	struct am_video_plane *video_plane = to_am_video_plane(plane);
 	struct meson_drm *drv = video_plane->drv;
 	struct am_meson_fb *meson_fb;
+	struct uvm_buf_obj *ubo;
 	#else
 	struct drm_gem_cma_object *gem;
 	#endif
@@ -340,6 +333,13 @@ static int meson_video_plane_fb_check(struct drm_plane *plane,
 				  fb->pixel_format == DRM_FORMAT_NV21))
 		phyaddr1 = am_meson_gem_object_get_phyaddr(drv,
 							   meson_fb->bufp[1]);
+	/* start to get vframe from uvm */
+	if (meson_fb->bufp[0]->is_uvm) {
+		ubo = &(meson_fb->bufp[0]->ubo);
+		plane_info->vf = dmabuf_get_vframe(ubo->dmabuf);
+		dmabuf_put_vframe(ubo->dmabuf);
+		plane_info->is_uvm = meson_fb->bufp[0]->is_uvm;
+	}
 	#else
 	if (!fb) {
 		DRM_INFO("fb is NULL!\n");
@@ -828,7 +828,7 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 	struct drm_plane *plane;
 	char plane_name[8];
 	u32 zpos, min_zpos, max_zpos;
-	const u64 *format_modifiers = video_wb_modifier;
+	const u64 *format_modifiers = NULL;
 
 	video_plane = devm_kzalloc(priv->drm->dev, sizeof(*video_plane),
 				   GFP_KERNEL);

@@ -24,7 +24,7 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
-
+#include <linux/amlogic/meson_uvm_core.h>
 #include "osd.h"
 #include "osd_drm.h"
 #include "meson_fb.h"

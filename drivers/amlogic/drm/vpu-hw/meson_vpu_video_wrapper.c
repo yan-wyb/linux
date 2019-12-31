@@ -160,6 +160,9 @@ static int video_check_state(struct meson_vpu_block *vblk,
 
 	mvvs->pixel_format = plane_info->pixel_format;
 	mvvs->fb_size = plane_info->fb_size;
+	mvvs->vf = plane_info->vf;
+	mvvs->is_uvm = plane_info->is_uvm;
+
 	if (!video->video_path_reg) {
 		kfifo_reset(&video->ready_q);
 		kfifo_reset(&video->free_q);
@@ -192,62 +195,73 @@ static void video_set_state(struct meson_vpu_block *vblk,
 	byte_stride = mvvs->byte_stride;
 	phy_addr = mvvs->phy_addr[0];
 	pixel_format = mvvs->pixel_format;
-	if (pixel_format == DRM_FORMAT_NV12 ||
-	    pixel_format == DRM_FORMAT_NV21) {
-		if (!mvvs->phy_addr[1])
-			phy_addr2 = phy_addr + byte_stride * src_h;
-		else
-			phy_addr2 = mvvs->phy_addr[1];
-	}
-	if (kfifo_get(&video->free_q, &vf) && vf) {
-		memset(vf, 0, sizeof(struct vframe_s));
-		vf->width = mvvs->src_w;
-		vf->height = mvvs->src_h;
-		vf->source_type = VFRAME_SOURCE_TYPE_OTHERS;
-		vf->source_mode = VFRAME_SOURCE_MODE_OTHERS;
-		vf->bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
-		vf->type = video_type_get(pixel_format);
-		vf->axis[0] = mvvs->dst_x;
-		vf->axis[1] = mvvs->dst_y;
-		vf->axis[2] = mvvs->dst_x + mvvs->dst_w - 1;
-		vf->axis[3] = mvvs->dst_y + mvvs->dst_h - 1;
-		vf->crop[0] = mvvs->src_y;/*crop top*/
-		vf->crop[1] = mvvs->src_x;/*crop left*/
-		/*vf->width is from mvvs->src_w which is the valid content
-		 *so the crop of bottom and right could be 0
-		 */
-		vf->crop[2] = 0;/*crop bottow*/
-		vf->crop[3] = 0;/*crop right*/
-		vf->flag |= VFRAME_FLAG_VIDEO_DRM;
-		/*need sync with vpp*/
-		vf->canvas0Addr = (u32)-1;
-		/*Todo: if canvas0_config.endian = 1
-		 *supprot little endian is okay,the flag could be removed.
-		 */
-		vf->flag |= VFRAME_FLAG_VIDEO_LINEAR;
-		vf->plane_num = 1;
-		vf->canvas0_config[0].phy_addr = phy_addr;
-		vf->canvas0_config[0].width = byte_stride;
-		vf->canvas0_config[0].height = src_h;
-		vf->canvas0_config[0].block_mode = CANVAS_BLKMODE_LINEAR;
-		vf->canvas0_config[0].endian = 0;/*big endian default support*/
-		if (pixel_format == DRM_FORMAT_NV12 ||
-		    pixel_format == DRM_FORMAT_NV21) {
-			vf->plane_num = 2;
-			vf->canvas0_config[1].phy_addr = phy_addr2;
-			vf->canvas0_config[1].width = byte_stride;
-			vf->canvas0_config[1].height = src_h / 2;
-			vf->canvas0_config[1].block_mode =
-				CANVAS_BLKMODE_LINEAR;
-			/*big endian default support*/
-			vf->canvas0_config[1].endian = 0;
-		}
-		DRM_DEBUG("vframe info:type(0x%x),plane_num=%d\n",
-			  vf->type, vf->plane_num);
+
+	if (mvvs->is_uvm) {
+		vf = mvvs->vf;
 		if (!kfifo_put(&video->ready_q, vf))
 			DRM_INFO("ready_q is full!\n");
 	} else {
-		DRM_INFO("free_q get fail!");
+		if (pixel_format == DRM_FORMAT_NV12 ||
+			pixel_format == DRM_FORMAT_NV21) {
+			if (!mvvs->phy_addr[1])
+				phy_addr2 = phy_addr + byte_stride * src_h;
+			else
+				phy_addr2 = mvvs->phy_addr[1];
+		}
+
+		if (kfifo_get(&video->free_q, &vf) && vf) {
+			memset(vf, 0, sizeof(struct vframe_s));
+			vf->width = mvvs->src_w;
+			vf->height = mvvs->src_h;
+			vf->source_type = VFRAME_SOURCE_TYPE_OTHERS;
+			vf->source_mode = VFRAME_SOURCE_MODE_OTHERS;
+			vf->bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
+			vf->type = video_type_get(pixel_format);
+			vf->axis[0] = mvvs->dst_x;
+			vf->axis[1] = mvvs->dst_y;
+			vf->axis[2] = mvvs->dst_x + mvvs->dst_w - 1;
+			vf->axis[3] = mvvs->dst_y + mvvs->dst_h - 1;
+			vf->crop[0] = mvvs->src_y;/*crop top*/
+			vf->crop[1] = mvvs->src_x;/*crop left*/
+			/*vf->width is from mvvs->src_w which is the
+			 *valid content so the crop of bottom and right
+			 *could be 0
+			 */
+			vf->crop[2] = 0;/*crop bottow*/
+			vf->crop[3] = 0;/*crop right*/
+			vf->flag |= VFRAME_FLAG_VIDEO_DRM;
+			/*need sync with vpp*/
+			vf->canvas0Addr = (u32)-1;
+			/*Todo: if canvas0_config.endian = 1
+			 *supprot little endian is okay,could be removed.
+			 */
+			vf->flag |= VFRAME_FLAG_VIDEO_LINEAR;
+			vf->plane_num = 1;
+			vf->canvas0_config[0].phy_addr = phy_addr;
+			vf->canvas0_config[0].width = byte_stride;
+			vf->canvas0_config[0].height = src_h;
+			vf->canvas0_config[0].block_mode =
+				CANVAS_BLKMODE_LINEAR;
+			/*big endian default support*/
+			vf->canvas0_config[0].endian = 0;
+			if (pixel_format == DRM_FORMAT_NV12 ||
+				pixel_format == DRM_FORMAT_NV21) {
+				vf->plane_num = 2;
+				vf->canvas0_config[1].phy_addr = phy_addr2;
+				vf->canvas0_config[1].width = byte_stride;
+				vf->canvas0_config[1].height = src_h / 2;
+				vf->canvas0_config[1].block_mode =
+					CANVAS_BLKMODE_LINEAR;
+				/*big endian default support*/
+				vf->canvas0_config[1].endian = 0;
+			}
+			DRM_DEBUG("vframe info:type(0x%x),plane_num=%d\n",
+					vf->type, vf->plane_num);
+			if (!kfifo_put(&video->ready_q, vf))
+				DRM_INFO("ready_q is full!\n");
+		} else {
+			DRM_INFO("free_q get fail!");
+		}
 	}
 	DRM_DEBUG("plane_index=%d,HW-video=%d, byte_stride=%d\n",
 		  mvvs->plane_index, vblk->index, byte_stride);
