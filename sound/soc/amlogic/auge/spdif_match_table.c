@@ -41,6 +41,9 @@ struct spdif_chipinfo {
 	bool same_src_spdif_reen;
 	/* async fifo */
 	bool async_fifo;
+
+	/* from tm2_revb */
+	bool separate_tohdmitx_en;
 };
 
 struct spdif_chipinfo axg_spdif_chipinfo = {
@@ -114,6 +117,24 @@ struct spdif_chipinfo tm2_spdif_b_chipinfo = {
 	.async_fifo   = true,
 };
 
+struct spdif_chipinfo tm2_revb_spdif_a_chipinfo = {
+	.id           = SPDIF_A,
+	.chnum_en     = true,
+	.hold_start   = true,
+	.eq_drc_en    = true,
+	.async_fifo   = true,
+	.separate_tohdmitx_en = true,
+};
+
+struct spdif_chipinfo tm2_revb_spdif_b_chipinfo = {
+	.id           = SPDIF_B,
+	.chnum_en     = true,
+	.hold_start   = true,
+	.eq_drc_en    = true,
+	.async_fifo   = true,
+	.separate_tohdmitx_en = true,
+};
+
 static const struct of_device_id aml_spdif_device_id[] = {
 	{
 		.compatible = "amlogic, axg-snd-spdif",
@@ -150,6 +171,14 @@ static const struct of_device_id aml_spdif_device_id[] = {
 	{
 		.compatible = "amlogic, tm2-snd-spdif-b",
 		.data		= &tm2_spdif_b_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tm2-revb-snd-spdif-a",
+		.data		= &tm2_revb_spdif_a_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tm2-revb-snd-spdif-b",
+		.data		= &tm2_revb_spdif_b_chipinfo,
 	},
 	{},
 };

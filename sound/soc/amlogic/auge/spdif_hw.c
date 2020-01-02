@@ -397,15 +397,26 @@ void aml_spdifout_get_aed_info(int spdifout_id,
 /* spdifout to hdmix ctrl
  * allow spdif out data to hdmitx
  */
-void spdifout_to_hdmitx_ctrl(int spdif_index)
+void spdifout_to_hdmitx_ctrl(int spdif_tohdmitxen_separated, int spdif_index)
 {
 	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
-		1 << 31
-		| 1 << 3 /* spdif_clk_cap_inv */
+		1 << 3 /* spdif_clk_cap_inv */
 		| 0 << 2 /* spdif_clk_inv */
 		| spdif_index << 1 /* spdif_out */
 		| spdif_index << 0 /* spdif_clk */
 	);
+
+	/* if tohdmitx_en is separated, need do:
+	 * step1: enable/disable clk
+	 * step2: enable/disable dat
+	 */
+	if (spdif_tohdmitxen_separated) {
+		audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+				     0x1 << 30, 0x1 << 30);
+	}
+
+	audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+			     0x1 << 31, 0x1 << 31);
 }
 #if 0
 static void spdifout_clk_ctrl(int spdif_id, bool is_enable)
@@ -635,7 +646,9 @@ void spdif_set_channel_status_info(
 	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
 }
 
-void spdifout_play_with_zerodata(unsigned int spdif_id, bool reenable)
+void spdifout_play_with_zerodata(unsigned int spdif_id,
+				 bool reenable,
+				 int reparated)
 {
 	pr_debug("%s, spdif id:%d enable:%d\n",
 		__func__,
@@ -664,7 +677,7 @@ void spdifout_play_with_zerodata(unsigned int spdif_id, bool reenable)
 		/* spdif clk */
 		//spdifout_clk_ctrl(spdif_id, true);
 		/* spdif to hdmitx */
-		spdifout_to_hdmitx_ctrl(spdif_id);
+		spdifout_to_hdmitx_ctrl(reparated, spdif_id);
 
 		/* spdif ctrl */
 		spdifout_fifo_ctrl(spdif_id,

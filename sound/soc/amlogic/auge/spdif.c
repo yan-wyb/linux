@@ -1215,6 +1215,7 @@ static int aml_dai_spdif_prepare(
 	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int bit_depth = 0;
 	unsigned int fifo_id = 0;
+	int separated = 0;
 
 	bit_depth = snd_pcm_format_width(runtime->format);
 
@@ -1250,7 +1251,9 @@ static int aml_dai_spdif_prepare(
 		/* TOHDMITX_CTRL0
 		 * Both spdif_a/spdif_b would notify to hdmitx
 		 */
-		spdifout_to_hdmitx_ctrl(p_spdif->id);
+		if (p_spdif->chipinfo)
+			separated = p_spdif->chipinfo->separate_tohdmitx_en;
+		spdifout_to_hdmitx_ctrl(separated, p_spdif->id);
 		/* notify to hdmitx */
 		spdif_notify_to_hdmitx(substream);
 

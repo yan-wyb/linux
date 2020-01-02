@@ -1358,7 +1358,7 @@
 
 &audiobus {
 	tdma:tdm@0 {
-		compatible = "amlogic, tm2-snd-tdma";
+		compatible = "amlogic, tm2-revb-snd-tdma";
 		#sound-dai-cells = <0>;
 
 		dai-tdm-lane-slot-mask-in = <1 0>;
@@ -1406,7 +1406,7 @@
 	};
 
 	tdmb:tdm@1 {
-		compatible = "amlogic, tm2-snd-tdmb";
+		compatible = "amlogic, tm2-revb-snd-tdmb";
 		#sound-dai-cells = <0>;
 
 		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
@@ -1424,7 +1424,7 @@
 	};
 
 	tdmc:tdm@2 {
-		compatible = "amlogic, tm2-snd-tdmc";
+		compatible = "amlogic, tm2-revb-snd-tdmc";
 		#sound-dai-cells = <0>;
 
 		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
@@ -1518,7 +1518,7 @@
 	};
 
 	spdifa:spdif@0 {
-		compatible = "amlogic, tm2-snd-spdif-a";
+		compatible = "amlogic, tm2-revb-snd-spdif-a";
 		#sound-dai-cells = <0>;
 
 		clocks = <&clkc CLKID_MPLL1
@@ -1560,7 +1560,7 @@
 	};
 
 	spdifb:spdif@1 {
-		compatible = "amlogic, tm2-snd-spdif-b";
+		compatible = "amlogic, tm2-revb-snd-spdif-b";
 		#sound-dai-cells = <0>;
 
 		clocks = <&clkc CLKID_MPLL0 /*CLKID_HIFI_PLL*/
