@@ -644,6 +644,40 @@ static struct miscdevice hifi4dsp_miscdev[] = {
 	}
 };
 
+static void *mm_vmap(phys_addr_t phys, unsigned long size)
+{
+	u32 offset, npages;
+	struct page **pages = NULL;
+	pgprot_t pgprot = PAGE_KERNEL;
+	void *vaddr;
+	int i;
+
+	offset = offset_in_page(phys);
+	npages = DIV_ROUND_UP(size + offset, PAGE_SIZE);
+
+	pages = vmalloc(sizeof(struct page *) * npages);
+	if (!pages)
+		return NULL;
+	for (i = 0; i < npages; i++) {
+		pages[i] = phys_to_page(phys);
+		phys += PAGE_SIZE;
+	}
+
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
+	if (!vaddr) {
+		pr_err("vmaped fail, size: %d\n",
+			npages << PAGE_SHIFT);
+		vfree(pages);
+		return NULL;
+	}
+	vfree(pages);
+	pr_debug("[HIGH-MEM-MAP] pa(%lx) to va(%p), size: %d\n",
+		(unsigned long)phys, vaddr, npages << PAGE_SHIFT);
+
+	return vaddr;
+}
+
+
 /*of read clk_gate, clk*/
 static inline int of_read_dsp_irq(struct platform_device *pdev, int dsp_id)
 {
@@ -867,8 +901,20 @@ static int hifi4dsp_platform_probe(struct platform_device *pdev)
 	dma_alloc_from_contiguous(&pdev->dev,
 				  PAGE_ALIGN(reservememsize) >> PAGE_SHIFT, 0);
 	pr_info("cma alloc hifi4 mem region success!\n");
-	if (cma_pages != NULL)
+	if (cma_pages != NULL) {
 		hifi4_rmem.base = page_to_phys(cma_pages);
+		if (!PageHighMem(cma_pages)) {
+			fw_addr = phys_to_virt(hifi4_rmem.base);
+			pr_info("kernel addr map1 phys:0x%lx->virt:0x%lx\n",
+				(unsigned long)hifi4_rmem.base,
+				(unsigned long)fw_addr);
+		} else {
+			fw_addr = mm_vmap(hifi4_rmem.base, hifi4_rmem.size);
+			pr_info("kernel addr map2 phys:0x%lx->virt:0x%lx\n",
+				(unsigned long)hifi4_rmem.base,
+				(unsigned long)fw_addr);
+		}
+	}
 	else
 		goto err3;
 
@@ -891,7 +937,6 @@ static int hifi4dsp_platform_probe(struct platform_device *pdev)
 		hifi4base = hifi4_rmem.base + (id == 0 ?
 					       dspaoffset :
 					       dspboffset);
-		fw_addr = phys_to_virt(hifi4base);
 		hifi4size =
 		     (id == 0 ?
 		     (dspboffset - dspaoffset) :
