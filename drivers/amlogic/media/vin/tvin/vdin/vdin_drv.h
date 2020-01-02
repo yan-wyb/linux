@@ -268,6 +268,7 @@ struct vdin_dv_s {
 	unsigned int dolby_input;
 	dma_addr_t dv_dma_paddr;
 	void *dv_dma_vaddr;
+	void *temp_meta_data;
 	unsigned int dv_flag_cnt;/*cnt for no dv input*/
 	bool dv_flag;
 	bool dv_config;

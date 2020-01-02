@@ -70,6 +70,27 @@ struct ldim_max_s {
 };
 #endif
 
+#define META_PKY_TYPE_SINGLE	0x00
+#define META_PKY_TYPE_START	0x40
+#define META_PKY_TYPE_MID	0x80
+#define META_PKY_TYPE_TAIL	0xc0
+
+#define DV_META_PACKET_SIZE		128
+#define DV_META_HEADER_LEN		2
+#define DV_META_TAIL_CRC_SIZE		4
+#define DV_META_PACKET_TYPE_SIZE	3
+
+#define DV_META_SINGLE_PKT_SIZE		119
+#define DV_META_NORMAL_PKT_SIZE		121
+
+struct dv_meta_pkt {
+	u8 head0;
+	u8 head1;
+	u8 head2;
+	u8 body[121];
+	u32 crc;
+};
+
 extern unsigned int game_mode;
 extern bool vdin_dbg_en;
 

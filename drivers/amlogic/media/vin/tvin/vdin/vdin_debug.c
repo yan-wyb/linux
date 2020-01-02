@@ -1524,6 +1524,17 @@ static void vdin_dump_regs(struct vdin_dev_s *devp)
 				(reg + offset), rd(offset, reg));
 		}
 		pr_info("vdin%d h/v sk regs end----\n\n", devp->index);
+
+		pr_info("vdin%d DV regs start----\n", devp->index);
+		for (reg = VDIN_DOLBY_DSC_CTRL0;
+		     reg <= VDIN_DOLBY_DSC_STATUS2; reg++) {
+			pr_info("0x%04x = 0x%08x\n",
+				(reg + offset), rd(offset, reg));
+		}
+		pr_info("0x%04x = 0x%08x\n",
+			(VDIN_DOLBY_DSC_STATUS3 + offset),
+			rd(offset, VDIN_DOLBY_DSC_STATUS3));
+		pr_info("vdin%d DV regs end----\n\n", devp->index);
 	}
 
 	if (devp->afbce_flag & VDIN_AFBCE_EN) {
