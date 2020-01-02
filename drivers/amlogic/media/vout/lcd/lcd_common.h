@@ -44,7 +44,8 @@
 /* 20191025: tcon chpi phy setting update */
 /* 20191115: tcon add demura and vac function  for tl1*/
 /* 20191227: vbyone hw filter disable support*/
-#define LCD_DRV_VERSION    "20191227"
+/* 20200102: support resume type to avoid dual display interfere each other*/
+#define LCD_DRV_VERSION    "20200102"
 
 #define VPP_OUT_SATURATE            (1 << 0)
 
