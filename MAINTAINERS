@@ -15230,3 +15230,9 @@ F:  arch/arm64/boot/dts/amlogic/tm2_t962e2_ab311_buildroot.dts
 F:  arch/arm64/boot/dts/amlogic/tm2_t962e2_ab311_drm_buildroot.dts
 F:  arch/arm64/boot/dts/amlogic/tm2_t962x3_ab301_buildroot.dts
 F:  arch/arm64/boot/dts/amlogic/tm2_t962x3_ab301_drm_buildroot.dts
+
+AMLOGIC TM2 DSP MAILBOX DRIVER
+M: shunzhou jiang <shunzhou.jiang@amlogic.com>
+F: drivers/amlogic/mailbox/meson_mhu_dsp.c
+F: drivers/amlogic/mailbox/meson_mhu_dsp.h
+F: drivers/amlogic/mailbox/scpi_protocol_dsp.c
