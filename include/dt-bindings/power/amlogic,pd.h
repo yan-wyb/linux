@@ -9,6 +9,12 @@
 #define	PM_WAVE420L		3
 #define	PM_CSI			6
 #define	PM_VPU			8
+#define	PM_EMMC_B		9
+#define	PM_EMMC_C		10
+#define	PM_AUDIO		11
+#define	PM_TVFE			12
+#define	PM_ACODEC		13
+#define	PM_ATV_DEMOD		14
 #define	PM_NN			16
 #define	PM_USB			17
 #define	PM_PCIE0		18
