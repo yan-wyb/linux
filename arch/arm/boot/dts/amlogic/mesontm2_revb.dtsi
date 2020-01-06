@@ -669,7 +669,8 @@
 			};
 
 			ddr_manager {
-				compatible = "amlogic, tl1-audio-ddr-manager";
+				compatible =
+					"amlogic, tm2-revb-audio-ddr-manager";
 				interrupts = <
 					GIC_SPI 148 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 149 IRQ_TYPE_EDGE_RISING
@@ -743,7 +744,7 @@
 		/* Sound iomap */
 		aml_snd_iomap {
 			compatible = "amlogic, snd-iomap";
-			status = "disabled";
+			status = "okay";
 			#address-cells=<1>;
 			#size-cells=<1>;
 			ranges;

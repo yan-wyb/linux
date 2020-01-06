@@ -239,19 +239,19 @@
 	pdm_codec:dummy {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, pdm_dummy_codec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	dummy_codec:dummy {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml_dummy_codec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	tl1_codec:codec {
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, tl1_acodec";
-		status = "disabled";
+		status = "okay";
 		reg = <0x0 0xff632000 0x0 0x1c>;
 		tdmout_index = <0>;
 		tdmin_index = <0>;
@@ -1392,7 +1392,7 @@
 
 		/*tdm clk tuning enable*/
 		clk_tuning_enable = <1>;
-		status = "disabled";
+		status = "okay";
 
 		/* !!!For --TV platform-- ONLY */
 		Channel_Mask {
@@ -1413,7 +1413,7 @@
 				&clkc CLKID_MPLL1>;
 		clock-names = "mclk", "clk_srcpll";
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	tdmc:tdm@2 {
@@ -1431,7 +1431,7 @@
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmout_c &tdmin_c>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	tdmlb:tdm@3 {
@@ -1504,7 +1504,7 @@
 		/* mode 0~4, defalut:1 */
 		filter_mode = <1>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	spdifa:spdif@0 {
@@ -1546,7 +1546,7 @@
 
 		/*spdif clk tuning enable*/
 		clk_tuning_enable = <1>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	spdifb:spdif@1 {
@@ -1559,7 +1559,7 @@
 		clock-names = "sysclk",
 				"gate_spdifout", "clk_spdifout";
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	extn:extn {
@@ -1570,7 +1570,7 @@
 				<GIC_SPI 158 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "irq_frhdmirx";
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	aed:effect {
@@ -1595,7 +1595,7 @@
 		/* max 0xff, each bit for one channel */
 		channel_mask = <0xff>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	asrca: resample@0 {
@@ -1621,7 +1621,7 @@
 		 */
 		resample_module = <8>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	asrcb: resample@1 {
@@ -1633,7 +1633,7 @@
 
 		/*this resample is only used for loopback_A.*/
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	vad:vad {
@@ -1669,7 +1669,7 @@
 		 */
 		level = <1>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	loopbacka:loopback@0 {
@@ -1724,7 +1724,7 @@
 		/* config which data pin as loopback */
 		datalb-lane-mask-in = <1 0 0 0>;
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	loopbackb:loopback@1 {
@@ -1784,7 +1784,7 @@
 }; /* end of audiobus */
 
 &earc {
-	status = "disabled";
+	status = "okay";
 };
 
 &pinctrl_periphs {
@@ -1893,7 +1893,7 @@
 		compatible = "ESMT, ad82584f";
 		#sound-dai-cells = <0>;
 		reg = <0x30>;
-		status = "disabled";
+		status = "okay";
 		reset_pin = <&gpio GPIOH_13 0>;
 		no_mclk;
 	};
@@ -1902,7 +1902,7 @@
 		compatible = "ESMT, ad82584f";
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
-		status = "disabled";
+		status = "okay";
 		no_mclk;
 	};
 };
