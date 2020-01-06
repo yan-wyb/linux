@@ -212,6 +212,7 @@ struct meson_vpu_osd_state {
 	u32 plane_index;
 	u32 fb_size;
 	u32 premult_en;
+	u32 afbc_en;
 	u32 rotation;
 };
 
@@ -279,6 +280,7 @@ struct meson_vpu_video_state {
 	u32 plane_index;
 	u32 fb_size;
 	u32 premult_en;
+	u32 afbc_en;
 };
 
 struct meson_vpu_afbc {
