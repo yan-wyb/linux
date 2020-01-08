@@ -1392,6 +1392,10 @@
 
 		/*tdm clk tuning enable*/
 		clk_tuning_enable = <1>;
+
+		/* enable control gain */
+		ctrl_gain = <1>;
+
 		status = "okay";
 
 		/* !!!For --TV platform-- ONLY */
@@ -1413,6 +1417,9 @@
 				&clkc CLKID_MPLL1>;
 		clock-names = "mclk", "clk_srcpll";
 
+		/* enable control gain */
+		ctrl_gain = <1>;
+
 		status = "okay";
 	};
 
@@ -1430,6 +1437,9 @@
 
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmout_c &tdmin_c>;
+
+		/* enable control gain */
+		ctrl_gain = <1>;
 
 		status = "okay";
 	};

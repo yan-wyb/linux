@@ -514,6 +514,8 @@ struct register_table {
 #define EE_AUDIO_TDMOUT_A_MUTE5            0x2a9
 #define EE_AUDIO_TDMOUT_A_MUTE6            0x2aa
 #define EE_AUDIO_TDMOUT_A_MUTE7            0x2ab
+#define EE_AUDIO_TDMOUT_A_GAIN_EN          0x2ac
+#define EE_AUDIO_TDMOUT_A_GAIN_CTRL        0x2ad
 #define EE_AUDIO_TDMOUT_A_MASK_VAL         0x14f
 
 #define EE_AUDIO_TDMOUT_B_CTRL0            0x150
@@ -543,6 +545,8 @@ struct register_table {
 #define EE_AUDIO_TDMOUT_B_MUTE5            0x2b9
 #define EE_AUDIO_TDMOUT_B_MUTE6            0x2ba
 #define EE_AUDIO_TDMOUT_B_MUTE7            0x2bb
+#define EE_AUDIO_TDMOUT_B_GAIN_EN          0x2bc
+#define EE_AUDIO_TDMOUT_B_GAIN_CTRL        0x2bd
 #define EE_AUDIO_TDMOUT_B_MASK_VAL         0x15f
 
 #define EE_AUDIO_TDMOUT_C_CTRL0            0x160
@@ -572,6 +576,8 @@ struct register_table {
 #define EE_AUDIO_TDMOUT_C_MUTE5            0x2c9
 #define EE_AUDIO_TDMOUT_C_MUTE6            0x2ca
 #define EE_AUDIO_TDMOUT_C_MUTE7            0x2cb
+#define EE_AUDIO_TDMOUT_C_GAIN_EN          0x2cc
+#define EE_AUDIO_TDMOUT_C_GAIN_CTRL        0x2cd
 #define EE_AUDIO_TDMOUT_C_MASK_VAL         0x16f
 
 /*

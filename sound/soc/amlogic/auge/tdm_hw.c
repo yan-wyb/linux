@@ -861,3 +861,91 @@ void aml_tdm_out_reset(unsigned int tdm_id, int offset)
 	audiobus_update_bits(reg, val, val);
 	audiobus_update_bits(reg, val, 0);
 }
+
+void aml_tdmout_auto_gain_enable(unsigned int tdm_id)
+{
+	unsigned int reg, offset;
+
+	offset = EE_AUDIO_TDMOUT_B_GAIN_EN - EE_AUDIO_TDMOUT_A_GAIN_EN;
+	reg = EE_AUDIO_TDMOUT_A_GAIN_EN + offset * tdm_id;
+
+	/* 0 - 8 channel */
+	audiobus_update_bits(reg, 0xFF << 0, 0xFF << 0);
+
+	offset = EE_AUDIO_TDMOUT_B_GAIN_CTRL - EE_AUDIO_TDMOUT_A_GAIN_CTRL;
+	reg = EE_AUDIO_TDMOUT_A_GAIN_CTRL + offset * tdm_id;
+	/*
+	 * bit 31: step by step change gain
+	 * bit 16 - 23: gain_step
+	 * bit 0 - 15: the period of each change, unit is FS
+	 */
+	audiobus_update_bits(reg,
+			     0x1 << 31 | 0xFF << 16 | 0xFFFF << 0,
+			     0x1 << 31 | 0x0C << 16 | 0x03C0 << 0);
+}
+
+void aml_tdmout_set_gain(int tdmout_id, int value)
+{
+	unsigned int reg, offset;
+	int i;
+
+	offset = EE_AUDIO_TDMOUT_B_GAIN0 - EE_AUDIO_TDMOUT_A_GAIN0;
+	reg = EE_AUDIO_TDMOUT_A_GAIN0 + offset * tdmout_id;
+
+	/* channel 0 - channel 8 */
+	for (i = 0; i < 2; i++)
+		audiobus_write(reg + i,
+			       value << 24
+			       | value << 16
+			       | value << 8
+			       | value << 0);
+}
+
+int aml_tdmout_get_gain(int tdmout_id)
+{
+	unsigned int reg, offset;
+	int value;
+
+	offset = EE_AUDIO_TDMOUT_B_GAIN0 - EE_AUDIO_TDMOUT_A_GAIN0;
+	reg = EE_AUDIO_TDMOUT_A_GAIN0 + offset * tdmout_id;
+	value = audiobus_read(reg);
+
+	return value & 0xFF;
+}
+
+void aml_tdmout_set_mute(int tdmout_id, int mute)
+{
+	unsigned int reg, offset, value;
+	int i;
+
+	if (mute)
+		value = 0xFFFFFFFF;
+	else
+		value = 0x0;
+
+	offset = EE_AUDIO_TDMOUT_B_MUTE0 - EE_AUDIO_TDMOUT_A_MUTE0;
+	reg = EE_AUDIO_TDMOUT_A_MUTE0 + offset * tdmout_id;
+
+	/* lane0 - lane3 */
+	for (i = 0; i < 4; i++)
+		audiobus_write(reg + i, value);
+
+	offset = EE_AUDIO_TDMOUT_B_MUTE4 - EE_AUDIO_TDMOUT_A_MUTE4;
+	reg = EE_AUDIO_TDMOUT_A_MUTE4 + offset * tdmout_id;
+
+	/* lane4 - lane7 */
+	for (i = 0; i < 4; i++)
+		audiobus_write(reg + i, value);
+}
+
+int aml_tdmout_get_mute(int tdmout_id)
+{
+	unsigned int reg, offset;
+	int value;
+
+	offset = EE_AUDIO_TDMOUT_B_MUTE0 - EE_AUDIO_TDMOUT_A_MUTE0;
+	reg = EE_AUDIO_TDMOUT_A_MUTE0 + offset * tdmout_id;
+	value = audiobus_read(reg);
+
+	return value & 0x1;
+}

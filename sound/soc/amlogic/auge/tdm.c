@@ -117,6 +117,8 @@ struct aml_tdm {
 	int start_clk_enable;
 	int clk_tuning_enable;
 	int last_rate;
+
+	int ctrl_gain_enable;
 };
 
 static const struct snd_pcm_hardware aml_tdm_hardware = {
@@ -174,6 +176,54 @@ static int tdm_clk_set(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tdmout_gain_get(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] = aml_tdmout_get_gain(p_tdm->id);
+
+	return 0;
+}
+
+static int tdmout_gain_set(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	int value = ucontrol->value.enumerated.item[0];
+
+	aml_tdmout_set_gain(p_tdm->id, value);
+
+	return 0;
+}
+
+static int tdmout_get_mute_enum(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] = aml_tdmout_get_mute(p_tdm->id);
+
+	return 0;
+}
+
+static int tdmout_set_mute_enum(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	int value = ucontrol->value.enumerated.item[0];
+
+	aml_tdmout_set_mute(p_tdm->id, value);
+
+	return 0;
+}
+
 static int tdmin_clk_get(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
@@ -220,6 +270,42 @@ static const struct snd_kcontrol_new snd_tdm_clk_controls[] = {
 				0, 0, 2000000, 0,
 				tdm_clk_get,
 				tdm_clk_set),
+};
+
+static const struct snd_kcontrol_new snd_tdm_a_controls[] = {
+	/*TDMOUT_A gain, enable data * gain*/
+	SOC_SINGLE_EXT("TDMOUT_A GAIN",
+		       0, 0, 255, 0,
+		       tdmout_gain_get,
+		       tdmout_gain_set),
+	SOC_SINGLE_BOOL_EXT("TDMOUT_A Mute",
+			    0,
+			    tdmout_get_mute_enum,
+			    tdmout_set_mute_enum),
+};
+
+static const struct snd_kcontrol_new snd_tdm_b_controls[] = {
+	/*TDMOUT_B gain, enable data * gain*/
+	SOC_SINGLE_EXT("TDMOUT_B GAIN",
+		       0, 0, 255, 0,
+		       tdmout_gain_get,
+		       tdmout_gain_set),
+	SOC_SINGLE_BOOL_EXT("TDMOUT_B Mute",
+			    0,
+			    tdmout_get_mute_enum,
+			    tdmout_set_mute_enum),
+};
+
+static const struct snd_kcontrol_new snd_tdm_c_controls[] = {
+	/*TDMOUT_C gain, enable data * gain*/
+	SOC_SINGLE_EXT("TDMOUT_C GAIN",
+		       0, 0, 255, 0,
+		       tdmout_gain_get,
+		       tdmout_gain_set),
+	SOC_SINGLE_BOOL_EXT("TDMOUT_C Mute",
+			    0,
+			    tdmout_get_mute_enum,
+			    tdmout_set_mute_enum),
 };
 
 static irqreturn_t aml_tdm_ddr_isr(int irq, void *devid)
@@ -1333,6 +1419,26 @@ static int aml_dai_tdm_probe(struct snd_soc_dai *cpu_dai)
 	/* config ddr arb */
 	aml_tdm_arb_config(p_tdm->actrl);
 
+	if (p_tdm->ctrl_gain_enable && p_tdm->id == 0) {
+		ret = snd_soc_add_dai_controls(cpu_dai,
+					       snd_tdm_a_controls,
+					       ARRAY_SIZE(snd_tdm_a_controls));
+		if (ret < 0)
+			pr_err("failed add snd tdmA controls\n");
+	} else if (p_tdm->ctrl_gain_enable && p_tdm->id == 1) {
+		ret = snd_soc_add_dai_controls(cpu_dai,
+					       snd_tdm_b_controls,
+					       ARRAY_SIZE(snd_tdm_b_controls));
+		if (ret < 0)
+			pr_err("failed add snd tdmB controls\n");
+	} else if (p_tdm->ctrl_gain_enable && p_tdm->id == 2) {
+		ret = snd_soc_add_dai_controls(cpu_dai,
+					       snd_tdm_c_controls,
+					       ARRAY_SIZE(snd_tdm_c_controls));
+		if (ret < 0)
+			pr_err("failed add snd tdmA controls\n");
+	}
+
 	return 0;
 }
 
@@ -1749,6 +1855,12 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		pr_info("TDM id %d output clk enable:%d\n",
 			p_tdm->id, p_tdm->start_clk_enable);
 
+	ret = of_property_read_u32(node,
+				   "ctrl_gain",
+				   &p_tdm->ctrl_gain_enable);
+	if (ret < 0)
+		p_tdm->ctrl_gain_enable = 0;
+
 	/*set default clk for output*/
 	if (p_tdm->start_clk_enable == 1)
 		aml_set_default_tdm_clk(p_tdm);
@@ -1768,6 +1880,9 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		dev_err(dev, "devm_snd_soc_register_component failed\n");
 		return ret;
 	}
+
+	if (p_tdm->ctrl_gain_enable)
+		aml_tdmout_auto_gain_enable(p_tdm->id);
 
 	ret = of_property_read_u32(node, "clk_tuning_enable",
 				&p_tdm->clk_tuning_enable);
