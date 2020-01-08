@@ -1497,7 +1497,7 @@
 
 	mesonstream {
 		compatible = "amlogic, codec, streambuf";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_U_PARSER
 			&clkc CLKID_DEMUX
 			&clkc CLKID_AHB_ARB0
@@ -1520,12 +1520,12 @@
 
 	vcodec-dec {
 		compatible = "amlogic, vcodec-dec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vdec {
 		compatible = "amlogic, vdec";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 3 1
 			0 23 1
 			0 32 1

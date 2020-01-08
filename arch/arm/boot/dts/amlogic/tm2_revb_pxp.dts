@@ -76,15 +76,22 @@
 			alignment = <0x400000>;
 			alloc-ranges = <0x3f800000 0x800000>;
 		};
+		dsp_fw_reserved:linux,dsp_fw {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x01000000>;
+			alignment = <0x00400000>;
+			alloc-ranges = <0x30000000 0x01000000>;
+		};
 
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x13400000>;
+			size = <0xd000000>;
 			alignment = <0x400000>;
 			linux,contiguous-region;
-			alloc-ranges = <0x30000000 0x50000000>;
+			alloc-ranges = <0x31000000 0x0d000000>;
 		};
 
 		/* codec shared reserved */
@@ -177,21 +184,13 @@
 			alignment = <0x0>;
 			linux,contiguous-region;
 		};
-
-		dsp_fw_reserved:linux,dsp_fw {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0x01000000>;
-			alignment = <0x00400000>;
-			alloc-ranges = <0x30000000 0x01000000>;
-		};
 	}; /* end of reserved-memory */
 	galcore {
 		status = "disabled";
 	};
 	codec_mm {
 		compatible = "amlogic, codec, mm";
-		status = "disabled";
+		status = "okay";
 		memory-region = <&codec_mm_cma &codec_mm_reserved>;
 	};
 
