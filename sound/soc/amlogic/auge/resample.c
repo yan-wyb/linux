@@ -45,6 +45,8 @@ struct resample_chipinfo {
 
 	bool dividor_fn;
 	int resample_version;
+
+	bool chnum_sync;
 };
 
 struct audioresample {
@@ -570,6 +572,22 @@ static struct resample_chipinfo sm1_resample_b_chipinfo = {
 	.resample_version = 1,
 };
 
+static struct resample_chipinfo tm2_revb_resample_a_chipinfo = {
+	.num        = 2,
+	.id         = RESAMPLE_A,
+	.dividor_fn = true,
+	.resample_version = 1,
+	.chnum_sync = true,
+};
+
+static struct resample_chipinfo tm2_revb_resample_b_chipinfo = {
+	.num        = 2,
+	.id         = RESAMPLE_B,
+	.dividor_fn = true,
+	.resample_version = 1,
+	.chnum_sync = true,
+};
+
 static const struct of_device_id resample_device_id[] = {
 	{
 		.compatible = "amlogic, axg-resample",
@@ -594,6 +612,14 @@ static const struct of_device_id resample_device_id[] = {
 	{
 		.compatible = "amlogic, sm1-resample-b",
 		.data = &sm1_resample_b_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tm2-revb-resample-a",
+		.data = &tm2_revb_resample_a_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tm2-revb-resample-b",
+		.data = &tm2_revb_resample_b_chipinfo,
 	},
 	{}
 };
@@ -701,10 +727,13 @@ static int resample_platform_probe(struct platform_device *pdev)
 	else
 		s_resample_a = p_resample;
 
-	if (p_chipinfo && p_chipinfo->resample_version == 1)
+	if (p_chipinfo && p_chipinfo->resample_version == 1) {
 		new_resample_init(p_resample);
-	else if (p_chipinfo && p_chipinfo->resample_version == 0)
+		if (p_chipinfo->chnum_sync)
+			aml_resample_chsync_enable(p_resample->id);
+	} else if (p_chipinfo && p_chipinfo->resample_version == 0) {
 		resample_clk_set(p_resample, DEFAULT_SPK_SAMPLERATE);
+	}
 
 	aml_set_resample(p_resample->id, p_resample->enable,
 			 p_resample->resample_module);

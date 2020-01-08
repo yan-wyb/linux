@@ -411,3 +411,15 @@ int resample_set_hw_pause_thd(enum resample_idx id, unsigned int thd)
 
 	return 0;
 }
+
+void aml_resample_chsync_enable(enum resample_idx id)
+{
+	int offset =
+		EE_AUDIO_RSAMP_B_CHSYNC_CTRL - EE_AUDIO_RSAMP_A_CHSYNC_CTRL;
+	int reg = EE_AUDIO_RSAMP_A_CHSYNC_CTRL + offset * id;
+
+	/* bit 31: enable, bit 0-7: chnum_max, 8channels */
+	audiobus_update_bits(reg,
+			     0x1 << 31 | 0x7F << 0,
+			     0x1 << 31 | 0x7 << 0);
+}

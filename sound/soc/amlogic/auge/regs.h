@@ -1232,6 +1232,27 @@ struct register_table {
 #define AUDIO_RSAMP_SINC_COEF_ADDR         0x040
 #define AUDIO_RSAMP_SINC_COEF_DATA         0x041
 
+#define EE_AUDIO_RSAMP_A_CHNUM_ID0         0x350
+#define EE_AUDIO_RSAMP_A_CHNUM_ID1         0x351
+#define EE_AUDIO_RSAMP_A_CHNUM_ID2         0x352
+#define EE_AUDIO_RSAMP_A_CHNUM_ID3         0x353
+#define EE_AUDIO_RSAMP_A_CHNUM_ID4         0x354
+#define EE_AUDIO_RSAMP_A_CHNUM_ID5         0x355
+#define EE_AUDIO_RSAMP_A_CHNUM_ID6         0x356
+#define EE_AUDIO_RSAMP_A_CHNUM_ID7         0x357
+#define EE_AUDIO_RSAMP_A_CHNUM_MASK        0x35E
+#define EE_AUDIO_RSAMP_A_CHSYNC_CTRL       0x35F
+
+#define EE_AUDIO_RSAMP_B_CHNUM_ID0         0x360
+#define EE_AUDIO_RSAMP_B_CHNUM_ID1         0x361
+#define EE_AUDIO_RSAMP_B_CHNUM_ID2         0x362
+#define EE_AUDIO_RSAMP_B_CHNUM_ID3         0x363
+#define EE_AUDIO_RSAMP_B_CHNUM_ID4         0x364
+#define EE_AUDIO_RSAMP_B_CHNUM_ID5         0x365
+#define EE_AUDIO_RSAMP_B_CHNUM_ID6         0x366
+#define EE_AUDIO_RSAMP_B_CHNUM_ID7         0x367
+#define EE_AUDIO_RSAMP_B_CHSYNC_CTRL       0x36F
+
 /*HHI bus*/
 #define HHI_AUDIO_MEM_PD_REG0              0x045
 
