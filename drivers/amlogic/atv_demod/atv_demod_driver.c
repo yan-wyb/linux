@@ -50,7 +50,8 @@
 /* 2019/11/25 --- V2.16 --- Add pal-m/n ring filter processing. */
 /* 2019/12/31 --- V2.17 --- Fix atv vif setting and offset error. */
 /* 2020/01/06 --- V2.18 --- Optimize MTS(Multi-channel sound) control flow. */
-#define AMLATVDEMOD_VER "V2.18"
+/* 2020/01/08 --- V2.19 --- Fix afc frequency offset. */
+#define AMLATVDEMOD_VER "V2.19"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
