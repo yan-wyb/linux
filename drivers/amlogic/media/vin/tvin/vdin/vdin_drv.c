@@ -2945,6 +2945,14 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		devp->dv.de_scramble = dv_de_scramble;
 		vdin_dolby_desc_sc_enable(devp, dv_de_scramble);
 		break;
+	case TVIN_IOC_S_PC_MODE:
+		if (copy_from_user(&vdin_pc_mode, argp, sizeof(unsigned int))) {
+			ret = -EFAULT;
+			break;
+		}
+		if (vdin_dbg_en)
+			pr_info("vdin_pc_mode:%d\n", vdin_pc_mode);
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 	/* pr_info("%s %d is not supported command\n", __func__, cmd); */

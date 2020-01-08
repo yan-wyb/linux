@@ -480,6 +480,9 @@ struct tvafe_pin_mux_s {
 	struct tvin_frontend_info_s)
 #define TVIN_IOC_S_CANVAS_ADDR  _IOW(_TM_T, 0x4f,\
 	struct vdin_set_canvas_s)
+#define TVIN_IOC_S_PC_MODE		_IOW(_TM_T, 0x50, unsigned int)
+
+
 #define TVIN_IOC_S_CANVAS_RECOVERY  _IO(_TM_T, 0x0a)
 /* TVAFE */
 #define TVIN_IOC_S_AFE_VGA_PARM     _IOW(_TM_T, 0x16, struct tvafe_vga_parm_s)

@@ -93,6 +93,7 @@ struct dv_meta_pkt {
 
 extern unsigned int game_mode;
 extern bool vdin_dbg_en;
+extern unsigned int vdin_pc_mode;
 
 /* ************************************************************************ */
 /* ******** GLOBAL FUNCTION CLAIM ******** */

@@ -114,6 +114,11 @@ MODULE_PARM_DESC(vdin_ctl_dbg, "vdin_ctl_dbg");
 unsigned int game_mode;
 module_param(game_mode, uint, 0664);
 MODULE_PARM_DESC(game_mode, "game_mode");
+
+unsigned int vdin_pc_mode;
+module_param(vdin_pc_mode, uint, 0664);
+MODULE_PARM_DESC(vdin_pc_mode, "vdin_pc_mode");
+
 static unsigned int vpu_reg_27af = 0x3;
 
 /***************************Local defines**********************************/
@@ -626,9 +631,14 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 			break;
 		case TVIN_YUV444:
 			if (IS_HDMI_SRC(port) &&
-			    (scan_mod == TVIN_SCAN_MODE_PROGRESSIVE))
-				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV444;
-			else if (devp->prop.dest_cfmt == TVIN_NV21)
+			   (scan_mod == TVIN_SCAN_MODE_PROGRESSIVE)) {
+				if (vdin_pc_mode)
+					format_convert =
+						VDIN_FORMAT_CONVERT_YUV_YUV444;
+				else
+					format_convert =
+						VDIN_FORMAT_CONVERT_YUV_YUV422;
+			} else if (devp->prop.dest_cfmt == TVIN_NV21)
 				format_convert = VDIN_FORMAT_CONVERT_YUV_NV21;
 			else if (devp->prop.dest_cfmt == TVIN_NV12)
 				format_convert = VDIN_FORMAT_CONVERT_YUV_NV12;
@@ -637,9 +647,14 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 			break;
 		case TVIN_RGB444:
 			if (IS_HDMI_SRC(port) &&
-			    (scan_mod == TVIN_SCAN_MODE_PROGRESSIVE))
-				format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
-			else if (devp->prop.dest_cfmt == TVIN_NV21)
+			    (scan_mod == TVIN_SCAN_MODE_PROGRESSIVE)) {
+				if (vdin_pc_mode)
+					format_convert =
+						VDIN_FORMAT_CONVERT_RGB_RGB;
+				else
+					format_convert =
+						VDIN_FORMAT_CONVERT_RGB_YUV422;
+			} else if (devp->prop.dest_cfmt == TVIN_NV21)
 				format_convert = VDIN_FORMAT_CONVERT_RGB_NV21;
 			else if (devp->prop.dest_cfmt == TVIN_NV12)
 				format_convert = VDIN_FORMAT_CONVERT_RGB_NV12;

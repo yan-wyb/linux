@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2019-1225: transfer vsif to dv module"
+#define VDIN_VER "ver:2020-0108: add pc mode interface"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
