@@ -220,6 +220,8 @@ static int debug_pts_checkin;
 static int debug_pts_checkout;
 static int debug_vpts;
 static int debug_apts;
+static int apts_error_num;
+static int vpts_error_num;
 
 #define M_HIGH_DIFF    2
 #define M_LOW_DIFF     2
@@ -874,6 +876,8 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 				}
 			}
 			timestamp_vpts_set(param);
+
+			vpts_error_num++;
 			break;
 		}
 		/*
@@ -889,6 +893,8 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		}
 
 		timestamp_vpts_set(param);
+
+		vpts_error_num++;
 		if (tsync_mode == TSYNC_MODE_VMASTER) {
 			timestamp_pcrscr_set(param);
 			set_pts_realign();
@@ -928,9 +934,13 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 				}
 			}
 			timestamp_apts_set(param);
+
+			apts_error_num++;
 			break;
 		}
 		timestamp_apts_set(param);
+
+		apts_error_num++;
 		if (!tsync_enable) {
 			timestamp_apts_set(param);
 			break;
@@ -1495,6 +1505,18 @@ bool tsync_check_vpts_discontinuity(unsigned int vpts)
 		return false;
 }
 EXPORT_SYMBOL(tsync_check_vpts_discontinuity);
+
+int tsync_get_vpts_error_num(void)
+{
+	return vpts_error_num;
+}
+EXPORT_SYMBOL(tsync_get_vpts_error_num);
+
+int tsync_get_apts_error_num(void)
+{
+	return apts_error_num;
+}
+EXPORT_SYMBOL(tsync_get_apts_error_num);
 
 static ssize_t store_pcr_recover(struct class *class,
 		struct class_attribute *attr,
@@ -2353,6 +2375,9 @@ static int __init tsync_module_init(void)
 	tsync_pcr_recover_timer.expires = jiffies + PCR_CHECK_INTERVAL;
 	pcr_sync_stat = PCR_SYNC_UNSET;
 	pcr_recover_trigger = 0;
+
+	apts_error_num = 0;
+	vpts_error_num = 0;
 
 	add_timer(&tsync_pcr_recover_timer);
 

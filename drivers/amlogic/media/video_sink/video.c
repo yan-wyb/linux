@@ -810,6 +810,18 @@ void set_pts_realign(void)
 }
 EXPORT_SYMBOL(set_pts_realign);
 
+u32 get_first_pic_coming(void)
+{
+	return first_frame_toggled;
+}
+EXPORT_SYMBOL(get_first_pic_coming);
+
+u32 get_toggle_frame_count(void)
+{
+	return new_frame_count;
+}
+EXPORT_SYMBOL(get_toggle_frame_count);
+
 /* wait queue for poll */
 static wait_queue_head_t amvideo_trick_wait;
 
