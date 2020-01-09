@@ -613,9 +613,10 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 				devp->afbce_info->fm_body_paddr[i] =
 					devp->vfmem_start[i];
 			}
-			pr_info("vdin%d buf[%d] mem_start = 0x%lx, mem_size = 0x%x\n",
-				devp->index, i,
-				devp->vfmem_start[i], devp->vfmem_size);
+			if (vdin_dbg_en)
+				pr_info("vdin%d buf[%d] mem_start = 0x%lx, mem_size = 0x%x\n",
+					devp->index, i,
+					devp->vfmem_start[i], devp->vfmem_size);
 		}
 
 		devp->mem_size = mem_size;
@@ -644,13 +645,16 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 			devp->afbce_info->frame_body_size = devp->vfmem_size;
 			devp->afbce_info->head_size = afbce_head_total_bytes;
 			devp->afbce_info->table_size = afbce_table_total_bytes;
-
-			pr_info("vdin%d head_start = 0x%lx, head_size = 0x%x\n",
-				devp->index, devp->afbce_info->head_paddr,
-				devp->afbce_info->head_size);
-			pr_info("vdin%d table_start = 0x%lx, table_size = 0x%x\n",
-				devp->index, devp->afbce_info->table_paddr,
-				devp->afbce_info->table_size);
+			if (vdin_dbg_en) {
+				pr_info("vdin%d head_start = 0x%lx, head_size = 0x%x\n",
+					devp->index,
+					devp->afbce_info->head_paddr,
+					devp->afbce_info->head_size);
+				pr_info("vdin%d table_start = 0x%lx, table_size = 0x%x\n",
+					devp->index,
+					devp->afbce_info->table_paddr,
+					devp->afbce_info->table_size);
+			}
 		}
 
 		devp->cma_mem_alloc = 1;
@@ -680,9 +684,11 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 			}
 			devp->vfmem_start[i] =
 				page_to_phys(devp->vfvenc_pages[i]);
-			pr_info("vdin%d buf[%d]mem_start = 0x%lx, mem_size = 0x%x\n",
-				devp->index, i,
-				devp->vfmem_start[i], devp->vfmem_size);
+			if (vdin_dbg_en)
+				pr_info("vdin%d buf[%d]mem_start = 0x%lx, mem_size = 0x%x\n",
+					devp->index, i,
+					devp->vfmem_start[i],
+					devp->vfmem_size);
 		}
 		devp->mem_size = mem_size;
 		devp->cma_mem_alloc = 1;
@@ -708,11 +714,13 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 				ref_paddr = devp->mem_start +
 					(devp->vfmem_size * i);
 				devp->afbce_info->fm_body_paddr[i] = ref_paddr;
-
-				pr_info("vdin%d body[%d]_start = 0x%lx, body_size = 0x%x\n",
-					devp->index, i,
-					devp->afbce_info->fm_body_paddr[i],
-					devp->afbce_info->frame_body_size);
+				if (vdin_dbg_en)
+					pr_info("vdin%d body[%d]_start = 0x%lx, body_size = 0x%x\n",
+						devp->index, i,
+						devp->afbce_info->
+						fm_body_paddr[i],
+						devp->afbce_info->
+						frame_body_size);
 			}
 
 			/* afbce header & table paddr */
@@ -723,14 +731,16 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 				devp->afbce_info->head_paddr +
 				devp->afbce_info->head_size;
 			devp->afbce_info->table_size = 2 * SZ_1M;/*2M*/
-
-			pr_info("vdin%d head_start = 0x%lx, head_size = 0x%x\n",
-				devp->index, devp->afbce_info->head_paddr,
-				devp->afbce_info->head_size);
-			pr_info("vdin%d table_start = 0x%lx, table_size = 0x%x\n",
-				devp->index, devp->afbce_info->table_paddr,
-				devp->afbce_info->table_size);
-
+			if (vdin_dbg_en) {
+				pr_info("vdin%d head_start = 0x%lx, head_size = 0x%x\n",
+					devp->index,
+					devp->afbce_info->head_paddr,
+					devp->afbce_info->head_size);
+				pr_info("vdin%d table_start = 0x%lx, table_size = 0x%x\n",
+					devp->index,
+					devp->afbce_info->table_paddr,
+					devp->afbce_info->table_size);
+			}
 			/*check memory over the boundary*/
 			mem_used = devp->afbce_info->table_paddr +
 				devp->afbce_info->table_size -
@@ -760,11 +770,11 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 			devp->afbce_info->fm_head_paddr[i] =
 				devp->afbce_info->head_paddr +
 				(devp->afbce_info->frame_head_size * i);
-
-			pr_info("vdin%d fm_head_paddr[%d] = 0x%lx, frame_head_size = 0x%x\n",
-				devp->index, i,
-				devp->afbce_info->fm_head_paddr[i],
-				devp->afbce_info->frame_head_size);
+			if (vdin_dbg_en)
+				pr_info("vdin%d fm_head_paddr[%d] = 0x%lx, frame_head_size = 0x%x\n",
+					devp->index, i,
+					devp->afbce_info->fm_head_paddr[i],
+					devp->afbce_info->frame_head_size);
 		}
 
 		/* set afbce table paddr */
@@ -775,11 +785,11 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 			devp->afbce_info->fm_table_paddr[i] =
 				devp->afbce_info->table_paddr +
 				(devp->afbce_info->frame_table_size * i);
-
-			pr_info("vdin%d fm_table_paddr[%d]=0x%lx, frame_table_size = 0x%x\n",
-				devp->index, i,
-				devp->afbce_info->fm_table_paddr[i],
-				devp->afbce_info->frame_table_size);
+			if (vdin_dbg_en)
+				pr_info("vdin%d fm_table_paddr[%d]=0x%lx, frame_table_size = 0x%x\n",
+					devp->index, i,
+					devp->afbce_info->fm_table_paddr[i],
+					devp->afbce_info->frame_table_size);
 		}
 	}
 
