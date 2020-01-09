@@ -18,7 +18,7 @@
 #ifndef _INC_AML_LCD_UNIFYKEY_H__
 #define _INC_AML_LCD_UNIFYKEY_H__
 
-#define LCD_UNIFYKEY_WAIT_TIMEOUT      500
+#define LCD_UNIFYKEY_WAIT_TIMEOUT      2000
 #define LCD_UNIFYKEY_RETRY_INTERVAL    20   /* ms */
 
 /* declare external unifykey function */

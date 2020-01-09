@@ -518,7 +518,7 @@ struct aml_lcd_drv_s {
 	void (*power_ctrl)(int status);
 
 	struct workqueue_struct *workqueue;
-	struct delayed_work lcd_probe_delayed_work;
+	struct work_struct lcd_probe_work;
 	struct work_struct  lcd_resume_work;
 	struct resource *res_vsync_irq;
 	struct resource *res_vsync2_irq;
