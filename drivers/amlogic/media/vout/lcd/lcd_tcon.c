@@ -87,6 +87,37 @@ static int lcd_tcon_valid_check(void)
 	return 0;
 }
 
+static unsigned char lcd_tcon_checksum(unsigned char *buf, unsigned int len)
+{
+	unsigned int temp = 0;
+	unsigned int i;
+
+	if (!buf)
+		return 0;
+	if (len == 0)
+		return 0;
+	for (i = 0; i < len; i++)
+		temp += buf[i];
+
+	return (unsigned char)(temp & 0xff);
+}
+
+static unsigned char lcd_tcon_lrc(unsigned char *buf, unsigned int len)
+{
+	unsigned char temp = 0;
+	unsigned int i;
+
+	if (!buf)
+		return 0xff;
+	if (len == 0)
+		return 0xff;
+	temp = buf[0];
+	for (i = 1; i < len; i++)
+		temp = temp ^ buf[i];
+
+	return temp;
+}
+
 unsigned int lcd_tcon_reg_read(unsigned int addr)
 {
 	unsigned int val;
@@ -435,6 +466,12 @@ static int lcd_tcon_acc_lut_tl1(void)
 		    (acc_lut[1] << 8) |
 		    (acc_lut[2] << 16) |
 		    (acc_lut[3] << 24));
+	if (data_cnt > 1161) { /* 0xb50~0xfd8, 1161 */
+		LCDPR("%s: data_cnt %d is invalid, force to 1161\n",
+		      __func__, data_cnt);
+		data_cnt = 1161;
+	}
+
 	data_buf = &acc_lut[8];
 	for (i = 0; i < data_cnt; i++)
 		lcd_tcon_write_byte((0xb50 + i), data_buf[i]);
@@ -499,6 +536,7 @@ static int lcd_tcon_vac_load(void)
 	unsigned int n;
 	unsigned char *vac_data = tcon_rmem.vac_mem_vaddr;
 	unsigned int data_cnt;
+	unsigned char data_checksum, data_lrc, temp_checksum, temp_lrc;
 
 	if ((tcon_rmem.vac_mem_size == 0) || (!vac_data))
 		return -1;
@@ -509,6 +547,22 @@ static int lcd_tcon_vac_load(void)
 		    (vac_data[3] << 24));
 	if (data_cnt == 0) {
 		LCDPR("%s: vac data_cnt is zero\n", __func__);
+		return -1;
+	}
+	data_checksum = vac_data[4];
+	data_lrc = vac_data[5];
+	temp_checksum = lcd_tcon_checksum(&vac_data[8], data_cnt);
+	temp_lrc = lcd_tcon_lrc(&vac_data[8], data_cnt);
+	if (data_checksum != temp_checksum) {
+		LCDERR("%s: vac_data checksum error\n", __func__);
+		return -1;
+	}
+	if (data_lrc != temp_lrc) {
+		LCDERR("%s: vac_data lrc error\n", __func__);
+		return -1;
+	}
+	if ((vac_data[6] != 0x55) || (vac_data[7] != 0xaa)) {
+		LCDERR("%s: vac_data pattern error\n", __func__);
 		return -1;
 	}
 
@@ -526,6 +580,7 @@ static int lcd_tcon_demura_set_load(void)
 	unsigned int n;
 	char *demura_setting = tcon_rmem.demura_set_vaddr;
 	unsigned int data_cnt;
+	unsigned char data_checksum, data_lrc, temp_checksum, temp_lrc;
 
 	if ((tcon_rmem.demura_set_mem_size == 0) || (!demura_setting))
 		return -1;
@@ -535,13 +590,29 @@ static int lcd_tcon_demura_set_load(void)
 		    (demura_setting[2] << 16) |
 		    (demura_setting[3] << 24));
 	if (data_cnt == 0) {
-		LCDPR("%s: demura_setting data_cnt is zero\n", __func__);
+		LCDPR("%s: demura_set data_cnt is zero\n", __func__);
+		return -1;
+	}
+	data_checksum = demura_setting[4];
+	data_lrc = demura_setting[5];
+	temp_checksum = lcd_tcon_checksum(&demura_setting[8], data_cnt);
+	temp_lrc = lcd_tcon_lrc(&demura_setting[8], data_cnt);
+	if (data_checksum != temp_checksum) {
+		LCDERR("%s: demura_set checksum error\n", __func__);
+		return -1;
+	}
+	if (data_lrc != temp_lrc) {
+		LCDERR("%s: demura_set lrc error\n", __func__);
+		return -1;
+	}
+	if ((demura_setting[6] != 0x55) || (demura_setting[7] != 0xaa)) {
+		LCDERR("%s: demura_set pattern error\n", __func__);
 		return -1;
 	}
 
 	if (lcd_debug_print_flag == 3) {
 		for (n = 0; n < 30; n++)
-			LCDPR("%s: demura_set_data[%d]: 0x%x",
+			LCDPR("%s: demura_set[%d]: 0x%x",
 			      __func__, n, demura_setting[n]);
 	}
 
@@ -553,6 +624,7 @@ static int lcd_tcon_demura_lut_load(void)
 	unsigned int n;
 	char *demura_lut = tcon_rmem.demura_lut_vaddr;
 	unsigned int data_cnt;
+	unsigned char data_checksum, data_lrc, temp_checksum, temp_lrc;
 
 	if ((tcon_rmem.demura_lut_mem_size == 0) || (!demura_lut))
 		return -1;
@@ -565,10 +637,26 @@ static int lcd_tcon_demura_lut_load(void)
 		LCDPR("%s: demura_lut data_cnt is zero\n", __func__);
 		return -1;
 	}
+	data_checksum = demura_lut[4];
+	data_lrc = demura_lut[5];
+	temp_checksum = lcd_tcon_checksum(&demura_lut[8], data_cnt);
+	temp_lrc = lcd_tcon_lrc(&demura_lut[8], data_cnt);
+	if (data_checksum != temp_checksum) {
+		LCDERR("%s: demura_lut checksum error\n", __func__);
+		return -1;
+	}
+	if (data_lrc != temp_lrc) {
+		LCDERR("%s: demura_lut lrc error\n", __func__);
+		return -1;
+	}
+	if ((demura_lut[6] != 0x55) || (demura_lut[7] != 0xaa)) {
+		LCDERR("%s: demura_lut pattern error\n", __func__);
+		return -1;
+	}
 
 	if (lcd_debug_print_flag == 3) {
 		for (n = 0; n < 30; n++)
-			LCDPR("%s: demura_lut_data[%d]: 0x%x\n",
+			LCDPR("%s: demura_lut[%d]: 0x%x\n",
 			      __func__, n, demura_lut[n]);
 	}
 
@@ -580,6 +668,7 @@ static int lcd_tcon_acc_lut_load(void)
 	unsigned int n;
 	char *acc_lut = tcon_rmem.acc_lut_vaddr;
 	unsigned int data_cnt;
+	unsigned char data_checksum, data_lrc, temp_checksum, temp_lrc;
 
 	if ((tcon_rmem.acc_lut_mem_size == 0) || (!acc_lut))
 		return -1;
@@ -592,10 +681,26 @@ static int lcd_tcon_acc_lut_load(void)
 		LCDPR("%s: acc_lut data_cnt is zero\n", __func__);
 		return -1;
 	}
+	data_checksum = acc_lut[4];
+	data_lrc = acc_lut[5];
+	temp_checksum = lcd_tcon_checksum(&acc_lut[8], data_cnt);
+	temp_lrc = lcd_tcon_lrc(&acc_lut[8], data_cnt);
+	if (data_checksum != temp_checksum) {
+		LCDERR("%s: acc_lut checksum error\n", __func__);
+		return -1;
+	}
+	if (data_lrc != temp_lrc) {
+		LCDERR("%s: acc_lut lrc error\n", __func__);
+		return -1;
+	}
+	if ((acc_lut[6] != 0x55) || (acc_lut[7] != 0xaa)) {
+		LCDERR("%s: acc_lut pattern error\n", __func__);
+		return -1;
+	}
 
 	if (lcd_debug_print_flag == 3) {
 		for (n = 0; n < 30; n++)
-			LCDPR("%s: acc_lut_data[%d]: 0x%x\n",
+			LCDPR("%s: acc_lut[%d]: 0x%x\n",
 			      __func__, n, acc_lut[n]);
 	}
 
