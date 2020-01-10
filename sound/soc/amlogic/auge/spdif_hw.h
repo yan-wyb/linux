@@ -106,5 +106,6 @@ void spdifout_play_with_zerodata(unsigned int spdif_id,
 void spdifout_play_with_zerodata_free(unsigned int spdif_id);
 void spdifin_set_src(int src);
 void aml_spdif_out_reset(unsigned int spdif_id, int offset);
+void aml_spdifin_sample_mode_filter_en(void);
 
 #endif

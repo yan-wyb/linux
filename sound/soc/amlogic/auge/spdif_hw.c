@@ -732,3 +732,7 @@ void aml_spdif_out_reset(unsigned int spdif_id, int offset)
 	audiobus_update_bits(reg, val, 0);
 }
 
+void aml_spdifin_sample_mode_filter_en(void)
+{
+	audiobus_update_bits(EE_AUDIO_SPDIFIN_CTRL6, 0x1 << 12, 0x1 << 12);
+}

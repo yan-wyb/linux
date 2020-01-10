@@ -1679,6 +1679,9 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 		aml_spdif->chipinfo = p_spdif_chipinfo;
 
 		spdif_reenable = p_spdif_chipinfo->same_src_spdif_reen;
+
+		if (p_spdif_chipinfo->sample_mode_filter_en)
+			aml_spdifin_sample_mode_filter_en();
 	} else
 		dev_warn_once(dev,
 			"check whether to update spdif chipinfo\n");

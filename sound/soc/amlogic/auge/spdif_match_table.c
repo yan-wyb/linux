@@ -44,6 +44,7 @@ struct spdif_chipinfo {
 
 	/* from tm2_revb */
 	bool separate_tohdmitx_en;
+	bool sample_mode_filter_en;
 };
 
 struct spdif_chipinfo axg_spdif_chipinfo = {
@@ -124,6 +125,7 @@ struct spdif_chipinfo tm2_revb_spdif_a_chipinfo = {
 	.eq_drc_en    = true,
 	.async_fifo   = true,
 	.separate_tohdmitx_en = true,
+	.sample_mode_filter_en = true,
 };
 
 struct spdif_chipinfo tm2_revb_spdif_b_chipinfo = {
