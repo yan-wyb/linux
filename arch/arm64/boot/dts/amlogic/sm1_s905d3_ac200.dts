@@ -1010,7 +1010,7 @@
 
 &CPU0 {
 	/*set multi table cpufreq max*/
-	/*multi_tables_available;*/
+	multi_tables_available;
 	operating-points-v2 = <&cpu_opp_table0>,
 			<&cpu_opp_table1>,
 			<&cpu_opp_table2>;
@@ -1018,7 +1018,7 @@
 
 &CPU1 {
 	/*set multi table cpufreq max*/
-	/*multi_tables_available;*/
+	multi_tables_available;
 	operating-points-v2 = <&cpu_opp_table0>,
 			<&cpu_opp_table1>,
 			<&cpu_opp_table2>;
@@ -1026,7 +1026,7 @@
 
 &CPU2 {
 	/*set multi table cpufreq max*/
-	/*multi_tables_available;*/
+	multi_tables_available;
 	operating-points-v2 = <&cpu_opp_table0>,
 			<&cpu_opp_table1>,
 			<&cpu_opp_table2>;
@@ -1034,7 +1034,7 @@
 
 &CPU3 {
 	/*set multi table cpufreq max*/
-	/*multi_tables_available;*/
+	multi_tables_available;
 	operating-points-v2 = <&cpu_opp_table0>,
 			<&cpu_opp_table1>,
 			<&cpu_opp_table2>;
