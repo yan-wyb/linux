@@ -81,7 +81,7 @@ static const struct snd_kcontrol_new ad82584f_snd_controls[] = {
 /* Power-up register defaults */
 static const
 struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
-	{0x00, 0x04},//##State_Control_1
+	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
 	{0x02, 0x30},//##State_Control_3
 	{0x03, 0x4e},//##Master_volume_control
@@ -219,7 +219,7 @@ struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
 };
 
 static const int m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
-	{0x00, 0x04},//##State_Control_1
+	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
 	{0x02, 0x30},//##State_Control_3
 	{0x03, 0x4e},//##Master_volume_control
@@ -876,12 +876,15 @@ static int ad82584f_init(struct snd_soc_codec *codec)
 	ad82584f_reg_init(codec);
 
 	/* Bclk system */
-	if (ad82584f->pdata->no_mclk)
+	if (ad82584f->pdata->no_mclk) {
+		snd_soc_write(codec, 0x00, 0x04);
+
 		snd_soc_write(codec,
 			0x01,
 			0x1 << 7 | /* Bclk system enable */
 			0x1 << 0   /* 64x bclk/fs */
 			);
+	}
 
 	/* eq and drc */
 	ad82584f_set_eq_drc(codec, 1, &m_ram1_tab[0][0]);
