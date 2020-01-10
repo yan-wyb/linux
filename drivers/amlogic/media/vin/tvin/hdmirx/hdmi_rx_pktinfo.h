@@ -573,13 +573,13 @@ struct fifo_rawdata_st {
 
 /* vendor specific infoFrame packet - 0x81 */
 struct vsi_infoframe_st {
-	uint8_t pkttype;
+	uint8_t pkttype:8;
 	struct vsi_ver_st {
 		uint8_t version:7;
 		uint8_t chgbit:1;
 	} __packed ver_st;
-	uint8_t length;
-	uint8_t rsd;
+	uint8_t length:5;
+	uint8_t rsd:3;
 
 	/*PB0*/
 	uint32_t checksum:8;
@@ -621,16 +621,57 @@ struct vsi_infoframe_st {
 			uint8_t threeD_meta_data[20];
 		} __packed vsi_3Dext;
 
-		/*dolby vision , length 0x18*/
+		/* dolby vision, length 0x18 */
+		/* ieee 0x000c03 */
 		struct vsi_DobV_st {
 			/*pb4*/
-			uint8_t rsvd0:5;
-			uint8_t vdfmt:3;
+			/*	0x00: Video formats not defined in Table 8-14
+			 *		of the HDMI specification v1.4b
+			 *	0x20: Video formats defined in Table 8-14
+			 *		of the HDMI specification v1.4b
+			 */
+			uint8_t vdfmt;
 			/*pb5*/
+			/*	0x0: Video formats not defined in Table 8-14
+			 *		of the HDMI specification, v1.4b
+			 *	0x1: 4K x 2K at 29.97 Hz or 30Hz
+			 *		as defined in Table 8-14
+			 *		of the HDMI specification, v1.4b
+			 *	0x2: 4K x 2K at 25 Hz as defined in Table 8-14
+			 *		of the HDMI specification, v1.4b
+			 *	0x3: 4K x 2K at 23.98 Hz or 24Hz
+			 *		as defined in Table 8-14
+			 *		of the HDMI specification, v1.4b
+			 */
 			uint8_t hdmi_vic;
 			/*pb6*/
-			uint8_t data[22];/* val=0 */
+			uint8_t data[22]; /* val=0 */
+		} __packed vsi_DobV_st;
+
+		/* dolby vision, length 0x1b*/
+		/* ieee 0x00d046 */
+		struct vsi_DobV {
+			/*pb4*/
+			uint8_t ll:1;
+			uint8_t dv_on:1;
+			uint8_t rsvd0:6;
+			/*pb5*/
+			uint8_t tmax_pq_lo:4;
+			uint8_t rsvd:2;
+			uint8_t aux_md:1;
+			uint8_t bklt_md:1;
+			/*pb6*/
+			uint8_t tmax_pq_hi;
+			/*pb7*/
+			uint8_t aux_run_mode;
+			/*pb8*/
+			uint8_t aux_run_ver;
+			/*pb9*/
+			uint8_t aux_debug;
+			/*pb10~27*/
+			uint8_t data[18]; /* val=0 */
 		} __packed vsi_DobV;
+
 		/*TODO:hdmi2.1 spec vsi packet*/
 		struct vsi_st_21 {
 			/*pb4*/

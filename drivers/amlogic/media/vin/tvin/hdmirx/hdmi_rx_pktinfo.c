@@ -113,7 +113,7 @@ void rx_pkt_status(void)
 	rx_pr("pkt_cnt_gcp_ex=%d\n", rxpktsts.pkt_cnt_gcp_ex);
 	rx_pr("pkt_cnt_amp_ex=%d\n", rxpktsts.pkt_cnt_amp_ex);
 	rx_pr("pkt_cnt_nvbi_ex=%d\n", rxpktsts.pkt_cnt_nvbi_ex);
-	rx_pr("pkt_cnt_nvbi_ex=%d\n", rxpktsts.pkt_cnt_emp_ex);
+	rx_pr("pkt_cnt_emp_ex=%d\n", rxpktsts.pkt_cnt_emp_ex);
 
 	rx_pr("pkt_chk_flg=%d\n", rxpktsts.pkt_chk_flg);
 
@@ -1355,18 +1355,39 @@ uint8_t rx_get_vsi_info(void)
 	uint8_t ret = E_VSI_NULL;
 	unsigned int tmp;
 
+  	pkt = (struct vsi_infoframe_st *)&(rx_pkt.vs_info);
 	if (rx.vs_info_details.timeout > 0) {
 		rx.vs_info_details.timeout--;
 	} else {
 		rx.vs_info_details.dolby_vision = false;
 		memset(&rx_pkt.vs_info, 0, sizeof(struct pd_infoframe_s));
 	}
-	pkt = (struct vsi_infoframe_st *)&(rx_pkt.vs_info);
+
+	if (rx.empbuff.emppktcnt &&
+	rx.empbuff.emp_tagid == IEEE_DV15) {
+		pkt->pkttype = 0x81;
+		pkt->length = E_PKT_LENGTH_27;
+		pkt->ieee = rx.empbuff.emp_tagid;
+		pkt->sbpkt.vsi_DobV.dv_on = 1;
+		pkt->sbpkt.vsi_DobV.ll =
+			(rx.empbuff.data_ver == 1) ? 1 : 0;
+		pkt->sbpkt.vsi_DobV.bklt_md = 0;
+		pkt->sbpkt.vsi_DobV.aux_md = 0;
+		if (log_level & 0x1000) {
+			rx_pr("***type=%x,ieee=%x,pb=%x, data_ver:%d\n",
+				pkt->pkttype, pkt->ieee,
+				rx_pkt.vs_info.HB, rx.empbuff.data_ver);
+		}
+	}
+	/* TODO: for EMP			 */
+	/* search all emp pkt for DV */
+	/* handle bklt_md and aux_md */
+	/* handle emp pkt for HDR10+ */
+
 	rx.vs_info_details._3d_structure = 0;
 	rx.vs_info_details._3d_ext_data = 0;
 	rx.vs_info_details.low_latency = false;
 	rx.vs_info_details.backlt_md_bit = false;
-
 	switch (pkt->ieee) {
 	case IEEE_DV15:
 		/* dolbyvision 1.5 */

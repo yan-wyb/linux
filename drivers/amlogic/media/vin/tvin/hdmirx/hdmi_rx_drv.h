@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2020/01/07"
+#define RX_VER0 "ver.2020/01/16"
 /*
  *
  *
@@ -412,6 +412,11 @@ struct emp_buff {
 	unsigned long irqcnt;
 	unsigned int emppktcnt;
 	unsigned int tmdspktcnt;
+	bool end;
+	u8 ogi_id;
+	unsigned int emp_tagid;
+	u8 data[128];
+	u8 data_ver;
 };
 
 struct rx_s {

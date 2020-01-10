@@ -48,6 +48,7 @@
 #include "hdmi_rx_hw.h"
 #include "hdmi_rx_edid.h"
 #include "hdmi_rx_wrapper.h"
+#include "hdmi_rx_pktinfo.h"
 
 /*------------------------marco define------------------------------*/
 #define SCRAMBLE_SEL 1
@@ -115,6 +116,8 @@ u32 phy_trim_val;
 int phy_term_lel;
 bool phy_tdr_en;
 int hdcp_tee_path;
+/* emp buffer */
+char emp_buf[1024];
 /*------------------------variable define end------------------------------*/
 
 static int check_regmap_flag(unsigned int addr)
@@ -803,7 +806,7 @@ void rx_irq_en(bool enable)
 			data32 |= 1 << 15; /* VSI_RCV */
 			data32 |= 0 << 14; /* AMP_RCV */
 			data32 |= 0 << 13; /* AMP_CHG */
-			data32 |= 0 << 9; /* EMP_RCV*/
+			data32 |= 1 << 9; /* EMP_RCV*/
 			data32 |= 0 << 8; /* PD_FIFO_NEW_ENTRY */
 			data32 |= 0 << 4; /* PD_FIFO_OVERFL */
 			data32 |= 0 << 3; /* PD_FIFO_UNDERFL */
@@ -4225,9 +4228,8 @@ void rx_emp_to_ddr_init(void)
 		/* emp field end done at DE rist bit[25]*/
 		/* emp last EMP pkt recv done bit[26]*/
 		/* disable emp irq */
-		/* top_intr_maskn_value |= _BIT(25);
-		 * hdmirx_wr_top(TOP_INTR_MASKN, top_intr_maskn_value);
-		 */
+		top_intr_maskn_value |= _BIT(25);
+		hdmirx_wr_top(TOP_INTR_MASKN, top_intr_maskn_value);
 	}
 
 	rx.empbuff.ready = NULL;
@@ -4305,12 +4307,25 @@ void rx_emp_field_done_irq(void)
 		i++;
 	}
 
-	/*ready address*/
-	rx.empbuff.ready = dts_addr;
-	/*ready pkt cnt*/
-	rx.empbuff.emppktcnt = emp_pkt_cnt;
-	/*emp field dont irq counter*/
-	rx.empbuff.irqcnt++;
+	if (emp_pkt_cnt * 32 > 1024) {
+		if (log_level & 0x400)
+			rx_pr("emp buffer overflow!!\n");
+	} else {
+		/*ready address*/
+		rx.empbuff.ready = dts_addr;
+		/*ready pkt cnt*/
+		rx.empbuff.emppktcnt = emp_pkt_cnt;
+		for (i = 0; i < rx.empbuff.emppktcnt; i++)
+			memcpy((char *)(emp_buf + 31 * i),
+				(char *)(dts_addr + 32 * i), 31);
+		/*emp field dont irq counter*/
+		rx.empbuff.irqcnt++;
+		rx.empbuff.ogi_id = emp_buf[6];
+		rx.empbuff.emp_tagid = emp_buf[10] +
+			(emp_buf[11] << 8) +
+			(emp_buf[12] << 16);
+		rx.empbuff.data_ver = emp_buf[13];
+	}
 }
 
 void rx_emp_status(void)
@@ -4322,7 +4337,7 @@ void rx_emp_status(void)
 	rx_pr("irq cnt =0x%x\n", (unsigned int)rx.empbuff.irqcnt);
 	rx_pr("ready=0x%p\n", rx.empbuff.ready);
 	rx_pr("dump_mode =0x%x\n", rx.empbuff.dump_mode);
-	rx_pr("recv tmp pkt cnt=0x%x\n", rx.empbuff.emppktcnt);
+	rx_pr("recv emp pkt cnt=0x%x\n", rx.empbuff.emppktcnt);
 	rx_pr("recv tmds pkt cnt=0x%x\n", rx.empbuff.tmdspktcnt);
 }
 

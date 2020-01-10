@@ -3296,9 +3296,15 @@ int hdmirx_debug(const char *buf, int size)
 		rx.phy.err_sum = 0xffffff;
 	} else if (strncmp(tmpbuf, "audio", 5) == 0) {
 		hdmirx_audio_fifo_rst();
-	} else if (strncmp(tmpbuf, "eqcal", 5) == 0)
+	} else if (strncmp(tmpbuf, "eqcal", 5) == 0) {
 		rx_phy_rt_cal();
-	else if (strncmp(tmpbuf, "muteget", 7) == 0) {
+	} else if (strncmp(tmpbuf, "empbuf", 5) == 0) {
+		rx_pr("cnt=%d\n", rx.empbuff.emppktcnt);
+		rx_pr("0x");
+		for (i = 0; i < (rx.empbuff.emppktcnt * 32); i++)
+			rx_pr("%02x", emp_buf[i]);
+		rx_pr("\nieee=%x\n", rx.empbuff.emp_tagid);
+	} else if (strncmp(tmpbuf, "muteget", 7) == 0) {
 		rx_pr("mute sts: %x\n", get_video_mute());
 	} else if (strncmp(tmpbuf, "muteset", 7) == 0) {
 		if (tmpbuf[7] == '0')

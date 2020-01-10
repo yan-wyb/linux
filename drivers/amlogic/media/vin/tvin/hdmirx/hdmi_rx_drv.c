@@ -772,7 +772,8 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 		prop->hdr10p_info.hdr10p_on = false;
 		last_vsi_state = vsi_state;
 	}
-
+	if (log_level & 0x1000)
+		rx_pr("***%x\n", vsi_state);
 	switch (vsi_state) {
 	case E_VSI_HDR10PLUS:
 		prop->hdr10p_info.hdr10p_on = rx.vs_info_details.hdr10plus;
@@ -797,7 +798,7 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 		if (rx.vs_info_details.dolby_vision) {
 			memcpy(&prop->dv_vsif_raw,
 			       &rx_pkt.vs_info, 3);
-			memcpy((char *)(&prop->dv_vsif_raw) + 3,
+			memcpy((char *)(&prop->dv_vsif_raw) + 4,
 			       &rx_pkt.vs_info.PB0,
 			       sizeof(struct tvin_dv_vsif_raw_s) - 4);
 		}
@@ -868,6 +869,18 @@ void hdmirx_get_latency_info(struct tvin_sig_property_s *prop)
 	prop->latency.allm_mode = rx.vs_info_details.allm_mode;
 	prop->latency.it_content = rx.cur.it_content;
 	prop->latency.cn_type = rx.cur.cn_type;
+}
+
+static uint32_t emp_irq_cnt;
+void hdmirx_get_emp_info(struct tvin_sig_property_s *prop)
+{
+	prop->emp_data.size = rx.empbuff.emppktcnt;
+	if (rx.empbuff.emppktcnt)
+		memcpy(&(prop->emp_data.empbuf),
+			emp_buf, rx.empbuff.emppktcnt * 32);
+	if (emp_irq_cnt == rx.empbuff.irqcnt)
+		rx.empbuff.emppktcnt = 0;
+	emp_irq_cnt = rx.empbuff.irqcnt;
 }
 
 /*
@@ -965,6 +978,7 @@ void hdmirx_get_sig_property(struct tvin_frontend_s *fe,
 	hdmirx_get_hdr_info(prop);
 	hdmirx_get_vsi_info(prop);
 	hdmirx_get_latency_info(prop);
+	hdmirx_get_emp_info(prop);
 	prop->skip_vf_num = vdin_drop_frame_cnt;
 }
 

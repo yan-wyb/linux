@@ -1126,7 +1126,7 @@ extern int eq_dbg_lvl;
 extern int phy_term_lel;
 extern bool phy_tdr_en;
 extern int hdcp_tee_path;
-
+extern char emp_buf[1024];
 extern void rx_get_best_eq_setting(void);
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
 extern void wr_reg_hhi_bits(unsigned int offset, unsigned int mask,

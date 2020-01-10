@@ -455,6 +455,12 @@ struct tvin_dv_vsif_raw_s {
 	u8 PB[29];
 };
 
+struct tvin_emp_data_s {
+	u8 size;
+	u8 empbuf[1024];
+	u8 tag_id;
+};
+
 struct tvin_hdr10plus_info_s {
 	bool hdr10p_on;
 	struct tvin_hdr10p_data_s hdr10p_data;
@@ -503,6 +509,7 @@ struct tvin_sig_property_s {
 	unsigned int skip_vf_num;/*skip pre vframe num*/
 	struct tvin_latency_s latency;
 	struct tvin_hdr10plus_info_s hdr10p_info;
+	struct tvin_emp_data_s emp_data;
 };
 
 #define TVAFE_VF_POOL_SIZE			6 /* 8 */
