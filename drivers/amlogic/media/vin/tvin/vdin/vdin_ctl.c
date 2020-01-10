@@ -2891,7 +2891,7 @@ void vdin_set_dolby_ll_tunnel(struct vdin_dev_s *devp)
 		return;
 
 	if ((devp->dv.dv_flag) && is_dolby_vision_enable()
-		&& (devp->dv.low_latency)
+		/*&& (devp->dv.low_latency)*/
 		&& (devp->prop.color_format == TVIN_YUV422)) {
 		offset = devp->addr_offset;
 		/*channel map*/
@@ -4891,6 +4891,9 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 
 	vf->vsif.addr = &devp->prop.dv_vsif_raw;
 	vf->vsif.size = sizeof(struct tvin_dv_vsif_raw_s);
+
+	vf->emp.addr = &devp->prop.emp_data.empbuf;
+	vf->emp.size = devp->prop.emp_data.size;
 }
 
 
