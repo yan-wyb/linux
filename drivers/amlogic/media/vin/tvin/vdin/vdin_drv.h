@@ -368,7 +368,9 @@ struct vdin_dev_s {
 
 	unsigned int irq;
 	unsigned int rdma_irq;
+	unsigned int vpu_crash_irq;
 	char irq_name[12];
+	char vpu_crash_irq_name[20];
 	/* address offset(vdin0/vdin1/...) */
 	unsigned int addr_offset;
 
@@ -484,6 +486,7 @@ struct vdin_dev_s {
 	/*use frame rate to cal duraton*/
 	unsigned int use_frame_rate;
 	unsigned int irq_cnt;
+	unsigned int vpu_crash_cnt;
 	unsigned int frame_cnt;
 	unsigned int rdma_irq_cnt;
 	unsigned int vdin_irq_flag;

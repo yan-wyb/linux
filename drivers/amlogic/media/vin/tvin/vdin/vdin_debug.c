@@ -890,6 +890,7 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("vdin_irq_flag: %d, vdin_rest_flag: %d, irq_cnt: %d, rdma_irq_cnt: %d\n",
 		devp->vdin_irq_flag, devp->vdin_reset_flag,
 		devp->irq_cnt, devp->rdma_irq_cnt);
+	pr_info("vpu crash irq cnt: %d\n", devp->vpu_crash_cnt);
 	pr_info("vdin_drop_cnt: %d frame_cnt:%d ignore_frames:%d\n",
 		vdin_drop_cnt, devp->frame_cnt, devp->ignore_frames);
 	pr_info("game_mode cfg :  0x%x\n", game_mode);
@@ -1078,6 +1079,7 @@ static int seq_file_vdin_state_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "vdin_irq_flag: %d, vdin_rest_flag: %d, irq_cnt: %d, rdma_irq_cnt: %d\n",
 		devp->vdin_irq_flag, devp->vdin_reset_flag,
 		devp->irq_cnt, devp->rdma_irq_cnt);
+	seq_printf(seq, "vpu crash irq cnt: %d\n", devp->vpu_crash_cnt);
 	seq_printf(seq, "rdma_enable :  %d\n", devp->rdma_enable);
 	seq_printf(seq, "dolby_input :  %d\n", devp->dv.dolby_input);
 	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x100))

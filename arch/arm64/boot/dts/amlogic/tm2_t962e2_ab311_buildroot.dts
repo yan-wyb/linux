@@ -543,7 +543,8 @@
 		 *worst case:(4096*2160*4 + 2M(afbce issue)) *6buf = 214.5M
 		 */
 		cma_size = <215>;
-		interrupts = <0 83 1>;
+		interrupts = <0 83 1 /* vdin0 vsync */
+			      0 72 1>;/* vpu crash */
 		rdma-irq = <2>;
 		clocks = <&clkc CLKID_FCLK_DIV5>,
 			<&clkc CLKID_VDIN_MEAS_COMP>;

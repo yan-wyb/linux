@@ -718,6 +718,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	}
 #endif
 	devp->irq_cnt = 0;
+	devp->vpu_crash_cnt = 0;
 	devp->rdma_irq_cnt = 0;
 	devp->frame_cnt = 0;
 	phase_lock_flag = 0;
@@ -759,6 +760,9 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 #endif
 
 	disable_irq_nosync(devp->irq);
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+		disable_irq_nosync(devp->vpu_crash_irq);
 
 	if (vdin_dbg_en)
 		pr_info("%s vdin.%d disable_irq_nosync\n", __func__,
@@ -1498,6 +1502,15 @@ int vdin_vframe_put_and_recycle(struct vdin_dev_s *devp, struct vf_entry *vfe,
 		}
 	}
 	return ret;
+}
+
+irqreturn_t vpu_crash_isr(int irq, void *dev_id)
+{
+	struct vdin_dev_s *devp = (struct vdin_dev_s *)dev_id;
+
+	devp->vpu_crash_cnt++;
+	pr_info("vpu crash happened:%d\n", devp->vpu_crash_cnt);
+	return IRQ_HANDLED;
 }
 
 /*
@@ -2279,6 +2292,12 @@ static int vdin_open(struct inode *inode, struct file *file)
 		ret = request_irq(devp->irq, vdin_isr, IRQF_SHARED,
 				devp->irq_name, (void *)devp);
 
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+			ret |= request_irq(devp->vpu_crash_irq, vpu_crash_isr,
+					   IRQF_SHARED,
+					   devp->vpu_crash_irq_name,
+					   (void *)devp);
+
 		if (vdin_dbg_en)
 			pr_info("%s vdin.%d request_irq\n", __func__,
 				devp->index);
@@ -2286,6 +2305,9 @@ static int vdin_open(struct inode *inode, struct file *file)
 	devp->flags |= VDIN_FLAG_ISR_REQ;
 	/*disable irq until vdin is configured completely*/
 	disable_irq_nosync(devp->irq);
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+		disable_irq_nosync(devp->vpu_crash_irq);
 
 	if (vdin_dbg_en)
 		pr_info("%s vdin.%d disable_irq_nosync\n", __func__,
@@ -2338,6 +2360,9 @@ static int vdin_release(struct inode *inode, struct file *file)
 	/* free irq */
 	if (devp->flags & VDIN_FLAG_ISR_REQ) {
 		free_irq(devp->irq, (void *)devp);
+
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+			free_irq(devp->vpu_crash_irq, (void *)devp);
 
 		if (vdin_dbg_en)
 			pr_info("%s vdin.%d free_irq\n", __func__,
@@ -2483,6 +2508,10 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			(viu_hw_irq != 0)) {
 			/*enable irq */
 			enable_irq(devp->irq);
+
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+			    devp->index == 0)
+				enable_irq(devp->vpu_crash_irq);
 
 			if (vdin_dbg_en)
 				pr_info("%s START_DEC vdin.%d enable_irq\n",
@@ -3283,17 +3312,31 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto fail_get_resource_irq;
 	}
+	vdevp->irq = res->start;
+	snprintf(vdevp->irq_name, sizeof(vdevp->irq_name),
+			"vdin%d-irq", vdevp->index);
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && vdevp->index == 0) {
+		res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
+		if (!res) {
+			pr_err("%s: can't get crash irq resource\n", __func__);
+			ret = -ENXIO;
+			goto fail_get_resource_irq;
+		}
+		vdevp->vpu_crash_irq = res->start;
+		snprintf(vdevp->vpu_crash_irq_name,
+			 sizeof(vdevp->vpu_crash_irq_name), "vpu-crash-irq");
+	}
+
 	ret = of_property_read_u32(pdev->dev.of_node,
 				"rdma-irq", &(vdevp->rdma_irq));
 	if (ret) {
 		pr_err("don't find  match rdma irq, disable rdma\n");
 		vdevp->rdma_irq = 0;
 	}
-	vdevp->irq = res->start;
-	snprintf(vdevp->irq_name, sizeof(vdevp->irq_name),
-			"vdin%d-irq", vdevp->index);
-	pr_info("vdin%d irq: %d rdma irq: %d\n", vdevp->index,
-			vdevp->irq, vdevp->rdma_irq);
+	pr_info("vdin%d irq: %d rdma irq: %d vpu crash irq: %d\n",
+		vdevp->index, vdevp->irq, vdevp->rdma_irq,
+		vdevp->vpu_crash_irq);
 
 	/*set color_depth_mode*/
 	ret = of_property_read_u32(pdev->dev.of_node,
