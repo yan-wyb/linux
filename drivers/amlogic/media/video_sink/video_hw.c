@@ -3954,6 +3954,7 @@ static int vpp_zorder_check(void)
 void vpp_blend_update(
 	const struct vinfo_s *vinfo)
 {
+	static u32 vd1_enabled;
 	u32 vpp_misc_save, vpp_misc_set, mode = 0;
 	u32 vpp_off = cur_dev->vpp_off;
 	int video1_off_req = 0;
@@ -4157,6 +4158,21 @@ void vpp_blend_update(
 		vpp_misc_set &= ~(VPP_VD1_PREBLEND |
 			VPP_VD1_POSTBLEND |
 			VPP_PREBLEND_EN);
+
+	if (vd1_enabled != vd_layer[0].enabled) {
+		if (vd_layer[0].enabled) {
+			video_prop_status &= ~VIDEO_PROP_CHANGE_DISABLE;
+			video_prop_status |= VIDEO_PROP_CHANGE_ENABLE;
+		} else {
+			video_prop_status &= ~VIDEO_PROP_CHANGE_ENABLE;
+			video_prop_status |= VIDEO_PROP_CHANGE_DISABLE;
+		}
+		if (vd_layer[0].global_debug & DEBUG_FLAG_TRACE_EVENT)
+			pr_info("VD1 enable/disable status changed: %s->%s.\n",
+				vd1_enabled ? "enable" : "disable",
+				vd_layer[0].enabled ? "enable" : "disable");
+		vd1_enabled = vd_layer[0].enabled;
+	}
 
 	if (!(mode & COMPOSE_MODE_3D) &&
 	    ((vd_layer[1].global_output == 0) ||

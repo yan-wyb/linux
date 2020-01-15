@@ -6769,6 +6769,14 @@ static enum hdr_type_e get_source_type(enum vd_path_e vd_path)
 		return HDRTYPE_SDR;
 }
 
+enum hdr_type_e get_cur_source_type(enum vd_path_e vd_path)
+{
+	if (vd_path >= VD_PATH_MAX)
+		return UNKNOWN_SOURCE;
+	return get_source_type(vd_path);
+}
+EXPORT_SYMBOL(get_cur_source_type);
+
 int get_hdr_module_status(enum vd_path_e vd_path)
 {
 	if (vd_path == VD1_PATH &&

@@ -565,6 +565,7 @@ extern void enable_osd1_mtx(unsigned int en);
 void set_cur_hdr_policy(uint policy);
 bool di_api_mov_sel(unsigned int mode,
 		    unsigned int *pdate);
+enum hdr_type_e get_cur_source_type(enum vd_path_e vd_path);
 
 int amvecm_set_saturation_hue(int mab);
 
