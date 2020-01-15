@@ -637,6 +637,35 @@ struct dovi_setting_s {
 #endif
 };
 
+#ifdef V1_6_1
+#define PREFIX_SEI_NUT 39
+#define SUFFIX_SEI_NUT 40
+#define SEI_USER_DATA_REGISTERED_ITU_T_T35 4
+#define SEI_MASTERING_DISPLAY_COLOUR_VOLUME 137
+
+#define MAX_LENGTH_2086_SEI 256
+#define MAX_LENGTH_2094_SEI 256
+
+/* VUI parameters required to generate Dolby Vision metadata for ATSC 3.0*/
+struct _dv_vui_param_s_ {
+	int32_t  i_video_format;
+	int      b_video_full_range;
+	int      b_colour_description;
+	int32_t  i_colour_primaries;
+	int32_t  i_transfer_characteristics;
+	int32_t  i_matrix_coefficients;
+};
+
+/* Data structure that combines all ATSC related parameters.*/
+struct _dv_atsc_s_ {
+	struct _dv_vui_param_s_  vui_param;
+	uint32_t length_2086_sei;
+	uint8_t  payload_2086_sei[MAX_LENGTH_2086_SEI];
+	uint32_t length_2094_sei;
+	uint8_t  payload_2094_sei[MAX_LENGTH_2094_SEI];
+};
+#endif
+
 enum cpuID_e {
 	_CPU_MAJOR_ID_GXM,
 	_CPU_MAJOR_ID_TXLX,
@@ -721,6 +750,7 @@ extern void metadata_parser_release(void);
 struct dolby_vision_func_s {
 	const char *version_info;
 	void * (*metadata_parser_init)(int flag);
+	/*flag: bit0 flag, bit1 0->dv, 1->atsc*/
 	int (*metadata_parser_reset)(int flag);
 	int (*metadata_parser_process)(
 		char  *src_rpu, int rpu_len,
