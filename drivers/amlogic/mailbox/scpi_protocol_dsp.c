@@ -23,7 +23,7 @@
 #include <linux/mailbox_client.h>
 #include <linux/amlogic/scpi_protocol.h>
 #include <linux/slab.h>
-#include "meson_mhu.h"
+#include "meson_mhu_dsp.h"
 
 #define CMD_TAG			(2 << 25)
 

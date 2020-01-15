@@ -38,7 +38,6 @@
 #include <linux/list.h>
 #include <linux/amlogic/scpi_protocol.h>
 
-#include "meson_mhu.h"
 #include "meson_mhu_dsp.h"
 
 struct device *dsp_scpi_device;
@@ -204,6 +203,7 @@ static int mhu_transfer_data(struct mbox_chan *link, void *msg)
 		mbox_base = mbox_dspa_base;
 
 	chan->data = data;
+
 	if (data->tx_buf) {
 		memset_io(payload + TX_PAYLOAD(idx),
 			  0, MHU_BUFFER_SIZE);
@@ -323,13 +323,14 @@ static ssize_t mbox_message_write(struct file *filp,
 		goto err_probe1;
 	}
 
-	ret = copy_from_user(mbox_data.data, userbuf + 4, count - 4);
+	ret = copy_from_user(mbox_data.data, userbuf + MBOX_USER_CMD_LEN,
+			     count - MBOX_USER_CMD_LEN);
 	if (ret) {
 		ret = -EFAULT;
 		goto err_probe2;
 	}
 
-	ret = copy_from_user((char *)&cmd, userbuf, 4);
+	ret = copy_from_user((char *)&cmd, userbuf, MBOX_USER_CMD_LEN);
 	if (ret) {
 		ret = -EFAULT;
 		goto err_probe2;
@@ -351,7 +352,7 @@ static ssize_t mbox_message_write(struct file *filp,
 	mbox_data.complete = (unsigned long)(&mbox_msg->complete);
 	dev_dbg(dev, "%s %lx\n", __func__, (unsigned long)mbox_data.complete);
 	data_buf.tx_buf = (void *)&mbox_data;
-	data_buf.tx_size = count - 4 + sizeof(mbox_data) - MBOX_TX_SIZE;
+	data_buf.tx_size = count -  MBOX_USER_CMD_LEN + MBOX_COMPLETE_LEN;
 	data_buf.cmd = (mbox_msg->cmd)
 		       | ((data_buf.tx_size & SIZE_MASK) << SIZE_SHIFT)
 		       | ASYNC_OR_SYNC(1);
