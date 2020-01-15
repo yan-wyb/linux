@@ -2620,7 +2620,8 @@ static int ppmgr_task(void *data)
 				VFRAME_SOURCE_TYPE_OTHERS)
 				goto SKIP_DETECT;
 			if ((vf->width * vf->height)
-				>= (3840 * 2160)) {          //4k do not detect
+				> (1920 * 1088)) {
+				// greater than (1920 * 1088), do not detect
 				goto SKIP_DETECT;
 			}
 			if (first_frame) {
