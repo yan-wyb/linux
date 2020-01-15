@@ -206,7 +206,7 @@
 		compatible = "amlogic, meson_mhu_dsp";
 		reg = <0x0 0xff680150 0x0 0x84>,   /* MHU registers */
 		      <0x0 0xff690150 0x0 0x84>,
-		      <0x0 0xfffdbc00 0x0 0x800>;   /* Payload area */
+		      <0x0 0xfffdc800 0x0 0x800>;   /* Payload area */
 		interrupts = <0 242 1>,   /* DSPA Receive */
 			     <0 244 1>,   /* DSPA Send */
 			     <0 246 1>,   /* DSPB Receive */
