@@ -4874,7 +4874,12 @@ EXPORT_SYMBOL(amvecm_clip_range_limit);
 static void amvecm_pq_enable(int enable)
 {
 	if (enable) {
-		vecm_latch_flag |= FLAG_VE_DNLP_EN;
+		lc_en = 1;
+		/* black_ext_en */
+		WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 1, 3, 1);
+		/* chroma_coring */
+		WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 1, 4, 1);
+		ve_enable_dnlp();
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (!is_dolby_vision_enable())
 #endif
@@ -4940,7 +4945,7 @@ static void amvecm_pq_enable(int enable)
 				1, 23, 1);
 		}
 
-		amvecm_wb_enable(true);
+		white_balance_adjust(0, 1);
 
 		vecm_latch_flag |= FLAG_GAMMA_TABLE_EN;
 		if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
@@ -4948,7 +4953,12 @@ static void amvecm_pq_enable(int enable)
 		else
 			WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
 	} else {
-		vecm_latch_flag |= FLAG_VE_DNLP_DIS;
+		lc_en = 0;
+		/* black_ext_en */
+		WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 0, 3, 1);
+		/* chroma_coring */
+		WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 0, 4, 1);
+		ve_disable_dnlp();
 
 		amcm_disable();
 
@@ -5013,7 +5023,7 @@ static void amvecm_pq_enable(int enable)
 				0, 23, 1);
 		}
 
-		amvecm_wb_enable(false);
+		white_balance_adjust(0, 0);
 
 		vecm_latch_flag |= FLAG_GAMMA_TABLE_DIS;
 
