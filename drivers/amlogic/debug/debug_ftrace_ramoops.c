@@ -75,29 +75,29 @@ EXPORT_SYMBOL(pstore_ftrace_save);
 static void notrace pstore_function_dump(struct pstore_ftrace_record *rec,
 					 struct seq_file *s)
 {
-	unsigned long sec = 0, us = 0;
+	unsigned long sec = 0, ms = 0;
 	unsigned long long time = rec->time;
 
-	do_div(time, 1000);
-	sec = (unsigned long)time / 1000000;
-	us = (unsigned long)time % 1000000;
-	seq_printf(s, "[%04ld.%06ld@%d] <%5d-%s>  <%pf <- %pF>\n",
-		   sec, us, pstore_ftrace_decode_cpu(rec), rec->pid, rec->comm,
+	do_div(time, 1000000);
+	sec = (unsigned long)time / 1000;
+	ms = (unsigned long)time % 1000;
+	seq_printf(s, "[%04ld.%03ld@%d] <%5d-%s>  <%pf <- %pF>\n",
+		   sec, ms, pstore_ftrace_decode_cpu(rec), rec->pid, rec->comm,
 		   (void *)rec->ip, (void *)rec->parent_ip);
 }
 
 void notrace pstore_io_rw_dump(struct pstore_ftrace_record *rec,
 			       struct seq_file *s)
 {
-	unsigned long sec = 0, us = 0;
+	unsigned long sec = 0, ms = 0;
 	unsigned long long time = rec->time;
 	unsigned int cpu = pstore_ftrace_decode_cpu(rec);
 
-	do_div(time, 1000);
-	sec = (unsigned long)time / 1000000;
-	us = (unsigned long)time % 1000000;
-	seq_printf(s, "[%04ld.%06ld@%d] <%5d-%6s> <%6s %08lx-%8lx>  <%pf <- %pF>\n",
-		   sec, us, cpu, rec->pid, rec->comm, record_name[rec->flag],
+	do_div(time, 1000000);
+	sec = (unsigned long)time / 1000;
+	ms = (unsigned long)time % 1000;
+	seq_printf(s, "[%04ld.%03ld@%d] <%5d-%6s> <%6s %08lx-%8lx>  <%pf <- %pF>\n",
+		   sec, ms, cpu, rec->pid, rec->comm, record_name[rec->flag],
 		   rec->val1, (rec->flag == PSTORE_FLAG_IO_W) ? rec->val2 : 0,
 		   (void *)rec->ip, (void *)rec->parent_ip);
 }
