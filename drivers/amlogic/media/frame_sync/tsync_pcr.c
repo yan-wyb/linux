@@ -1167,7 +1167,13 @@ static unsigned long tsync_pcr_check(void)
 		&& (!(tsync_pcr_inited_flag & TSYNC_PCR_INITCHECK_APTS))) {
 		u64 cur_system_time =
 			div64_u64((u64)jiffies * TIME_UNIT90K, HZ);
-		if (cur_system_time - first_time_record < 270000) {
+		/* update record time if pcr and checkin pts are not inited */
+		last_checkin_vpts = (u32) get_last_checkin_pts(PTS_TYPE_VIDEO);
+		last_checkin_apts = (u32) get_last_checkin_pts(PTS_TYPE_AUDIO);
+		if (last_checkin_vpts == 0xffffffff &&
+			last_checkin_apts == 0xffffffff) {
+			first_time_record = cur_system_time;
+		} else if (cur_system_time - first_time_record < 270000) {
 		} else {
 			tsync_pcr_inited_mode = INIT_PRIORITY_VIDEO;
 			tsync_pcr_pcrscr_set();
