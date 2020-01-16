@@ -766,6 +766,21 @@ const char *vdin_trans_matrix_str(enum vdin_matrix_csc_e csc_idx)
 	}
 };
 
+void vdin_dump_vs_info(struct vdin_dev_s *devp)
+{
+	unsigned int cnt = devp->unreliable_vs_cnt;
+
+	if (devp->unreliable_vs_cnt > 10)
+		cnt = 10;
+	pr_info("unreliable_vs_cnt:%d\n", devp->unreliable_vs_cnt);
+	if (devp->unreliable_vs_cnt > 0) {
+		for (devp->unreliable_vs_idx = 0; devp->unreliable_vs_idx < cnt;
+		    devp->unreliable_vs_idx++)
+		pr_info("err t:%d\n",
+			devp->unreliable_vs_time[devp->unreliable_vs_idx]);
+	}
+}
+
 static void vdin_dump_state(struct vdin_dev_s *devp)
 {
 	unsigned int i;
@@ -875,7 +890,8 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("vdin_irq_flag: %d, vdin_rest_flag: %d, irq_cnt: %d, rdma_irq_cnt: %d\n",
 		devp->vdin_irq_flag, devp->vdin_reset_flag,
 		devp->irq_cnt, devp->rdma_irq_cnt);
-	pr_info("vdin_drop_cnt: %d\n", vdin_drop_cnt);
+	pr_info("vdin_drop_cnt: %d frame_cnt:%d ignore_frames:%d\n",
+		vdin_drop_cnt, devp->frame_cnt, devp->ignore_frames);
 	pr_info("game_mode cfg :  0x%x\n", game_mode);
 	pr_info("game_mode cur:  0x%x\n", devp->game_mode);
 
@@ -956,6 +972,7 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		devp->vfp->dv_vsif.auxiliary_runversion,
 		devp->vfp->dv_vsif.auxiliary_debug0);
 	pr_info("Vdin driver version :  %s\n", VDIN_VER);
+	vdin_dump_vs_info(devp);
 }
 
 /*same as vdin_dump_state*/

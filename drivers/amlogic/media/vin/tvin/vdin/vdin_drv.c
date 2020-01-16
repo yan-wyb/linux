@@ -156,6 +156,10 @@ unsigned int dv_de_scramble;
 module_param(dv_de_scramble, uint, 0664);
 MODULE_PARM_DESC(dv_de_scramble, "dv_de_scramble");
 
+unsigned int drop_num = 2;
+module_param(drop_num, uint, 0664);
+MODULE_PARM_DESC(drop_num, "drop_num");
+
 static unsigned int panel_reverse;
 struct vdin_hist_s vdin1_hist;
 struct vdin_v4l2_param_s vdin_v4l2_param;
@@ -467,6 +471,17 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 static void vdin_rdma_irq(void *arg)
 {
 	struct vdin_dev_s *devp = arg;
+	int ret;
+
+	if (devp->index == 0) {
+		ret = rdma_config(devp->rdma_handle,
+				(devp->rdma_enable & 1) ?
+				devp->rdma_irq : RDMA_TRIGGER_MANUAL);
+		if (ret == 0)
+			devp->flags |= VDIN_FLAG_RDMA_DONE;
+		else
+			devp->flags &= ~VDIN_FLAG_RDMA_DONE;
+	}
 
 	devp->rdma_irq_cnt++;
 	return;
@@ -670,7 +685,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	/*it is better put after all reg init*/
 	if (devp->rdma_enable && devp->rdma_handle > 0)
-		devp->flags |= VDIN_FLAG_RDMA_ENABLE;
+		devp->flags |= (VDIN_FLAG_RDMA_ENABLE | VDIN_FLAG_RDMA_DONE);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	/*only for vdin0;vdin1 used for debug*/
@@ -706,6 +721,11 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	devp->rdma_irq_cnt = 0;
 	devp->frame_cnt = 0;
 	phase_lock_flag = 0;
+	devp->ignore_frames = max_ignore_frame_cnt;
+	devp->vs_time_stamp = sched_clock();
+	devp->unreliable_vs_cnt = 0;
+	devp->unreliable_vs_cnt_pre = 0;
+	devp->unreliable_vs_idx = 0;
 
 	if (time_en)
 		pr_info("vdin.%d start time: %ums, run time:%ums.\n",
@@ -803,11 +823,15 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	rdma_clear(devp->rdma_handle);
 #endif
 	devp->flags &= (~VDIN_FLAG_RDMA_ENABLE);
-	devp->ignore_frames = 0;
+	devp->ignore_frames = max_ignore_frame_cnt;
 	devp->cycle = 0;
 	/*reset csc_cfg in case it is enabled before switch out hdmi*/
 	devp->csc_cfg = 0;
 	devp->frame_drop_num = 0;
+	/*unreliable vsync interrupt check*/
+	devp->unreliable_vs_cnt = 0;
+	devp->unreliable_vs_cnt_pre = 0;
+	devp->unreliable_vs_idx = 0;
 
 	 /* clear color para*/
 	memset(&devp->prop, 0, sizeof(devp->prop));
@@ -1407,6 +1431,75 @@ void vdin_drop_frame_info(struct vdin_dev_s *devp, char *info)
 	}
 }
 
+int vdin_vs_duration_check(struct vdin_dev_s *devp)
+{
+	int ret = 0;
+	unsigned long long cur_time, diff_time;
+	unsigned long long temp;
+
+	cur_time = sched_clock();
+	diff_time = cur_time - devp->vs_time_stamp;
+	/*13ms is unreliable vs input*/
+	if ((devp->irq_cnt > 1) &&
+	   (diff_time < 13000000)) {
+		temp = func_div(diff_time, 1000);
+		devp->unreliable_vs_cnt++;
+		devp->unreliable_vs_time[devp->unreliable_vs_idx] = temp;
+		if (devp->unreliable_vs_idx++ >= 10)
+			devp->unreliable_vs_idx = 0;
+		ret = -1;
+		/*pr_info("vs t:%lld %d\n", temp, devp->unreliable_vs_cnt);*/
+	}
+
+	devp->vs_time_stamp = cur_time;
+	return ret;
+}
+
+/*
+ * put one frame out
+ * param: devp
+ *	vfe
+ * return:
+ *	0:put one frame
+ *	-1:recycled one frame
+ */
+int vdin_vframe_put_and_recycle(struct vdin_dev_s *devp, struct vf_entry *vfe,
+				  enum vdin_vf_put_md md)
+{
+	struct vf_entry *temp_vfe = NULL;
+	int ret = 0;
+
+	/*force recycle one frame*/
+	if ((!vfe) && (md == VDIN_VF_RECYCLE)) {
+		temp_vfe = receiver_vf_get(devp->vfp);
+		if (temp_vfe)
+			receiver_vf_put(&temp_vfe->vf, devp->vfp);
+		else
+			pr_err("[vdin.%d]force recycle error,no buffer in ready list",
+					devp->index);
+		ret = -1;
+	} else if ((devp->frame_cnt < drop_num) || (md == VDIN_VF_RECYCLE)) {
+		provider_vf_put(vfe, devp->vfp);
+		vfe = receiver_vf_get(devp->vfp);
+		if (vfe)
+			receiver_vf_put(&vfe->vf, devp->vfp);
+		else
+			pr_info(">>>>> err2 vframe self receive\n");
+		ret = -1;
+	} else {
+		provider_vf_put(vfe, devp->vfp);
+		vf_notify_receiver(devp->name,
+			VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
+		if (vdin_dbg_en) {
+			vfe->vf.ready_clock[1] = sched_clock();
+			pr_info("vdin put latency %lld us.first %lld us\n",
+			func_div(vfe->vf.ready_clock[1], 1000),
+			func_div(vfe->vf.ready_clock[0], 1000));
+		}
+	}
+	return ret;
+}
+
 /*
  *VDIN_FLAG_RDMA_ENABLE=1
  *	provider_vf_put(devp->last_wr_vfe, devp->vfp);
@@ -1418,7 +1511,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	ulong flags = 0;
 	struct vdin_dev_s *devp = (struct vdin_dev_s *)dev_id;
 	enum tvin_sm_status_e state;
-
 	struct vf_entry *next_wr_vfe = NULL;
 	struct vf_entry *curr_wr_vfe = NULL;
 	struct vframe_s *curr_wr_vf = NULL;
@@ -1430,8 +1522,10 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	unsigned int offset = 0, vf_drop_cnt = 0;
 	enum tvin_trans_fmt trans_fmt;
 	struct tvin_sig_property_s *prop, *pre_prop;
-	long long *clk_array;
+	/*long long *clk_array;*/
 	long long vlock_delay_jiffies, vlock_t1;
+	enum vdin_vf_put_md put_md = VDIN_VF_PUT;
+	int ret;
 
 	/* debug interrupt interval time
 	 *
@@ -1484,6 +1578,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		goto irq_handled;
 	}
 
+	vdin_vs_duration_check(devp);
 	if (devp->frame_drop_num) {
 		devp->frame_drop_num--;
 		devp->vdin_irq_flag = 9;
@@ -1498,6 +1593,11 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			devp->curr_wr_vfe->vf.ready_jiffies64 = jiffies_64;
 			devp->curr_wr_vfe->vf.ready_clock[0] = sched_clock();
 		}
+
+		if (devp->curr_wr_vfe && (devp->afbce_mode == 1))
+			vdin_afbce_set_next_frame(devp, (devp->flags &
+						  VDIN_FLAG_RDMA_ENABLE),
+						  devp->curr_wr_vfe);
 		/*save the first field stamp*/
 		devp->stamp = stamp;
 		devp->vdin_irq_flag = 3;
@@ -1532,15 +1632,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			&devp->dv.dv_vsif, sizeof(struct tvin_dv_vsif_s));
 		if ((devp->dv.dv_crc_check == true) ||
 			(!(dv_dbg_mask & DV_CRC_CHECK))) {
-			provider_vf_put(devp->last_wr_vfe, devp->vfp);
-			if (time_en) {
-				devp->last_wr_vfe->vf.ready_clock[1] =
-					sched_clock();
-				clk_array = devp->last_wr_vfe->vf.ready_clock;
-				pr_info("vdin put latency %lld us, first %lld us.\n",
-					func_div(*(clk_array + 1), 1000),
-					func_div(*clk_array, 1000));
-			}
+			vdin_vframe_put_and_recycle(devp, devp->last_wr_vfe,
+						   put_md);
 		} else {
 			devp->vdin_irq_flag = 5;
 			vdin_drop_frame_info(devp, "dv chk sun err");
@@ -1692,6 +1785,12 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		vdin_drop_frame_info(devp, "ignore frame flag");
 		devp->ignore_frames++;
 		vdin_drop_cnt++;
+
+		if (devp->afbce_mode == 1)
+			vdin_afbce_set_next_frame(devp, (devp->flags &
+						  VDIN_FLAG_RDMA_ENABLE),
+						  curr_wr_vfe);
+
 		goto irq_handled;
 	}
 
@@ -1708,12 +1807,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (!next_wr_vfe) {
 		/*add for force vdin buffer recycle*/
 		if (devp->flags & VDIN_FLAG_FORCE_RECYCLE) {
-			next_wr_vfe = receiver_vf_get(devp->vfp);
-			if (next_wr_vfe)
-				receiver_vf_put(&next_wr_vfe->vf, devp->vfp);
-			else
-				pr_err("[vdin.%d]force recycle error,no buffer in ready list",
-						devp->index);
+			vdin_vframe_put_and_recycle(devp, next_wr_vfe,
+						   VDIN_VF_RECYCLE);
 		} else {
 			devp->vdin_irq_flag = 14;
 			vdin_drop_frame_info(devp, "no next wr vfe");
@@ -1818,14 +1913,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 		if ((devp->dv.dv_crc_check == true) ||
 			(!(dv_dbg_mask & DV_CRC_CHECK))) {
-			provider_vf_put(curr_wr_vfe, devp->vfp);
-			if (vdin_dbg_en) {
-				curr_wr_vfe->vf.ready_clock[1] = sched_clock();
-				clk_array = curr_wr_vfe->vf.ready_clock;
-				pr_info("vdin put latency %lld us, first %lld us.\n",
-					func_div(*(clk_array + 1), 1000),
-					func_div(*clk_array, 1000));
-			}
+			vdin_vframe_put_and_recycle(devp, curr_wr_vfe, put_md);
 		} else {
 			devp->vdin_irq_flag = 15;
 			vdin_drop_frame_info(devp, "game md dv crc");
@@ -1877,15 +1965,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 	} else if (devp->game_mode & VDIN_GAME_MODE_2) {
 		/* game mode 2 */
-		provider_vf_put(next_wr_vfe, devp->vfp);
-		vf_notify_receiver(devp->name,
-			VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
-		if (vdin_dbg_en) {
-			next_wr_vfe->vf.ready_clock[1] = sched_clock();
-			pr_info("vdin put latency %lld us.first %lld us\n",
-			func_div(next_wr_vfe->vf.ready_clock[1], 1000),
-			func_div(next_wr_vfe->vf.ready_clock[0], 1000));
-		}
+		vdin_vframe_put_and_recycle(devp, next_wr_vfe, put_md);
 	}
 	devp->frame_cnt++;
 
@@ -1897,10 +1977,16 @@ irq_handled:
 
 	spin_unlock_irqrestore(&devp->isr_lock, flags);
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
-	if (devp->flags & VDIN_FLAG_RDMA_ENABLE)
-		rdma_config(devp->rdma_handle,
-			(devp->rdma_enable&1) ?
-			devp->rdma_irq:RDMA_TRIGGER_MANUAL);
+	if ((devp->flags & VDIN_FLAG_RDMA_ENABLE) &&
+	    (devp->flags & VDIN_FLAG_RDMA_DONE)) {
+		ret = rdma_config(devp->rdma_handle,
+			(devp->rdma_enable & 1) ?
+			devp->rdma_irq : RDMA_TRIGGER_MANUAL);
+		if (ret == 0)
+			devp->flags |= VDIN_FLAG_RDMA_DONE;
+		else
+			devp->flags &= ~VDIN_FLAG_RDMA_DONE;
+	}
 #endif
 	isr_log(devp->vfp);
 

@@ -732,6 +732,12 @@ void tvin_smr(struct vdin_dev_s *devp)
 			sm_p->state_cnt = 0;
 			hdmirx_color_fmt_handler(devp);
 		}
+		/* check unreliable vsync interrupt */
+		if (devp->unreliable_vs_cnt != devp->unreliable_vs_cnt_pre) {
+			devp->unreliable_vs_cnt_pre = devp->unreliable_vs_cnt;
+			if (sm_debug_enable & 0x2)
+				vdin_dump_vs_info(devp);
+		}
 		break;
 	}
 	case TVIN_SM_STATUS_NULL:

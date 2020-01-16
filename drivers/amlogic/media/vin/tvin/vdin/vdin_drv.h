@@ -82,6 +82,9 @@
 #define VDIN_FLAG_V4L2_DEBUG            0x00020000
 /*flag for isr req&free*/
 #define VDIN_FLAG_ISR_REQ               0x00040000
+/* flag for rdma done */
+#define VDIN_FLAG_RDMA_DONE             0x00080000
+
 /*values of vdin isr bypass check flag */
 #define VDIN_BYPASS_STOP_CHECK          0x00000001
 #define VDIN_BYPASS_CYC_CHECK           0x00000002
@@ -143,6 +146,12 @@ enum vdin_color_deeps_e {
 	VDIN_COLOR_DEEPS_10BIT = 10,
 	VDIN_COLOR_DEEPS_12BIT = 12,
 };
+
+enum vdin_vf_put_md {
+	VDIN_VF_PUT,
+	VDIN_VF_RECYCLE,
+};
+
 
 /* *********************************************************************** */
 /* *** enum definitions ********************************************* */
@@ -370,6 +379,12 @@ struct vdin_dev_s {
 	unsigned int cycle;
 	unsigned int start_time;/* ms vdin start time */
 	int rdma_handle;
+	/*for unreliable vsync interrupt check*/
+	unsigned long long vs_time_stamp;
+	unsigned int unreliable_vs_cnt;
+	unsigned int unreliable_vs_cnt_pre;
+	unsigned int unreliable_vs_idx;
+	unsigned int unreliable_vs_time[10];
 
 	bool cma_config_en;
 	/*cma_config_flag:
