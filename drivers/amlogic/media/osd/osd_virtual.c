@@ -56,7 +56,7 @@
 #include "../vout/spi/lcd_spi_api.h"
 #endif
 #ifdef CONFIG_AMLOGIC_PERIPHERAL_LCD
-#include "../vout/peripheral_lcd/peripheral_lcd_drv.h"
+#include <linux/amlogic/media/vout/peripheral_lcd.h>
 #endif
 #include "osd_log.h"
 #include "osd_fb.h"
@@ -367,6 +367,11 @@ static void sw_vsync_timer_func(unsigned long arg)
 static void lcd_post_frame(u32 addr)
 {
 	unsigned char *fb_data;
+#ifdef CONFIG_AMLOGIC_PERIPHERAL_LCD
+	struct peripheral_lcd_driver_s *peripheral_lcd_driver =
+		peripheral_lcd_get_driver();
+#endif
+
 #ifdef SPI_DEBUG
 	int stime, etime, time_write;
 	static int cnt;
@@ -378,8 +383,11 @@ static void lcd_post_frame(u32 addr)
 	/* frame post*/
 	fb_data = virt_fb.screen_base_vaddr + addr;
 
-#if defined(CONFIG_AMLOGIC_LCD_SPI) || defined(CONFIG_AMLOGIC_PERIPHERAL_LCD)
-	frame_post(fb_data, 0, virt_fb.xres, 0, virt_fb.yres);
+#ifdef CONFIG_AMLOGIC_PERIPHERAL_LCD
+	if (!peripheral_lcd_driver)
+		return;
+	peripheral_lcd_driver->frame_post(fb_data,
+		0, virt_fb.xres, 0, virt_fb.yres);
 #endif
 
 #ifdef SPI_DEBUG
@@ -471,6 +479,11 @@ static void lcd_post_frame(u32 addr)
 	fb_data = virt_fb.screen_base_vaddr + addr;
 
 #if defined(CONFIG_AMLOGIC_LCD_SPI) || defined(CONFIG_AMLOGIC_PERIPHERAL_LCD)
+	struct peripheral_lcd_driver_s *peripheral_lcd_driver =
+		peripheral_lcd_get_driver();
+
+	if (!peripheral_lcd_driver)
+		return;
 	start_post = 1;
 	frame_post(fb_data, 0, virt_fb.xres, 0, virt_fb.yres);
 	start_post = 0;
