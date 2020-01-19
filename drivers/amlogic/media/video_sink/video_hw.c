@@ -2606,6 +2606,46 @@ static void disable_vd2_blend(struct video_layer_s *layer)
 	layer->new_vframe_count = 0;
 }
 
+static void vd1_set_ipt(u32 enable)
+{
+	u32 data;
+
+	data = 3 << 27 |
+		2 << 24 |
+		0 << 21 |
+		5 << 18 |
+		4 << 15 |
+		1 << 12 |
+		1 << 2 |
+		0 << 1;
+	if (enable)
+		data |= 1 << 0;
+	else
+		data &= 0xfffffffe;
+	VSYNC_WR_MPEG_REG(VPP_XVYCC_MISC,
+		data);
+}
+
+static void vd2_set_ipt(u32 enable)
+{
+	u32 data;
+
+	data = 3 << 27 |
+		2 << 24 |
+		0 << 21 |
+		5 << 18 |
+		4 << 15 |
+		1 << 12 |
+		1 << 2 |
+		0 << 1;
+	if (enable)
+		data |= 1 << 0;
+	else
+		data &= 0xfffffffe;
+	VSYNC_WR_MPEG_REG(VPP_XVYCC_MISC0,
+		data);
+}
+
 /*********************************************************
  * DV EL APIs
  *********************************************************/
@@ -3670,6 +3710,13 @@ void proc_vd_vsc_phase_per_vsync(
 			layer, frame_par, vf);
 }
 
+void set_video_ipt(u8 layer_id, u32 enable)
+{
+	if (layer_id == 0)
+		vd1_set_ipt(enable);
+	else
+		vd2_set_ipt(enable);
+}
 /*********************************************************
  * Vpp APIs
  *********************************************************/

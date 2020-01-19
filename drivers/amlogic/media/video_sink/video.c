@@ -285,6 +285,9 @@ static int vpts_chase_pts_diff;
 static int step_enable;
 static int step_flag;
 
+static u32 ipt_enable;
+static u32 pip_ipt_enable;
+
 /*seek values on.video_define.h*/
 static int debug_flag;
 int get_video_debug_flags(void)
@@ -8350,6 +8353,56 @@ static ssize_t hist_test_store(
 	return strnlen(buf, count);
 }
 
+static ssize_t video_ipt_show(
+	struct class *cla,
+	struct class_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "ipt enable: %d\n",
+		ipt_enable);
+}
+
+static ssize_t video_ipt_store(
+	struct class *cla,
+	struct class_attribute *attr,
+	const char *buf, size_t count)
+{
+	int ret;
+	u32 enable;
+
+	ret = kstrtoint(buf, 0, &enable);
+	if (ret < 0)
+		return -EINVAL;
+	ipt_enable = enable;
+	set_video_ipt(VFM_PATH_AMVIDEO, enable);
+	return count;
+}
+
+static ssize_t videopip_ipt_show(
+	struct class *cla,
+	struct class_attribute *attr,
+	char *buf)
+{
+	return sprintf(buf, "piip ipt enable: %d\n",
+		pip_ipt_enable);
+}
+
+static ssize_t videopip_ipt_store(
+	struct class *cla,
+	struct class_attribute *attr,
+	const char *buf, size_t count)
+{
+	int ret;
+	u32 enable;
+
+	ret = kstrtoint(buf, 0, &enable);
+	if (ret < 0)
+		return -EINVAL;
+	pip_ipt_enable = enable;
+	set_video_ipt(VFM_PATH_PIP, enable);
+	return count;
+}
+
 int _videopip_set_disable(u32 val)
 {
 	struct video_layer_s *layer = &vd_layer[1];
@@ -8942,6 +8995,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       hist_test_show,
 	       hist_test_store),
+	__ATTR(video_ipt,
+		  0664,
+		  video_ipt_show,
+		  video_ipt_store),
 	__ATTR_RO(frame_addr),
 	__ATTR_RO(frame_canvas_width),
 	__ATTR_RO(frame_canvas_height),
@@ -8985,6 +9042,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       videopip_zorder_show,
 	       videopip_zorder_store),
 	__ATTR_RO(videopip_state),
+	__ATTR(videopip_ipt,
+		  0664,
+		  videopip_ipt_show,
+		  videopip_ipt_store),
 	__ATTR(path_select,
 	       0664,
 	       path_select_show,

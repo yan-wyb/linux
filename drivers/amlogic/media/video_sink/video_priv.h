@@ -354,6 +354,7 @@ void proc_vd_vsc_phase_per_vsync(
 void vpp_blend_update(
 	const struct vinfo_s *vinfo);
 
+void set_video_ipt(u8 layer_id, u32 enable);
 int get_layer_display_canvas(u8 layer_id);
 int set_layer_display_canvas(
 	u8 layer_id, struct vframe_s *vf,
