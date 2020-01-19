@@ -161,6 +161,8 @@ struct ddr_chipinfo {
 	int wakeup;
 
 	bool chnum_sync;
+
+	bool burst_finished_flag;
 };
 
 struct toddr {

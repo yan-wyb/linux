@@ -554,7 +554,46 @@ unsigned int aml_toddr_read_status2(struct toddr *to)
 	return aml_audiobus_read(actrl, reg);
 }
 
-bool aml_toddr_burst_finished(struct toddr *to)
+static bool aml_toddr_check_status_flag(struct toddr *to)
+{
+	struct aml_audio_controller *actrl = to->actrl;
+	unsigned int reg_base = to->reg_base;
+	unsigned int reg, status;
+	int i;
+
+	/*
+	 * reg_stop_ddr; if set from 0 to 1, will:
+	 * step1: stop write data to FIFO;
+	 * step2: stop sending request to DDR;
+	 * step3: keep receiving data from DDR;
+	 * step4: compare request count and receive count;
+	 * step5: done if two count matched;
+	 */
+	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL2, reg_base);
+	aml_audiobus_update_bits(actrl,	reg, 1 << 30, 0 << 30);
+	aml_audiobus_update_bits(actrl,	reg, 1 << 30, 1 << 30);
+
+	/* max 200us delay */
+	for (i = 0; i < 200; i++) {
+		/* STATUS1 bit 23, stop_ddr_done */
+		reg = calc_toddr_address(EE_AUDIO_TODDR_A_STATUS1, reg_base);
+		status = (aml_audiobus_read(actrl, reg) & 0x800000) >> 23;
+		if (status) {
+			pr_debug("%s(), fifo_stop success\n", __func__);
+			return true;
+		}
+
+		udelay(1);
+		if ((i % 20) == 0)
+			pr_info("delay:[%dus]; TODDR_STATUS1 bit 23: %u\n",
+				 i, status);
+	}
+
+	pr_err("Error: 200us time out, TODDR_STATUS1 bit 23: %u\n", status);
+	return false;
+}
+
+static bool aml_toddr_check_fifo_count(struct toddr *to)
 {
 	unsigned int addr_request, addr_reply, i = 0;
 	struct aml_audio_controller *actrl = to->actrl;
@@ -609,6 +648,14 @@ bool aml_toddr_burst_finished(struct toddr *to)
 	pr_err("Error: 200us time out, TODDR_STATUS2: [0x%x] [0x%x]\n",
 				addr_request, addr_reply);
 	return false;
+}
+
+bool aml_toddr_burst_finished(struct toddr *to)
+{
+	if (to->chipinfo->burst_finished_flag)
+		return aml_toddr_check_status_flag(to);
+	else
+		return aml_toddr_check_fifo_count(to);
 }
 
 /* not for tl1 */
@@ -1687,6 +1734,7 @@ static struct ddr_chipinfo tm2_revb_ddr_chipinfo = {
 	.fifo_num              = 4,
 	.wakeup                = 2,
 	.chnum_sync            = true,
+	.burst_finished_flag   = true,
 };
 
 static const struct of_device_id aml_ddr_mngr_device_id[] = {
