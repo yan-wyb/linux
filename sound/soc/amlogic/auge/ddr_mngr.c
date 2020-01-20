@@ -1280,13 +1280,60 @@ unsigned int aml_frddr_get_position(struct frddr *fr)
 	return aml_audiobus_read(actrl, reg);
 }
 
+static bool aml_frddr_burst_finished(struct frddr *fr)
+{
+	struct aml_audio_controller *actrl = fr->actrl;
+	unsigned int reg_base = fr->reg_base;
+	unsigned int reg, status;
+	int i;
+
+	/*
+	 * reg_stop_ddr; if set from 0 to 1, will:
+	 * step1: stop write data to FIFO;
+	 * step2: stop sending request to DDR;
+	 * step3: keep receiving data from DDR;
+	 * step4: compare request count and receive count;
+	 * step5: done if two count matched;
+	 */
+	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL2, reg_base);
+	aml_audiobus_update_bits(actrl,	reg, 1 << 21, 0 << 21);
+	aml_audiobus_update_bits(actrl,	reg, 1 << 21, 1 << 21);
+
+	/* max 200us delay */
+	for (i = 0; i < 200; i++) {
+		/* STATUS1 bit 17, stop_ddr_done */
+		reg = calc_frddr_address(EE_AUDIO_FRDDR_A_STATUS1, reg_base);
+		status = (aml_audiobus_read(actrl, reg) & 0x20000) >> 17;
+		if (status) {
+			pr_debug("%s(), fifo_stop success\n", __func__);
+			return true;
+		}
+
+		udelay(1);
+		if ((i % 20) == 0)
+			pr_info("delay:[%dus]; FRDDR_STATUS1 bit 17: %u\n",
+				i, status);
+	}
+
+	pr_err("Error: 200us time out, FRDDR_STATUS1 bit 17: %u\n", status);
+	return false;
+}
+
 void aml_frddr_enable(struct frddr *fr, bool enable)
 {
 	struct aml_audio_controller *actrl = fr->actrl;
 	unsigned int reg_base = fr->reg_base;
-	unsigned int reg;
+	unsigned int reg, value;
 
 	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL0, reg_base);
+
+	value = aml_audiobus_read(actrl, reg);
+	if (fr->chipinfo &&
+	    fr->chipinfo->burst_finished_flag &&
+	    (!enable) &&
+	    (value & 0x80000000))
+		aml_frddr_burst_finished(fr);
+
 	/* ensure disable before enable frddr */
 	aml_audiobus_update_bits(actrl,	reg, 1<<31, enable<<31);
 
@@ -1577,11 +1624,7 @@ void frddr_init_without_mngr(unsigned int frddr_index, unsigned int src0_sel)
 
 void frddr_deinit_without_mngr(unsigned int frddr_index)
 {
-	unsigned int offset, reg;
-
-	offset = EE_AUDIO_FRDDR_B_CTRL0 - EE_AUDIO_FRDDR_A_CTRL0;
-	reg = EE_AUDIO_FRDDR_A_CTRL0 + offset * frddr_index;
-	audiobus_write(reg, 0x0);
+	aml_frddr_enable(frddrs + frddr_index, false);
 }
 
 static enum toddr_src toddr_src_idx = TODDR_INVAL;
