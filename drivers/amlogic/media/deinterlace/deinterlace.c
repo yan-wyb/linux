@@ -1705,6 +1705,12 @@ unsigned char is_bypass(vframe_t *vf_in)
 
 	if (bypass_all)
 		return 1;
+
+	if (vf_in && vf_in->type & VIDTYPE_COMPRESS) {
+	if (!afbc_is_supported())
+		return 1;
+	}
+
 	if (di_pre_stru.cur_prog_flag &&
 	    ((di_pre_stru.cur_width > 1920) ||
 	    (di_pre_stru.cur_height > 1080) ||
@@ -4420,7 +4426,8 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 			 * for afbc used by vpp and di, when di use it,
 			 * vpp need release afbc, waitting vpp release
 			 */
-			if (is_meson_tl1_cpu() || is_meson_sm1_cpu()) {
+			if (is_meson_tl1_cpu() || is_meson_sm1_cpu() ||
+			    is_meson_tm2_cpu()) {
 				/*compress mode and format changed*/
 				if (!is_bypass(di_buf->vframe) &&
 					di_pre_stru.source_change_flag &&
