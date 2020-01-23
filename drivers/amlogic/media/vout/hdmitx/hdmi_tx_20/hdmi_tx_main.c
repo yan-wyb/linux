@@ -2479,6 +2479,7 @@ const char *disp_mode_t[] = {
 	"2560x1440p60hz",
 	"2560x1600p60hz",
 	"3440x1440p60hz",
+	"2400x1200p90hz",
 	NULL
 };
 
