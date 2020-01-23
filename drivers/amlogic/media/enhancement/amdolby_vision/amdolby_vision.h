@@ -120,6 +120,20 @@ struct TgtGDCfg {
 #pragma pack(pop)
 
 #ifdef V1_6_1
+#define AMBIENT_UPD_FRONT     (uint32_t)(1<<0)
+#define AMBIENT_UPD_REAR      (uint32_t)(1<<1)
+#define AMBIENT_UPD_WHITEXY   (uint32_t)(1<<2)
+#define AMBIENT_UPD_MODE      (uint32_t)(1<<3)
+
+struct ambient_cfg_s {
+	uint32_t update_flag;
+	uint32_t ambient; /* 1<<16 */
+	uint32_t tRearLum;
+	uint32_t tFrontLux;
+	uint32_t tWhiteX; /* 1<<15 */
+	uint32_t tWhiteY; /* 1<<15 */
+};
+
 /*! @brief Ambient light configuration.*/
 # pragma pack(push, 1)
 struct AmbientCfg {
@@ -723,7 +737,8 @@ extern int tv_control_path(
 	int set_no_el,
 	struct hdr10_param_s *hdr10_param,
 	struct tv_dovi_setting_s *output,
-	char *vsem_if, int vsem_if_size);
+	char *vsem_if, int vsem_if_size,
+	struct ambient_cfg_s *ambient_cfg);
 #else
 extern int tv_control_path(
 	enum signal_format_e in_format,
@@ -781,7 +796,8 @@ struct dolby_vision_func_s {
 		int set_no_el,
 		struct hdr10_param_s *hdr10_param,
 		struct tv_dovi_setting_s *output,
-		char *vsem_if, int vsem_if_size);
+		char *vsem_if, int vsem_if_size,
+		struct ambient_cfg_s *ambient_cfg);
 #else
 	int (*tv_control_path)(
 		enum signal_format_e in_format,

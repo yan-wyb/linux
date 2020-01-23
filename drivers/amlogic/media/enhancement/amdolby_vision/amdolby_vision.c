@@ -486,7 +486,62 @@ static unsigned int sdr_ref_mode;
 module_param(sdr_ref_mode, uint, 0664);
 MODULE_PARM_DESC(sdr_ref_mode, "\n sdr_ref_mode\n");
 
+static unsigned int ambient_test_mode;
+module_param(ambient_test_mode, uint, 0664);
+MODULE_PARM_DESC(ambient_test_mode, "\n ambient_test_mode\n");
+
 #ifdef V1_6_1
+#define AMBIENT_CFG_FRAMES 46
+struct ambient_cfg_s ambient_test_cfg[AMBIENT_CFG_FRAMES] = {
+	/* update_flag, ambient, front, rear, x, y */
+	{ 12, 65536, 0, 0, 0, 0 },
+	{ 4, 0, 0, 0, 32768, 0 },
+	{ 4, 0, 0, 0, 0, 32768 },
+	{ 4, 0, 0, 0, 32768, 32768 },
+	{ 6, 0, 0, 0, 10246, 10780 },
+	{ 2, 0, 10000, 0, 0, 0 },
+	{ 3, 0, 5, 0, 0, 0 },
+	{ 1, 0, 0, 30000, 0, 0 },
+	{ 8, 0, 0, 0, 0, 0 },
+	{ 8, 655360, 0, 0, 0, 0 },
+	{ 15, 571146, 2204, 23229, 589, 30638 },
+	{ 0, 0, 0, 0, 0, 0 },
+	{ 8, 257884, 0, 0, 0, 0 },
+	{ 1, 0, 0, 24942, 0, 0 },
+	{ 15, 112525, 4646, 25899, 31686, 9764 },
+	{ 8, 645988, 0, 0, 0, 0 },
+	{ 4, 0, 0, 0, 491, 30113 },
+	{ 12, 240058, 0, 0, 11632, 13402 },
+	{ 4, 0, 0, 0, 22282, 31162 },
+	{ 14, 586612, 6276, 0, 98, 16056 },
+	{ 14, 279117, 5276, 0, 8454, 6946 },
+	{ 2, 0, 6558, 0, 0, 0 },
+	{ 2, 0, 355, 0, 0, 0 },
+	{ 15, 317194, 6898, 9651, 30539, 17104 },
+	{ 11, 592707, 5558, 838, 0, 0 },
+	{ 5, 0, 0, 8462, 7438, 655 },
+	{ 8, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0 },
+	{ 9, 65536, 0, 12792, 0, 0 },
+	{ 12, 138739, 0, 0, 30179, 14909 },
+	{ 11, 561971, 1287, 16711, 0, 0 },
+	{ 7, 0, 991, 9667, 14450, 9699 },
+	{ 4, 0, 0, 0, 12746, 5636 },
+	{ 2, 0, 1382, 0, 0, 0 },
+	{ 1, 0, 0, 14647, 0, 0 },
+	{ 2, 0, 9080, 0, 0, 0 },
+	{ 12, 247791, 0, 0, 21921, 16056 },
+	{ 3, 0, 6840, 13834, 0, 0 },
+	{ 5, 0, 0, 21597, 25755, 26673 },
+	{ 0, 0, 0, 0, 0, 0 },
+	{ 5, 0, 0, 19217, 17825, 17989 },
+	{ 14, 114425, 2185, 0, 13828, 5406 },
+	{ 10, 591855, 3587, 0, 0, 0 },
+	{ 5, 0, 0, 17788, 3571, 28508 },
+	{ 4, 0, 0, 0, 32636, 5799 }
+};
+
 /*cfg_0.005_500_BT1886_2.4_YUV_NARROW_v0.txt    --tid 0 */
 /*tv cert: OTT mode/HDMI MODE(5010~5013 and 5232,5272,5332) use this cfg*/
 struct TargetDisplayConfig def_tgt_display_cfg = {
@@ -621,6 +676,7 @@ struct TargetDisplayConfig def_tgt_display_cfg = {
 	0, 0, 0, 0, 0, 0, 0, 0,
 	} /* padding[128] */
 };
+
 struct TargetDisplayConfig def_tgt_display_cfg_bestpq = {
 	36045, /* gamma */
 	2, /* eotf */
@@ -4533,7 +4589,8 @@ void enable_dolby_vision(int enable)
 						0,
 						NULL,
 						NULL,
-						NULL, 0);
+						NULL, 0,
+						NULL);
 #else
 				if (p_funcs_tv) /* destroy ctx */
 					p_funcs_tv->tv_control_path(
@@ -7647,7 +7704,8 @@ int dolby_vision_parse_metadata(
 					0,
 					NULL,
 					NULL,
-					NULL, 0);
+					NULL, 0,
+					NULL);
 		}
 #endif
 		calculate_panel_max_pq(
@@ -7710,7 +7768,8 @@ int dolby_vision_parse_metadata(
 					0,
 					NULL,
 					NULL,
-					NULL, 0);
+					NULL, 0,
+					NULL);
 #else
 			if (p_funcs_tv && (p_funcs_tv->tv_control_path))
 				p_funcs_tv->tv_control_path(
@@ -7743,7 +7802,11 @@ int dolby_vision_parse_metadata(
 			(dolby_vision_flags & FLAG_DISABLE_COMPOSER),
 			&hdr10_param,
 			tv_dovi_setting,
-			vsem_if_buf, vsem_if_size);
+			vsem_if_buf, vsem_if_size,
+			(ambient_test_mode != 0 && toggle_mode == 1
+			&& frame_count < AMBIENT_CFG_FRAMES) ?
+			&ambient_test_cfg[frame_count] :
+			(struct ambient_cfg_s *)NULL);
 #else
 		flag = p_funcs_tv->tv_control_path(
 			src_format, input_mode,
