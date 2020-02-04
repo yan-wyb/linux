@@ -140,6 +140,7 @@ struct hdr_proc_mtx_param_s {
 	int mtxo_pos_offset[3];
 	unsigned int mtx_on;
 	enum hdr_process_sel p_sel;
+	unsigned int gmt_bit_mode;
 };
 
 #define OO_BITS			12
