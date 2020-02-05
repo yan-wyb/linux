@@ -36,6 +36,7 @@
 #define CFUD                             0x2d
 
 #define AD82584F_REGISTER_COUNT          0x86
+#define AD82584F_REGISTER_TABLE_SIZE     0x10c
 #define AD82584F_RAM_TABLE_COUNT         0x80
 #define AD82584F_RAM_TABLE_SIZE          0x200
 

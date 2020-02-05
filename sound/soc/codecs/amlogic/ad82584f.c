@@ -60,6 +60,12 @@ static int ad82584f_get_ram_param(struct snd_kcontrol *kcontrol,
 static int ad82584f_set_ram_param(struct snd_kcontrol *kcontrol,
 				  const unsigned int __user *bytes,
 				  unsigned int size);
+static int ad82584f_get_reg(struct snd_kcontrol *kcontrol,
+			    unsigned int __user *bytes,
+			    unsigned int size);
+static int ad82584f_set_reg(struct snd_kcontrol *kcontrol,
+			    const unsigned int __user *bytes,
+			    unsigned int size);
 
 static const struct snd_kcontrol_new ad82584f_snd_controls[] = {
 	SOC_SINGLE_TLV("Master Volume", MVOL, 0,
@@ -76,6 +82,9 @@ static const struct snd_kcontrol_new ad82584f_snd_controls[] = {
 	SND_SOC_BYTES_TLV("RAM table", (AD82584F_RAM_TABLE_SIZE * 2),
 			  ad82584f_get_ram_param,
 			  ad82584f_set_ram_param),
+	SND_SOC_BYTES_TLV("Reg table", AD82584F_REGISTER_TABLE_SIZE,
+			  ad82584f_get_reg,
+			  ad82584f_set_reg),
 };
 
 /* Power-up register defaults */
@@ -218,7 +227,7 @@ struct reg_default ad82584f_reg_defaults[AD82584F_REGISTER_COUNT] = {
 
 };
 
-static const int m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
+static char m_reg_tab[AD82584F_REGISTER_COUNT][2] = {
 	{0x00, 0x00},//##State_Control_1
 	{0x01, 0x04},//##State_Control_2
 	{0x02, 0x30},//##State_Control_3
@@ -631,6 +640,7 @@ struct ad82584f_priv {
 
 	char *m_ram1_tab;
 	char *m_ram2_tab;
+	char *m_reg_tab;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
@@ -829,6 +839,53 @@ static int ad82584f_get_ram_param(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int ad82584f_set_reg(struct snd_kcontrol *kcontrol,
+			    const unsigned int __user *bytes,
+			    unsigned int size)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
+	struct snd_ctl_tlv *tlv;
+	char *val = (char *)bytes + sizeof(*tlv);
+	char *p1 = ad82584f->m_reg_tab;
+	int res = 0, i;
+
+	res = copy_from_user(p1, val, AD82584F_REGISTER_TABLE_SIZE);
+	if (res)
+		return -EFAULT;
+
+	/* State_Control can't be changed by user */
+	/* volume is changed by "volume kcontrol" */
+	for (i = 6; i < AD82584F_REGISTER_COUNT; i++) {
+		int reg = (int)p1[2 * i];
+		int val = (int)p1[2 * i + 1];
+
+		snd_soc_write(codec, reg, val);
+	};
+
+	return 0;
+}
+
+static int ad82584f_get_reg(struct snd_kcontrol *kcontrol,
+			    unsigned int __user *bytes,
+			    unsigned int size)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
+	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
+	struct snd_ctl_tlv *tlv;
+	char *val = (char *)bytes + sizeof(*tlv);
+	char *p1 = ad82584f->m_reg_tab;
+	int res = 0;
+
+	res = copy_to_user(val, p1, AD82584F_REGISTER_TABLE_SIZE);
+	if (res)
+		return -EFAULT;
+
+	return 0;
+}
+
 static int ad82584f_GPIO_enable(struct snd_soc_codec *codec, bool enable)
 {
 	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
@@ -862,9 +919,10 @@ static int ad82584f_reg_init(struct snd_soc_codec *codec)
 	for (i = 0; i < AD82584F_REGISTER_COUNT; i++) {
 		snd_soc_write(codec, m_reg_tab[i][0], m_reg_tab[i][1]);
 	};
-	return 0;
 
+	return 0;
 }
+
 static int ad82584f_init(struct snd_soc_codec *codec)
 {
 	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
@@ -1102,6 +1160,16 @@ static int ad82584f_i2c_probe(struct i2c_client *i2c,
 	}
 	memcpy(ad82584f->m_ram2_tab, m_ram2_tab, AD82584F_RAM_TABLE_SIZE);
 
+	ad82584f->m_reg_tab =
+		kzalloc(sizeof(char) * AD82584F_REGISTER_TABLE_SIZE,
+			GFP_KERNEL);
+	if (!ad82584f->m_reg_tab) {
+		kfree(ad82584f->m_ram1_tab);
+		kfree(ad82584f->m_ram2_tab);
+		return -ENOMEM;
+	}
+	memcpy(ad82584f->m_reg_tab, m_reg_tab, AD82584F_REGISTER_TABLE_SIZE);
+
 	return ret;
 }
 
@@ -1110,11 +1178,11 @@ static int ad82584f_i2c_remove(struct i2c_client *client)
 	struct ad82584f_priv *ad82584f =
 		(struct ad82584f_priv *)i2c_get_clientdata(client);
 
-	if (ad82584f)
+	if (ad82584f) {
 		kfree(ad82584f->m_ram1_tab);
-
-	if (ad82584f)
 		kfree(ad82584f->m_ram2_tab);
+		kfree(ad82584f->m_reg_tab);
+	}
 
 	snd_soc_unregister_codec(&client->dev);
 
