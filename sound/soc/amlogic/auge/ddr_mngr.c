@@ -439,6 +439,14 @@ void aml_toddr_set_format(struct toddr *to, struct toddr_fmt *fmt)
 		0x1 << 27 | 0x7 << 24 | 0x1fff << 3,
 		0x1 << 27 | fmt->endian << 24 | fmt->type << 13 |
 		fmt->msb << 8 | fmt->lsb << 3);
+
+	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CHSYNC_CTRL, reg_base);
+	/* bit 0-7: chnum_max, same with record channels */
+	if (to->chipinfo && to->chipinfo->chnum_sync)
+		aml_audiobus_update_bits(actrl,
+					 reg,
+					 0x7F << 0,
+					 (fmt->ch_num - 1) << 0);
 }
 
 unsigned int aml_toddr_get_status(struct toddr *to)
@@ -465,11 +473,11 @@ void aml_toddr_chsync_enable(struct toddr *to)
 	offset = EE_AUDIO_TODDR_B_CHSYNC_CTRL - EE_AUDIO_TODDR_A_CHSYNC_CTRL;
 	reg = EE_AUDIO_TODDR_A_CHSYNC_CTRL + offset * to->fifo_id;
 
-	/* bit 31: enable, bit 0-7: chnum_max, 8channels */
+	/* bit 31: enable */
 	aml_audiobus_update_bits(actrl,
 				 reg,
-				 0x1 << 31 | 0x7F << 0,
-				 0x1 << 31 | 0x7 << 0);
+				 0x1 << 31,
+				 0x1 << 31);
 }
 
 void aml_toddr_ack_irq(struct toddr *to, int status)
