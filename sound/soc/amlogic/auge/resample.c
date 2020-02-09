@@ -130,6 +130,20 @@ bool get_resample_enable(enum resample_idx id)
 	return p_resample->enable;
 }
 
+bool get_resample_enable_chnum_sync(enum resample_idx id)
+{
+	struct audioresample *p_resample;
+
+	p_resample = ((id == RESAMPLE_A) ? s_resample_a : s_resample_b);
+
+	if (!p_resample || !p_resample->chipinfo) {
+		pr_debug("Not init audio resample\n");
+		return false;
+	}
+
+	return p_resample->chipinfo->chnum_sync;
+}
+
 int set_resample_source(enum resample_idx id, enum toddr_src src)
 {
 	struct audioresample *p_resample = get_audioresample(id);
