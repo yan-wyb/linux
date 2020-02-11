@@ -740,6 +740,14 @@ static void vd1_set_dcu(
 		VSYNC_WR_MPEG_REG_BITS(
 			G12_VD1_IF0_GEN_REG3,
 			(burst_len & 0x3), 1, 2);
+		if (vf->flag & VFRAME_FLAG_VIDEO_LINEAR)
+			VSYNC_WR_MPEG_REG_BITS(
+				G12_VD1_IF0_GEN_REG3,
+				0, 0, 1);
+		else
+			VSYNC_WR_MPEG_REG_BITS(
+				G12_VD1_IF0_GEN_REG3,
+				1, 0, 1);
 		if (is_mvc) {
 			VSYNC_WR_MPEG_REG_BITS(
 				G12_VD2_IF0_GEN_REG3,
@@ -747,6 +755,14 @@ static void vd1_set_dcu(
 			VSYNC_WR_MPEG_REG_BITS(
 				G12_VD2_IF0_GEN_REG3,
 				(burst_len & 0x3), 1, 2);
+			if (vf->flag & VFRAME_FLAG_VIDEO_LINEAR)
+				VSYNC_WR_MPEG_REG_BITS(
+					G12_VD2_IF0_GEN_REG3,
+					0, 0, 1);
+			else
+				VSYNC_WR_MPEG_REG_BITS(
+					G12_VD2_IF0_GEN_REG3,
+					1, 0, 1);
 		}
 	} else {
 		VSYNC_WR_MPEG_REG_BITS(
@@ -803,6 +819,9 @@ static void vd1_set_dcu(
 
 	if (frame_par->hscale_skip_count)
 		r |= VDIF_CHROMA_HZ_AVG | VDIF_LUMA_HZ_AVG;
+
+	if (vf->flag & VFRAME_FLAG_VIDEO_LINEAR)
+		r |= (1 << 4);
 
 	/*enable go field reset default according to vlsi*/
 	r |= VDIF_RESET_ON_GO_FIELD;
@@ -1175,6 +1194,14 @@ static void vd2_set_dcu(
 		VSYNC_WR_MPEG_REG_BITS(
 			G12_VD2_IF0_GEN_REG3,
 			(burst_len & 0x3), 1, 2);
+		if (vf->flag & VFRAME_FLAG_VIDEO_LINEAR)
+			VSYNC_WR_MPEG_REG_BITS(
+				G12_VD2_IF0_GEN_REG3,
+				0, 0, 1);
+		else
+			VSYNC_WR_MPEG_REG_BITS(
+				G12_VD2_IF0_GEN_REG3,
+				1, 0, 1);
 	} else {
 		VSYNC_WR_MPEG_REG_BITS(
 			VD2_IF0_GEN_REG3 + vd_off,
@@ -1204,6 +1231,9 @@ static void vd2_set_dcu(
 
 	if (frame_par->hscale_skip_count)
 		r |= VDIF_CHROMA_HZ_AVG | VDIF_LUMA_HZ_AVG;
+
+	if (vf->flag & VFRAME_FLAG_VIDEO_LINEAR)
+		r |= (1 << 4);
 
 	VSYNC_WR_MPEG_REG(VD2_IF0_GEN_REG + vd_off, r);
 
