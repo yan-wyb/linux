@@ -373,15 +373,25 @@ void vpp_get_lcd_gamma_table(u32 rgb_mask)
 	cnt = 0;
 	for (i = 0; i < 256; i++) {
 		cnt = 0;
+		while (!(READ_VPP_REG(L_GAMMA_CNTL_PORT) & (0x1 << ADR_RDY))) {
+			udelay(10);
+			if (cnt++ > GAMMA_RETRY) {
+				pr_info("%s ADR_RDY timeout\n", __func__);
+				break;
+			}
+		}
 		WRITE_VPP_REG(L_GAMMA_ADDR_PORT, (0x1 << H_RD) |
 						(0x0 << H_AUTO_INC) |
 						(0x1 << rgb_mask)	|
 						(i << HADR));
 
+		cnt = 0;
 		while (!(READ_VPP_REG(L_GAMMA_CNTL_PORT) & (0x1 << RD_RDY))) {
 			udelay(10);
-			if (cnt++ > GAMMA_RETRY)
+			if (cnt++ > GAMMA_RETRY) {
+				pr_info("%s ADR_RDY timeout\n", __func__);
 				break;
+			}
 		}
 		if (rgb_mask == H_SEL_R)
 			gamma_data_r[i] = READ_VPP_REG(L_GAMMA_DATA_PORT);
