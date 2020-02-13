@@ -247,6 +247,7 @@ struct frddr {
 	unsigned int fifo_depth;
 
 	unsigned int channels;
+	unsigned int rate;
 	unsigned int msb;
 	unsigned int type;
 
@@ -328,6 +329,7 @@ void aml_frddr_set_fifos(struct frddr *fr,
 unsigned int aml_frddr_get_fifo_id(struct frddr *fr);
 void aml_frddr_set_format(struct frddr *fr,
 	unsigned int chnum,
+	unsigned int rate,
 	unsigned int msb,
 	unsigned int frddr_type);
 

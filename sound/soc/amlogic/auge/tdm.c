@@ -659,6 +659,7 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 		}
 		aml_frddr_set_format(fr,
 			runtime->channels,
+			runtime->rate,
 			bit_depth - 1,
 			tdmout_get_frddr_type(bit_depth));
 		aml_frddr_select_dst(fr, dst);

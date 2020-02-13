@@ -14734,6 +14734,7 @@ F:	sound/soc/amlogic/auge/frhdmirx_hw.c
 F:	sound/soc/amlogic/auge/frhdmirx_hw.h
 F:	sound/soc/amlogic/auge/*
 
+
 AMLOGIC LCD DRIVERS
 M:	Evoke Zhang <evoke.zhang@amlogic.com>
 F:	arch\arm\boot\dts\amlogic\mesontl1_pxp-panel.dtsi

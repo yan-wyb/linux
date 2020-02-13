@@ -1463,12 +1463,14 @@ unsigned int aml_frddr_get_fifo_id(struct frddr *fr)
 
 void aml_frddr_set_format(struct frddr *fr,
 	unsigned int chnum,
+	unsigned int rate,
 	unsigned int msb,
 	unsigned int frddr_type)
 {
 	fr->channels = chnum;
-	fr->msb  = msb;
-	fr->type = frddr_type;
+	fr->rate     = rate;
+	fr->msb      = msb;
+	fr->type     = frddr_type;
 }
 
 static void aml_aed_enable(struct frddr_attach *p_attach_aed, bool enable)
