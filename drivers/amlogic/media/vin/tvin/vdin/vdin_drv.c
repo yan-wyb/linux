@@ -1982,8 +1982,18 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	} else if (devp->game_mode & VDIN_GAME_MODE_2) {
 		/* game mode 2 */
 		vdin_vframe_put_and_recycle(devp, next_wr_vfe, put_md);
-		vf_notify_receiver(devp->name,
-				   VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		if (((devp->dv.dolby_input & (1 << devp->index)) ||
+		     (devp->dv.dv_flag && is_dolby_vision_enable())) &&
+		     devp->dv.dv_config == true)
+			vf_notify_receiver(VDIN_DV_NAME,
+					   VFRAME_EVENT_PROVIDER_VFRAME_READY,
+					   NULL);
+		else
+#endif
+			vf_notify_receiver(devp->name,
+					   VFRAME_EVENT_PROVIDER_VFRAME_READY,
+					   NULL);
 	}
 	devp->frame_cnt++;
 
