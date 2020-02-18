@@ -1492,9 +1492,10 @@ int vdin_vframe_put_and_recycle(struct vdin_dev_s *devp, struct vf_entry *vfe,
 		ret = -1;
 	} else {
 		provider_vf_put(vfe, devp->vfp);
-		vf_notify_receiver(devp->name,
-			VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
-		if (vdin_dbg_en) {
+		/*vf_notify_receiver(devp->name,*/
+		/*		     VFRAME_EVENT_PROVIDER_VFRAME_READY,*/
+		/*		     NULL);*/
+		if (time_en) {
 			vfe->vf.ready_clock[1] = sched_clock();
 			pr_info("vdin put latency %lld us.first %lld us\n",
 			func_div(vfe->vf.ready_clock[1], 1000),
@@ -1979,6 +1980,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	} else if (devp->game_mode & VDIN_GAME_MODE_2) {
 		/* game mode 2 */
 		vdin_vframe_put_and_recycle(devp, next_wr_vfe, put_md);
+		vf_notify_receiver(devp->name,
+				   VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 	}
 	devp->frame_cnt++;
 
