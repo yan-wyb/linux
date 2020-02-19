@@ -214,6 +214,8 @@ void vdin_change_matrix(unsigned int offset,
 			unsigned int matrix_csc);
 void vdin_dolby_desc_sc_enable(struct vdin_dev_s *devp,
 			       unsigned int  onoff);
+bool vdin_is_dolby_input(struct vdin_dev_s *devp);
+bool vdin_is_dolby_tunnel_444_input(struct vdin_dev_s *devp);
 
 #endif
 

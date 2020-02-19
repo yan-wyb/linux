@@ -3936,11 +3936,21 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 				(devp->prop.color_format == TVIN_YUV422) &&
 				(devp->color_depth_support &
 				VDIN_WR_COLOR_DEPTH_10BIT)) {
-				/*10 bit mode*/
-				devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
-				wr_bits(offset, VDIN_WR_CTRL2, 1,
-					VDIN_WR_10BIT_MODE_BIT,
-					VDIN_WR_10BIT_MODE_WID);
+				if (vdin_is_dolby_tunnel_444_input(devp)) {
+					/*8bit mode*/
+					devp->source_bitdepth =
+						VDIN_COLOR_DEEPS_8BIT;
+					wr_bits(offset, VDIN_WR_CTRL2, 0,
+						VDIN_WR_10BIT_MODE_BIT,
+						VDIN_WR_10BIT_MODE_WID);
+				} else {
+					/*10 bit mode*/
+					devp->source_bitdepth =
+						VDIN_COLOR_DEEPS_10BIT;
+					wr_bits(offset, VDIN_WR_CTRL2, 1,
+						VDIN_WR_10BIT_MODE_BIT,
+						VDIN_WR_10BIT_MODE_WID);
+				}
 			} else {
 				/*8bit mode*/
 				devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
@@ -4270,6 +4280,26 @@ static uint32_t crc32(uint32_t crc, const void *buf, size_t size)
 		size--;
 	}
 	return crc;
+}
+
+bool vdin_is_dolby_input(struct vdin_dev_s *devp)
+{
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	if (devp->dv.dolby_input ||
+	    (devp->dv.dv_flag && is_dolby_vision_enable()))
+		return true;
+#endif
+	return false;
+}
+
+bool vdin_is_dolby_tunnel_444_input(struct vdin_dev_s *devp)
+{
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	if (vdin_is_dolby_input(devp) &&
+	    devp->prop.color_format == TVIN_YUV422)
+		return true;
+#endif
+	return false;
 }
 
 void vdin_dolby_pr_meta_data(void *addr, unsigned int size)
