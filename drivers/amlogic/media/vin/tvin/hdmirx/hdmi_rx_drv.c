@@ -678,6 +678,29 @@ int hdmirx_get_connect_info(void)
 }
 EXPORT_SYMBOL(hdmirx_get_connect_info);
 
+/* see CEA-861-F table-12 and chapter 5.1:
+ * By default, RGB pixel data values should be assumed to have
+ * the limited range when receiving a CE video format, and the
+ * full range when receiving an IT format.
+ * CE Video Format: Any Video Format listed in Table 1
+ * except the 640x480p Video Format.
+ * IT Video Format: Any Video Format that is not a CE Video Format.
+ */
+static bool is_it_vid_fmt(void)
+{
+	bool ret = false;
+
+	if ((rx.pre.sw_vic <= HDMI_640x480p60) ||
+	    (rx.pre.sw_vic >= HDMI_VESA_OFFSET))
+		ret = true;
+	else
+		ret = false;
+
+	if (log_level & VIDEO_LOG)
+		rx_pr("sw_vic: %d, it video format: %d\n", rx.pre.sw_vic, ret);
+	return ret;
+}
+
 /*
  * hdmirx_get_color_fmt - get video color format
  */
@@ -726,8 +749,10 @@ void hdmirx_get_color_fmt(struct tvin_sig_property_s *prop)
 			prop->color_fmt_range = TVIN_RGB_FULL;
 		else if (rgb_quant_range == E_RGB_RANGE_LIMIT)
 			prop->color_fmt_range = TVIN_RGB_LIMIT;
+		else if (is_it_vid_fmt())
+			prop->color_fmt_range = TVIN_RGB_FULL;
 		else
-			prop->color_fmt_range = TVIN_FMT_RANGE_NULL;
+			prop->color_fmt_range = TVIN_RGB_LIMIT;
 		break;
 	default:
 		prop->color_fmt_range = TVIN_FMT_RANGE_NULL;
