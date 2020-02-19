@@ -152,6 +152,7 @@ static struct tvafe_user_param_s tvafe_user_param = {
 
 	/*4 is the test result@20171101 on fluke-54200 and DVD*/
 	.skip_vf_num = 4,
+	.unlock_cnt_max = 3,
 
 	.avout_en = 1,
 };
@@ -624,8 +625,9 @@ static int tvafe_dec_isr(struct tvin_frontend_s *fe, unsigned int hcnt64)
 	struct tvafe_info_s *tvafe = &devp->tvafe;
 	enum tvin_port_e port = tvafe->parm.port;
 	enum tvin_aspect_ratio_e aspect_ratio = TVIN_ASPECT_NULL;
+	struct tvafe_user_param_s *user_param = tvafe_get_user_param();
 	static int count[10] = {0};
-	int i;
+	int i, unlock = 0;
 
 	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED) ||
 		(devp->flags & TVAFE_POWERDOWN_IN_IDLE)) {
@@ -647,6 +649,42 @@ static int tvafe_dec_isr(struct tvin_frontend_s *fe, unsigned int hcnt64)
 
 	if ((port < TVIN_PORT_CVBS0) || (port > TVIN_PORT_CVBS3))
 		return TVIN_BUF_SKIP;
+
+	if ((tvafe->parm.info.status == TVIN_SIG_STATUS_STABLE) &&
+		(port == TVIN_PORT_CVBS1 || port == TVIN_PORT_CVBS2)) {
+		if (tvafe->cvd2.info.h_unlock_cnt >
+		    user_param->unlock_cnt_max) {
+			if (tvafe_dbg_print & TVAFE_DBG_ISR) {
+				pr_info("%s: h_unlock cnt: %d\n",
+					__func__,
+					tvafe->cvd2.info.h_unlock_cnt);
+			}
+			unlock = 1;
+		}
+		if (tvafe->cvd2.info.v_unlock_cnt >
+		    user_param->unlock_cnt_max) {
+			if (tvafe_dbg_print & TVAFE_DBG_ISR) {
+				pr_info("%s: v_unlock cnt: %d\n",
+					__func__,
+					tvafe->cvd2.info.v_unlock_cnt);
+			}
+			unlock = 1;
+		}
+		if (tvafe->cvd2.info.sig_unlock_cnt >
+		    user_param->unlock_cnt_max) {
+			if (tvafe_dbg_print & TVAFE_DBG_ISR) {
+				pr_info("%s: sig_unlock cnt: %d\n",
+					__func__,
+					tvafe->cvd2.info.sig_unlock_cnt);
+			}
+			unlock = 1;
+		}
+		if (unlock) {
+			if (tvafe->cvd2.info.unlock_cnt++ >= 65536)
+				tvafe->cvd2.info.unlock_cnt = 0;
+			return TVIN_BUF_SKIP;
+		}
+	}
 
 	if (tvafe->cvd2.info.isr_cnt++ >= 65536)
 		tvafe->cvd2.info.isr_cnt = 0;

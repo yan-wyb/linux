@@ -32,7 +32,7 @@
 /* ************************************************* */
 /* *** macro definitions ********************************************* */
 /* *********************************************************** */
-#define TVAFE_VER "Ref.2019/12/04"
+#define TVAFE_VER "Ref.2020/03/03"
 
 /* used to set the flag of tvafe_dev_s */
 #define TVAFE_FLAG_DEV_OPENED 0x00000010
@@ -81,6 +81,7 @@ struct tvafe_user_param_s {
 	unsigned int nostd_stable_cnt;
 	unsigned int nostd_dmd_clp_step;
 	unsigned int skip_vf_num;
+	unsigned int unlock_cnt_max;
 	unsigned int avout_en;
 };
 

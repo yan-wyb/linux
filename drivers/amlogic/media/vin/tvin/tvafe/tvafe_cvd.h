@@ -161,6 +161,10 @@ struct tvafe_cvd2_info_s {
 	bool hs_adj_dir;
 	unsigned int auto_hs_flag;
 
+	unsigned int h_unlock_cnt;
+	unsigned int v_unlock_cnt;
+	unsigned int sig_unlock_cnt;
+
 #ifdef TVAFE_CVD2_AUTO_DE_ENABLE
 	struct tvafe_cvd2_lines_s vlines;
 #endif
@@ -168,6 +172,7 @@ struct tvafe_cvd2_info_s {
 
 	unsigned int smr_cnt;
 	unsigned int isr_cnt;
+	unsigned int unlock_cnt;
 };
 
 /* CVD2 status list */

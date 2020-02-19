@@ -884,6 +884,18 @@ static void tvafe_cvd2_get_signal_status(struct tvafe_cvd2_s *cvd2)
 				(bool)((data & 0x04) >> VLOCK_BIT);
 	cvd2->hw_data[cvd2->hw_data_cur].chroma_lock =
 				(bool)((data & 0x08) >> CHROMALOCK_BIT);
+	if (cvd2->hw_data[cvd2->hw_data_cur].h_lock)
+		cvd2->info.h_unlock_cnt = 0;
+	else
+		cvd2->info.h_unlock_cnt++;
+	if (cvd2->hw_data[cvd2->hw_data_cur].v_lock)
+		cvd2->info.v_unlock_cnt = 0;
+	else
+		cvd2->info.v_unlock_cnt++;
+	if (!cvd2->hw_data[cvd2->hw_data_cur].no_sig)
+		cvd2->info.sig_unlock_cnt = 0;
+	else
+		cvd2->info.sig_unlock_cnt++;
 
 	data = R_APB_REG(CVD2_STATUS_REGISTER2);
 	cvd2->hw_data[cvd2->hw_data_cur].h_nonstd =

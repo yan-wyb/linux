@@ -130,10 +130,6 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 	tvafe_pr_info("tvafe_cvd2_info_s->hcnt64[3]:0x%x\n",
 		cvd2_info->hcnt64[3]);
 #endif
-	tvafe_pr_info("tvafe_cvd2_info_s->smr_cnt:%d\n",
-		cvd2_info->smr_cnt);
-	tvafe_pr_info("tvafe_cvd2_info_s->isr_cnt:%d\n",
-		cvd2_info->isr_cnt);
 
 	/* tvafe_cvd2_info_s->tvafe_cvd2_lines_s struct info */
 	tvafe_pr_info("\n!!tvafe_cvd2_info_s->tvafe_cvd2_lines_s struct info:\n");
@@ -186,6 +182,14 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 	tvafe_pr_info("tvafe_cvd2_hw_data_s->fsc_358:%d\n", hw->fsc_358);
 	tvafe_pr_info("tvafe_cvd2_hw_data_s->fsc_425:%d\n", hw->fsc_425);
 	tvafe_pr_info("tvafe_cvd2_hw_data_s->fsc_443:%d\n", hw->fsc_443);
+
+	tvafe_pr_info("\ntvafe_cvd2_info_s->smr_cnt:%d\n",
+		cvd2_info->smr_cnt);
+	tvafe_pr_info("tvafe_cvd2_info_s->isr_cnt:%d\n",
+		cvd2_info->isr_cnt);
+	tvafe_pr_info("tvafe_cvd2_info_s->unlock_cnt:%d\n\n",
+		cvd2_info->unlock_cnt);
+
 	for (i = 0; i < 5; i++) {
 		tvafe_pr_info("cutwindow_val_h[%d]:%d\n",
 			i, user_param->cutwindow_val_h[i]);
@@ -207,6 +211,7 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 	tvafe_pr_info("nostd_dmd_clp_step:0x%x\n",
 		user_param->nostd_dmd_clp_step);
 	tvafe_pr_info("skip_vf_num:%d\n", user_param->skip_vf_num);
+	tvafe_pr_info("unlock_cnt_max:%d\n", user_param->unlock_cnt_max);
 	tvafe_pr_info("try_fmt_max_atv:%d\n", try_fmt_max_atv);
 	tvafe_pr_info("try_fmt_max_av:%d\n", try_fmt_max_av);
 	tvafe_pr_info("avout_en:%d\n", user_param->avout_en);
@@ -451,6 +456,14 @@ static ssize_t tvafe_store(struct device *dev,
 		}
 		pr_info("[tvafe..]%s: skip_vf_num = %d\n",
 			__func__, user_param->skip_vf_num);
+	} else if (!strncmp(buff, "unlock_cnt", strlen("unlock_cnt"))) {
+		if (parm[1]) {
+			if (kstrtouint(parm[1], 10,
+				&user_param->unlock_cnt_max) < 0)
+				goto tvafe_store_err;
+		}
+		pr_info("[tvafe..]%s: unlock_cnt_max = %d\n",
+			__func__, user_param->unlock_cnt_max);
 	} else if (!strncmp(buff, "try_fmt_max_atv",
 		strlen("try_fmt_max_atv"))) {
 		if (kstrtouint(parm[1], 10, &try_fmt_max_atv) < 0)
