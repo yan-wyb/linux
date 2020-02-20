@@ -345,13 +345,19 @@ int dynamic_hdr_sdr_ootf(u32 maxl, u32 panell, u64 sx, u64 sy, u64 *anchor)
 	range_ebz_y = MAX_32 - ky;
 
 	if (maxl <= panell) {
-		if (oe_x[i] <= kx_primy) {
-			temp = tgtl << TM_GAIN_BIT;
-			oo_gain[i] = div64_u64(temp, panell);
-		} else {
-			curvey[i] = oe_x[148] << TM_GAIN_BIT;
-			curvex[i] = oe_x[i];
-			oo_gain[i] = div64_u64(curvey[i], curvex[i]);
+		for (i = 0; i < OE_X; i++) {
+			if (oe_x[i] <= kx_primy) {
+				temp = tgtl << TM_GAIN_BIT;
+				oo_gain[i] = div64_u64(temp, panell);
+			} else {
+				curvey[i] = oe_x[148] << TM_GAIN_BIT;
+				curvex[i] = oe_x[i];
+				oo_gain[i] = div64_u64(curvey[i], curvex[i]);
+			}
+			if (oo_gain[i] < (1 << TM_GAIN_BIT))
+				oo_gain[i] = 1 << TM_GAIN_BIT;
+			if (oo_gain[i] > (1 << MAX12_BIT) - 1)
+				oo_gain[i] = (1 << MAX12_BIT) - 1;
 		}
 	} else {
 		for (i = 0; i < OE_X; i++) {
