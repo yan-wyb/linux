@@ -1859,6 +1859,8 @@ MODULE_PARM_DESC(debug_dolby_frame, "\n debug_dolby_frame\n");
 static bool dolby_vision_on;
 static bool dolby_vision_core1_on;
 static bool dolby_vision_wait_on;
+module_param(dolby_vision_wait_on, bool, 0664);
+MODULE_PARM_DESC(dolby_vision_wait_on, "\n dolby_vision_wait_on\n");
 static bool dolby_vision_on_in_uboot;
 static bool dolby_vision_wait_init;
 static unsigned int frame_count;
@@ -7576,6 +7578,11 @@ int dolby_vision_parse_metadata(
 	}
 
 	check_format = src_format;
+	if (vf) {
+		update_src_format(check_format, vf);
+		last_current_format = check_format;
+	}
+
 	if (dolby_vision_request_mode != 0xff) {
 		dolby_vision_mode = dolby_vision_request_mode;
 		dolby_vision_request_mode = 0xff;
@@ -7594,10 +7601,8 @@ int dolby_vision_parse_metadata(
 		pr_dolby_dbg("[dolby_vision_parse_metadata] output change from %d to %d(%d, %p, %d)\n",
 			dolby_vision_mode, current_mode,
 			toggle_mode, vf, src_format);
-	}
-	if (vf) {
-		update_src_format(check_format, vf);
-		last_current_format = check_format;
+	} else {
+		dolby_vision_target_mode = dolby_vision_mode;
 	}
 
 	if ((get_hdr_module_status(VD1_PATH) != HDR_MODULE_ON)
@@ -7624,6 +7629,7 @@ int dolby_vision_parse_metadata(
 		new_dovi_setting.video_width = 0;
 		new_dovi_setting.video_height = 0;
 		new_dovi_setting.mode_changed = 0;
+		dolby_vision_wait_on = false;
 		if (get_hdr_module_status(VD1_PATH) == HDR_MODULE_BYPASS)
 			return 1;
 		return -1;
@@ -8356,6 +8362,10 @@ int dolby_vision_wait_metadata(struct vframe_s *vf)
 			check_format = FORMAT_MVC;
 		else
 			check_format = FORMAT_SDR;
+
+		if (vf)
+			update_src_format(check_format, vf);
+
 		if (dolby_vision_policy_process(
 			&mode, check_format)) {
 			if ((mode != DOLBY_VISION_OUTPUT_MODE_BYPASS)
@@ -8370,9 +8380,6 @@ int dolby_vision_wait_metadata(struct vframe_s *vf)
 					check_format, mode);
 			}
 		}
-		if (vf)
-			update_src_format(check_format, vf);
-
 		/* don't use run mode when sdr -> dv and vd1 not disable */
 		if (dolby_vision_wait_init &&
 			(READ_VPP_DV_REG(VPP_MISC) & (1<<10)))
@@ -8681,7 +8688,8 @@ int dolby_vision_process(
 				dolby_vision_set_toggle_flag(1);
 		}
 		if (dolby_vision_flags & FLAG_TOGGLE_FRAME) {
-			pr_dolby_dbg("update when video off\n");
+			if (debug_dolby & 1)
+				pr_dolby_dbg("update when video off\n");
 			dolby_vision_parse_metadata(
 				NULL, 1, false, false);
 		}
