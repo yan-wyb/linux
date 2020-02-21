@@ -596,6 +596,10 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 	unsigned int port = devp->parm.port;
 	unsigned int scan_mod = devp->fmt_info_p->scan_mode;
 
+	if (IS_HDMI_SRC(port)) {
+		devp->prop.dest_cfmt = TVIN_COLOR_FMT_MAX;
+	}
+
 	if (devp->prop.color_format == devp->prop.dest_cfmt) {
 		switch (devp->prop.color_format) {
 		case TVIN_YUV422:

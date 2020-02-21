@@ -1738,7 +1738,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_set_matrix(devp);
 			vdin_drop_frame_info(devp, "color fmt chg");
 		}
-		if (prop->dest_cfmt != pre_prop->dest_cfmt) {
+		/*if (prop->dest_cfmt != pre_prop->dest_cfmt) */{
 			vdin_set_bitdepth(devp);
 			vdin_source_bitdepth_reinit(devp);
 			vdin_set_wr_ctrl_vsync(devp, devp->addr_offset,
