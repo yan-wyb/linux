@@ -175,8 +175,7 @@ static long hifi4dsp_miscdev_unlocked_ioctl(struct file *fp, unsigned int cmd,
 		pr_debug("%s HIFI4DSP_LOAD\n", __func__);
 		ret = copy_from_user(info, argp,
 				     sizeof(struct hifi4dsp_info_t));
-		pr_debug("\ninfo->fw1_name : %s\n", info->fw1_name);
-		pr_debug("\ninfo->fw2_name : %s\n", info->fw2_name);
+		pr_debug("\ninfo->fw_name : %s\n", info->fw_name);
 		priv->dsp->info = info;
 		hifi4dsp_driver_load_fw(priv->dsp);
 	break;
