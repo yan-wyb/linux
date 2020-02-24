@@ -415,4 +415,8 @@ int ext_frame_capture_poll(int endflags);
 #endif
 bool is_meson_tm2_revb(void);
 #endif
+
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
+void di_trig_free_mirror_mem(void);
+#endif
 /*VIDEO_PRIV_HEADER_HH*/

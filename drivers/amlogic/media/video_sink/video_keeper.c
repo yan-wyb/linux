@@ -835,6 +835,7 @@ void try_free_keep_video(int flags)
 	mutex_lock(&video_keeper_mutex);
 	video_keeper_new_frame_notify();
 	free_alloced_keep_buffer();
+	di_trig_free_mirror_mem();
 	mutex_unlock(&video_keeper_mutex);
 }
 EXPORT_SYMBOL(try_free_keep_video);

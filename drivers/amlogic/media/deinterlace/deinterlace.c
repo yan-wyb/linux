@@ -7460,6 +7460,7 @@ static int di_task_handle(void *data)
 			di_pre_stru.cma_alloc_done = 1;
 		}
 		if (di_free_mem_pre()) {
+			usleep_range(40000, 40001);
 			di_cma_release(devp);
 			di_pr_info("release mirror\n");
 			atomic_set(&di_trig_free_mem, 0);
