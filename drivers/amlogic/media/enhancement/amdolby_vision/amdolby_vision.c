@@ -57,6 +57,7 @@
 #include <linux/string.h>
 #include <linux/vmalloc.h>
 #include <linux/arm-smccc.h>
+#include <linux/spinlock.h>
 
 DEFINE_SPINLOCK(dovi_lock);
 
@@ -494,6 +495,52 @@ MODULE_PARM_DESC(sdr_ref_mode, "\n sdr_ref_mode\n");
 static unsigned int ambient_test_mode;
 module_param(ambient_test_mode, uint, 0664);
 MODULE_PARM_DESC(ambient_test_mode, "\n ambient_test_mode\n");
+
+#define MAX_DV_PICTUREMODES 5
+struct pq_config_s bin_to_cfg[MAX_DV_PICTUREMODES];
+
+static struct dv_cfg_info_s cfg_info[2] = {
+	{0, "cinema", 0, 0, 0, 0, {0, 0, 0, 0, 0, 0, 0} },
+	{1, "standard", 0, 0, 0, 0, {0, 0, 0, 0, 0, 0, 0} },
+};
+
+static s16 pq_center[2][4];
+struct dv_pq_range_s pq_range[4];
+u8 current_vsvdb[7];
+
+#define USE_CENTER_2048 0
+
+int num_picture_mode;
+static int default_pic_mode;
+static int cur_pic_mode;/*current picture mode id*/
+static bool load_bin_config;
+static bool need_update_cfg;
+
+static const s16 EXTER_MIN_PQ = -256;
+static const s16 EXTER_MAX_PQ = 256;
+static const s16 INTER_MIN_PQ; //0
+static const s16 INTER_MAX_PQ = 4095;
+static const s16 INTER_CENTER_PQ = 2048;
+
+#define LEFT_RANGE_BRIGHTNESS  (-1536) /*limit the range*/
+#define RIGHT_RANGE_BRIGHTNESS (1536)
+#define LEFT_RANGE_CONTRAST    (0)
+#define RIGHT_RANGE_CONTRAST   (4095)
+#define LEFT_RANGE_COLORSHIFT  (0)
+#define RIGHT_RANGE_COLORSHIFT (4095)
+#define LEFT_RANGE_SATURATION  (0)
+#define RIGHT_RANGE_SATURATION (4095)
+
+const char *pq_item_str[] = {"brightness",
+			     "contrast",
+			     "colorshift",
+			     "saturation"};
+
+const char *eotf_str[] = {"bt1886", "pq", "power"};
+
+/*0: set exter pq [-256,256]. 1:set inter pq [0,4095]*/
+static int set_inter_pq;
+static DEFINE_SPINLOCK(cfg_lock);
 
 #ifdef V1_6_1
 #define AMBIENT_CFG_FRAMES 46
@@ -7196,6 +7243,7 @@ int dolby_vision_parse_metadata(
 #ifdef V1_6_1
 	int vsem_if_size = 0;
 #endif
+	unsigned long lockflags;
 	memset(&req, 0, (sizeof(struct provider_aux_req_s)));
 	memset(&el_req, 0, (sizeof(struct provider_aux_req_s)));
 
@@ -7696,38 +7744,42 @@ int dolby_vision_parse_metadata(
 		if (!pq_config_set_flag) {
 			if (debug_dolby & 1)
 				pr_dolby_dbg("update def_tgt_display_cfg\n");
-			if ((dolby_vision_flags & FLAG_FORCE_DOVI_LL)
-				|| (req.low_latency == 1))
-				memcpy(&(((struct pq_config_s *)
-				pq_config_fake)->target_display_config),
+			if (!load_bin_config) {
+				if ((dolby_vision_flags & FLAG_FORCE_DOVI_LL) ||
+				    (req.low_latency == 1))
+					memcpy(&(((struct pq_config_s *)
+					pq_config_fake)->target_display_config),
 #ifdef V1_6_1
-				DV_cfg_ll[cfg_ll_id],
+					DV_cfg_ll[cfg_ll_id],
 #else
-				&def_tgt_display_cfg_ll,
+					&def_tgt_display_cfg_ll,
 #endif
-				sizeof(def_tgt_display_cfg_ll));
-			else {
+					sizeof(def_tgt_display_cfg_ll));
+				else {
 #ifdef V1_6_1
-				/* cert: need cfg_id = 0 */
-				if (dolby_vision_flags & FLAG_CERTIFICAION)
-					cfg_id = 0;
-				else
-					cfg_id = 1;
+					/* cert: need cfg_id = 0 */
+					if (dolby_vision_flags &
+					    FLAG_CERTIFICAION)
+						cfg_id = 0;
+					else
+						cfg_id = 1;
 #endif
-				memcpy(&(((struct pq_config_s *)
-				pq_config_fake)->target_display_config),
+					memcpy(&(((struct pq_config_s *)
+					pq_config_fake)->target_display_config),
 #ifdef V1_6_1
-				DV_cfg[cfg_id],
+					DV_cfg[cfg_id],
 #else
-				&def_tgt_display_cfg,
+					&def_tgt_display_cfg,
 #endif
-				sizeof(def_tgt_display_cfg));
+					sizeof(def_tgt_display_cfg));
 #ifdef V1_6_1
-				/* cert: need dm31_avail=0*/
-				if (dolby_vision_flags & FLAG_CERTIFICAION)
+					/* cert: need dm31_avail=0*/
+					if (dolby_vision_flags &
+					    FLAG_CERTIFICAION)
 					((struct pq_config_s *)pq_config_fake)
 					->target_display_config.dm31_avail = 0;
 #endif
+				}
 			}
 			pq_config_set_flag = true;
 		}
@@ -7772,18 +7824,6 @@ int dolby_vision_parse_metadata(
 			((struct pq_config_s *)pq_config_fake)
 				->target_display_config.tuningMode &=
 				(~TUNINGMODE_EL_FORCEDDISABLE);
-#ifdef V1_5
-#if 0
-		/* disable global dimming */
-		if (dolby_vision_flags & FLAG_CERTIFICAION)
-			((struct pq_config_s *)pq_config_fake)
-				->target_display_config.tuningMode &=
-				(~TUNINGMODE_EXTLEVEL4_DISABLE);
-		else
-			((struct pq_config_s *)pq_config_fake)
-				->target_display_config.tuningMode |=
-				TUNINGMODE_EXTLEVEL4_DISABLE;
-#endif
 #ifdef V1_6_1
 		if ((dolby_vision_flags & FLAG_CERTIFICAION) && sdr_ref_mode) {
 			((struct pq_config_s *)pq_config_fake)
@@ -7796,9 +7836,12 @@ int dolby_vision_parse_metadata(
 				->target_display_config.dm31_avail = 1;
 		}
 #endif
+		spin_lock_irqsave(&cfg_lock, lockflags);
+#ifdef V1_5
 		if ((src_format != tv_dovi_setting->src_format) ||
 			(tv_dovi_setting->video_width != w) ||
-			(tv_dovi_setting->video_height != h)) {
+			(tv_dovi_setting->video_height != h) ||
+			need_update_cfg) {
 			pr_dolby_dbg("reset control_path fmt %d->%d, w %d->%d, h %d->%d\n",
 				tv_dovi_setting->src_format, src_format,
 				tv_dovi_setting->video_width, w,
@@ -7830,8 +7873,11 @@ int dolby_vision_parse_metadata(
 					NULL,
 					NULL);
 #endif
+			if (need_update_cfg)
+				need_update_cfg = false;
 		}
 #endif
+		spin_unlock_irqrestore(&cfg_lock, lockflags);
 		tv_dovi_setting->video_width = w << 16;
 		tv_dovi_setting->video_height = h << 16;
 		if ((!p_funcs_tv) || (!p_funcs_tv->tv_control_path))
@@ -8691,7 +8737,8 @@ int dolby_vision_process(
 
 	/* monitor policy changes */
 	policy_changed = is_policy_changed();
-	if (policy_changed || format_changed || (graphic_status & 2))
+	if (policy_changed || format_changed || (graphic_status & 2) ||
+	    need_update_cfg)
 		dolby_vision_set_toggle_flag(1);
 
 	if (!is_dolby_vision_on())
@@ -8711,7 +8758,7 @@ int dolby_vision_process(
 	}
 	if (sink_changed || policy_changed || format_changed ||
 	    (video_status == 1) || (graphic_status & 2) ||
-	    (dolby_vision_flags & FLAG_FORCE_HDMI_PKT)) {
+	    (dolby_vision_flags & FLAG_FORCE_HDMI_PKT) || need_update_cfg) {
 		if (debug_dolby & 1)
 			pr_dolby_dbg("sink %s,cap 0x%x,video %s,osd %s,vf %p,toggle %d\n",
 				     current_sink_available ? "on" : "off",
@@ -9254,6 +9301,1051 @@ static unsigned long __invoke_psci_fn_smc(unsigned long function_id,
 	return res.a0;
 }
 
+static void parse_param_amdolby_vision(char *buf_orig, char **parm)
+{
+	char *ps, *token;
+	unsigned int n = 0;
+	char delim1[3] = " ";
+	char delim2[2] = "\n";
+
+	ps = buf_orig;
+	strcat(delim1, delim2);
+	while (1) {
+		token = strsep(&ps, delim1);
+		if (!token)
+			break;
+		if (*token == '\0')
+			continue;
+		parm[n++] = token;
+		if (n >= MAX_PARAM)
+			break;
+	}
+}
+
+static inline s16 clamps(s16 value, s16 v_min, s16 v_max)
+{
+	if (value > v_max)
+		return v_max;
+	if (value < v_min)
+		return v_min;
+	return value;
+}
+
+/*to do*/
+static void update_vsvdb_to_rx(void)
+{
+	u8 *p = cfg_info[cur_pic_mode].vsvdb;
+
+	if (memcmp(&current_vsvdb[0], p, sizeof(current_vsvdb))) {
+		memcpy(&current_vsvdb[0], p, sizeof(current_vsvdb));
+		pr_info("%s: %d %d %d %d %d %d %d\n",
+			__func__, p[0], p[1], p[2], p[3], p[4], p[5], p[6]);
+	}
+}
+
+static void update_cp_cfg(void)
+{
+	unsigned long lockflags;
+	struct TargetDisplayConfig *tdc;
+
+	memcpy(pq_config_fake,
+	       &bin_to_cfg[cur_pic_mode],
+	       sizeof(struct pq_config_s));
+	tdc = &(((struct pq_config_s *)pq_config_fake)->target_display_config);
+	tdc->brightness	= cfg_info[cur_pic_mode].brightness;
+	tdc->contrast = cfg_info[cur_pic_mode].contrast;
+	tdc->dColorShift = cfg_info[cur_pic_mode].colorshift;
+	tdc->dSaturation = cfg_info[cur_pic_mode].saturation;
+
+	spin_lock_irqsave(&cfg_lock, lockflags);
+	need_update_cfg = true;
+	spin_unlock_irqrestore(&cfg_lock, lockflags);
+}
+
+/*0: reset picture mode and reset pq for all picture mode*/
+/*1: reset pq for all picture mode*/
+/*2: reset pq for current picture mode */
+static void restore_dv_pq_setting(enum pq_reset_e pq_reset)
+{
+	int mode = 0;
+
+	if (pq_reset == RESET_ALL)
+		cur_pic_mode = default_pic_mode;
+
+	for (mode = 0; mode < num_picture_mode; mode++) {
+		if (pq_reset == RESET_PQ_FOR_CUR && mode != cur_pic_mode)
+			continue;
+		cfg_info[mode].brightness =
+			bin_to_cfg[mode].target_display_config.brightness;
+		cfg_info[mode].contrast =
+			bin_to_cfg[mode].target_display_config.contrast;
+		cfg_info[mode].colorshift =
+			bin_to_cfg[mode].target_display_config.dColorShift;
+		cfg_info[mode].saturation =
+			bin_to_cfg[mode].target_display_config.dSaturation;
+		memcpy(cfg_info[mode].vsvdb,
+		       bin_to_cfg[mode].target_display_config.vsvdb,
+		       sizeof(cfg_info[mode].vsvdb));
+	}
+	update_cp_cfg();
+	if (debug_dolby & 0x200)
+		pr_info("reset pq %d\n", pq_reset);
+}
+
+static void set_dv_pq_center(void)
+{
+	int mode = 0;
+#if USE_CENTER_2048
+	for (mode = 0; mode < num_picture_mode; mode++) {
+		pq_center[mode][0] = 2048;
+		pq_center[mode][1] = 2048;
+		pq_center[mode][2] = 2048;
+		pq_center[mode][3] = 2048;
+	}
+#else
+	for (mode = 0; mode < num_picture_mode; mode++) {
+		pq_center[mode][0] =
+			bin_to_cfg[mode].target_display_config.brightness;
+		pq_center[mode][1] =
+			bin_to_cfg[mode].target_display_config.contrast;
+		pq_center[mode][2] =
+			bin_to_cfg[mode].target_display_config.dColorShift;
+		pq_center[mode][3] =
+			bin_to_cfg[mode].target_display_config.dSaturation;
+	}
+#endif
+}
+
+static void set_dv_pq_range(void)
+{
+	pq_range[PQ_BRIGHTNESS].left = LEFT_RANGE_BRIGHTNESS;
+	pq_range[PQ_BRIGHTNESS].right = RIGHT_RANGE_BRIGHTNESS;
+	pq_range[PQ_CONTRAST].left = LEFT_RANGE_CONTRAST;
+	pq_range[PQ_CONTRAST].right = RIGHT_RANGE_CONTRAST;
+	pq_range[PQ_COLORSHIFT].left = LEFT_RANGE_COLORSHIFT;
+	pq_range[PQ_COLORSHIFT].right = RIGHT_RANGE_COLORSHIFT;
+	pq_range[PQ_SATURATION].left = LEFT_RANGE_SATURATION;
+	pq_range[PQ_SATURATION].right = RIGHT_RANGE_SATURATION;
+}
+
+static int load_dv_pq_config_data(void)
+{
+	struct file *filp = NULL;
+	bool ret = true;
+	char *path = "/vendor/etc/tvconfig/panel/dv_config.bin";
+	loff_t pos = 0;
+	mm_segment_t old_fs = get_fs();
+
+	struct kstat stat;
+	unsigned int length = 0;
+	unsigned int max_len = sizeof(bin_to_cfg);
+
+	set_fs(KERNEL_DS);
+
+	filp = filp_open(path, O_RDONLY, 0444);
+	if (IS_ERR(filp)) {
+		ret = false;
+		pr_info("[%s] failed to open file: |%s|\n", __func__, path);
+		goto LOAD_END;
+	}
+
+	vfs_stat(path, &stat);
+
+	length = (stat.size > max_len) ? max_len : stat.size;
+	num_picture_mode = length / sizeof(struct pq_config_s);
+
+	if (num_picture_mode >
+	    sizeof(cfg_info) / sizeof(struct dv_cfg_info_s)) {
+		pr_info("dv_config.bin size(%d) bigger than cfg_info(%d)\n",
+			num_picture_mode,
+			(int)(sizeof(cfg_info) / sizeof(struct dv_cfg_info_s)));
+		num_picture_mode =
+			sizeof(cfg_info) / sizeof(struct dv_cfg_info_s);
+	}
+	vfs_read(filp, (char *)bin_to_cfg, length, &pos);
+
+	set_dv_pq_center();
+	set_dv_pq_range();
+	restore_dv_pq_setting(RESET_ALL);
+	update_vsvdb_to_rx();
+
+	filp_close(filp, NULL);
+
+	pr_info("DV config: load %d picture mode\n", num_picture_mode);
+
+LOAD_END:
+	set_fs(old_fs);
+	return ret;
+}
+
+/*internal range -> external range*/
+static s16 map_pq_inter_to_exter
+	(enum pq_item_e pq_item,
+	 s16 inter_value)
+{
+	s16 inter_pq_min;
+	s16 inter_pq_max;
+	s16 exter_pq_min;
+	s16 exter_pq_max;
+	s16 exter_value;
+	s16 inter_range;
+	s16 exter_range;
+	s16 tmp;
+	s16 left_range = pq_range[pq_item].left;
+	s16 right_range = pq_range[pq_item].right;
+	s16 center = pq_center[cur_pic_mode][pq_item];
+
+	if (inter_value >= center) {
+		exter_pq_min = 0;
+		exter_pq_max = EXTER_MAX_PQ;
+		inter_pq_min = center;
+		inter_pq_max = center + right_range;
+	} else {
+		exter_pq_min = EXTER_MIN_PQ;
+		exter_pq_max = 0;
+		inter_pq_min = center + left_range;
+		inter_pq_max = center;
+	}
+	inter_pq_min = clamps(inter_pq_min, INTER_MIN_PQ, INTER_MAX_PQ);
+	inter_pq_max = clamps(inter_pq_max, INTER_MIN_PQ, INTER_MAX_PQ);
+	tmp = clamps(inter_value, inter_pq_min, inter_pq_max);
+
+	inter_range = inter_pq_max - inter_pq_min;
+	exter_range = exter_pq_max - exter_pq_min;
+
+	if (inter_range == 0) {
+		inter_range = INTER_MAX_PQ;
+		pr_info("invalid inter_range, set to INTER_MAX_PQ\n");
+	}
+
+	exter_value = exter_pq_min +
+		(tmp - inter_pq_min) * exter_range / inter_range;
+
+	if (debug_dolby & 0x200)
+		pr_info("%s: %s [%d]->[%d]\n",
+			__func__, pq_item_str[pq_item],
+			inter_value, exter_value);
+	return exter_value;
+}
+
+/*external range -> internal range*/
+static s16 map_pq_exter_to_inter
+	(enum pq_item_e pq_item,
+	 s16 exter_value)
+{
+	s16 inter_pq_min;
+	s16 inter_pq_max;
+	s16 exter_pq_min;
+	s16 exter_pq_max;
+	s16 inter_value;
+	s16 inter_range;
+	s16 exter_range;
+	s16 tmp;
+	s16 left_range = pq_range[pq_item].left;
+	s16 right_range = pq_range[pq_item].right;
+	s16 center = pq_center[cur_pic_mode][pq_item];
+
+	if (exter_value >= 0) {
+		exter_pq_min = 0;
+		exter_pq_max = EXTER_MAX_PQ;
+		inter_pq_min = center;
+		inter_pq_max = center + right_range;
+	} else {
+		exter_pq_min = EXTER_MIN_PQ;
+		exter_pq_max = 0;
+		inter_pq_min = center + left_range;
+		inter_pq_max = center;
+	}
+
+	inter_pq_min = clamps(inter_pq_min, INTER_MIN_PQ, INTER_MAX_PQ);
+	inter_pq_max = clamps(inter_pq_max, INTER_MIN_PQ, INTER_MAX_PQ);
+	tmp = clamps(exter_value, exter_pq_min, exter_pq_max);
+
+	inter_range = inter_pq_max - inter_pq_min;
+	exter_range = exter_pq_max - exter_pq_min;
+
+	inter_value = inter_pq_min +
+		(tmp - exter_pq_min) * inter_range / exter_range;
+
+	if (debug_dolby & 0x200)
+		pr_info("%s: %s [%d]->[%d]\n",
+			__func__, pq_item_str[pq_item],
+			exter_value, inter_value);
+	return inter_value;
+}
+
+static bool is_valid_pic_mode(int mode)
+{
+	if (mode < num_picture_mode && mode >= 0)
+		return true;
+	else
+		return false;
+}
+
+static bool is_valid_pq_exter_value(s16 exter_value)
+{
+	if (exter_value <= EXTER_MAX_PQ && exter_value >= EXTER_MIN_PQ)
+		return true;
+
+	pr_info("pq %d is out of range[%d, %d]\n",
+		exter_value, EXTER_MIN_PQ, EXTER_MAX_PQ);
+		return false;
+}
+
+static bool is_valid_pq_inter_value(s16 exter_value)
+{
+	if (exter_value <= INTER_MAX_PQ && exter_value >= INTER_MIN_PQ)
+		return true;
+
+	pr_info("pq %d is out of range[%d, %d]\n",
+		exter_value, INTER_MIN_PQ, INTER_MAX_PQ);
+	return false;
+}
+
+static void set_pic_mode(int mode)
+{
+	cur_pic_mode = mode;
+	update_cp_cfg();
+	update_vsvdb_to_rx();
+}
+
+static int get_pic_mode_num(void)
+{
+	return num_picture_mode;
+}
+
+static int get_pic_mode(void)
+{
+	return cur_pic_mode;
+}
+
+static char *get_pic_mode_name(int mode)
+{
+	if (!is_valid_pic_mode(mode))
+		return "errmode";
+
+	return cfg_info[mode].pic_mode_name;
+}
+
+static s16 get_single_pq_value(int mode, enum pq_item_e item)
+{
+	s16 exter_value = 0;
+	s16 inter_value = 0;
+
+	if (!is_valid_pic_mode(mode)) {
+		pr_err("err picture mode %d\n", mode);
+		return exter_value;
+	}
+	switch (item) {
+	case PQ_BRIGHTNESS:
+		inter_value = cfg_info[mode].brightness;
+		break;
+	case PQ_CONTRAST:
+		inter_value = cfg_info[mode].contrast;
+		break;
+	case PQ_COLORSHIFT:
+		inter_value = cfg_info[mode].colorshift;
+		break;
+	case PQ_SATURATION:
+		inter_value = cfg_info[mode].saturation;
+		break;
+	default:
+		pr_err("err pq_item %d\n", item);
+		break;
+	}
+
+	exter_value = map_pq_inter_to_exter(item, inter_value);
+
+	if (debug_dolby & 0x200)
+		pr_info("%s: mode:%d, item:%s, [inter: %d, exter: %d]\n",
+			__func__, mode, pq_item_str[item],
+			inter_value, exter_value);
+	return exter_value;
+}
+
+static struct dv_full_pq_info_s get_full_pq_value(int mode)
+{
+	s16 exter_value = 0;
+	struct dv_full_pq_info_s full_pq_info = {mode, 0, 0, 0, 0};
+
+	if (!is_valid_pic_mode(mode)) {
+		pr_err("err picture mode %d\n", mode);
+		return full_pq_info;
+	}
+
+	exter_value = map_pq_inter_to_exter(PQ_BRIGHTNESS,
+					    cfg_info[mode].brightness);
+	full_pq_info.brightness = exter_value;
+
+	exter_value = map_pq_inter_to_exter(PQ_CONTRAST,
+					    cfg_info[mode].contrast);
+	full_pq_info.contrast = exter_value;
+
+	exter_value = map_pq_inter_to_exter(PQ_COLORSHIFT,
+					    cfg_info[mode].colorshift);
+	full_pq_info.colorshift = exter_value;
+
+	exter_value = map_pq_inter_to_exter(PQ_SATURATION,
+					    cfg_info[mode].saturation);
+	full_pq_info.saturation = exter_value;
+
+	if (debug_dolby & 0x200) {
+		pr_info("----------%s: mode:%d-----------\n", __func__, mode);
+		pr_info("%s: value[inter: %d, exter: %d]\n",
+			pq_item_str[PQ_BRIGHTNESS],
+			cfg_info[mode].brightness,
+			full_pq_info.brightness);
+		pr_info("%s: value[inter: %d, exter: %d]\n",
+			pq_item_str[PQ_CONTRAST],
+			cfg_info[mode].contrast,
+			full_pq_info.contrast);
+		pr_info("%s: value[inter: %d, exter: %d]\n",
+			pq_item_str[PQ_COLORSHIFT],
+			cfg_info[mode].colorshift,
+			full_pq_info.colorshift);
+		pr_info("%s: value[inter: %d, exter: %d]\n",
+			pq_item_str[PQ_SATURATION],
+			cfg_info[mode].saturation,
+			full_pq_info.saturation);
+	}
+
+	return full_pq_info;
+}
+
+static void set_single_pq_value(int mode, enum pq_item_e item, s16 value)
+{
+	s16 inter_value = 0;
+	s16 exter_value = value;
+
+	if (!is_valid_pic_mode(mode)) {
+		pr_err("err picture mode %d\n", mode);
+		return;
+	}
+	if (!set_inter_pq) {
+		if (!is_valid_pq_exter_value(exter_value)) {
+			exter_value =
+				clamps(exter_value, EXTER_MIN_PQ, EXTER_MAX_PQ);
+			pr_info("clamps %s to %d\n",
+				pq_item_str[item], exter_value);
+		}
+		inter_value = map_pq_exter_to_inter(item, exter_value);
+		if (debug_dolby & 0x200) {
+			pr_info("%s: mode:%d, item:%s, [inter:%d, exter:%d]\n",
+				__func__, mode, pq_item_str[item],
+				inter_value, exter_value);
+		}
+	} else {
+		inter_value = value;
+		if (!is_valid_pq_inter_value(inter_value)) {
+			inter_value =
+				clamps(inter_value, INTER_MIN_PQ, INTER_MAX_PQ);
+			pr_info("clamps %s to %d\n",
+				pq_item_str[item], inter_value);
+		}
+		if (debug_dolby & 0x200) {
+			exter_value = map_pq_inter_to_exter(item, inter_value);
+			pr_info("%s: mode:%d, item:%s, [inter:%d, exter:%d]\n",
+				__func__, mode, pq_item_str[item],
+				inter_value, exter_value);
+		}
+	}
+	switch (item) {
+	case PQ_BRIGHTNESS:
+		cfg_info[cur_pic_mode].brightness = inter_value;
+		break;
+	case PQ_CONTRAST:
+		cfg_info[cur_pic_mode].contrast = inter_value;
+		break;
+	case PQ_COLORSHIFT:
+		cfg_info[cur_pic_mode].colorshift = inter_value;
+		break;
+	case PQ_SATURATION:
+		cfg_info[cur_pic_mode].saturation = inter_value;
+		break;
+	default:
+		pr_err("err pq_item %d\n", item);
+		break;
+	}
+	update_cp_cfg();
+}
+
+static void set_full_pq_value(struct dv_full_pq_info_s full_pq_info)
+{
+	s16 inter_value = 0;
+	s16 exter_value = 0;
+	int mode = full_pq_info.pic_mode_id;
+
+	if (!is_valid_pic_mode(mode)) {
+		pr_err("err picture mode %d\n", mode);
+		return;
+	}
+	/*------------set brightness----------*/
+	if (!set_inter_pq) {
+		exter_value = full_pq_info.brightness;
+		if (!is_valid_pq_exter_value(exter_value)) {
+			exter_value =
+				clamps(exter_value, EXTER_MIN_PQ, EXTER_MAX_PQ);
+			pr_info("clamps brightness from %d to %d\n",
+				full_pq_info.brightness, exter_value);
+		}
+		inter_value = map_pq_exter_to_inter(PQ_BRIGHTNESS, exter_value);
+	} else {
+		inter_value = full_pq_info.brightness;
+		if (!is_valid_pq_inter_value(inter_value)) {
+			inter_value =
+				clamps(inter_value, INTER_MIN_PQ, INTER_MAX_PQ);
+			pr_info("clamps brightness from %d to %d\n",
+				full_pq_info.brightness, inter_value);
+		}
+	}
+	cfg_info[cur_pic_mode].brightness = inter_value;
+
+	/*-------------set contrast-----------*/
+	if (!set_inter_pq) {
+		exter_value = full_pq_info.contrast;
+		if (!is_valid_pq_exter_value(exter_value)) {
+			exter_value =
+				clamps(exter_value, EXTER_MIN_PQ, EXTER_MAX_PQ);
+			pr_info("clamps contrast from %d to %d\n",
+				full_pq_info.contrast, exter_value);
+		}
+		inter_value = map_pq_exter_to_inter(PQ_CONTRAST, exter_value);
+	} else {
+		inter_value = full_pq_info.contrast;
+		if (!is_valid_pq_inter_value(inter_value)) {
+			inter_value =
+				clamps(inter_value, INTER_MIN_PQ, INTER_MAX_PQ);
+			pr_info("clamps contrast from %d to %d\n",
+				full_pq_info.contrast, inter_value);
+		}
+	}
+	cfg_info[cur_pic_mode].contrast = inter_value;
+
+	/*-------------set colorshift-----------*/
+	if (!set_inter_pq) {
+		exter_value = full_pq_info.colorshift;
+		if (!is_valid_pq_exter_value(exter_value)) {
+			exter_value =
+				clamps(exter_value, EXTER_MIN_PQ, EXTER_MAX_PQ);
+			pr_info("clamps colorshift from %d to %d\n",
+				full_pq_info.colorshift, exter_value);
+		}
+		inter_value = map_pq_exter_to_inter(PQ_COLORSHIFT, exter_value);
+	} else {
+		inter_value = full_pq_info.colorshift;
+		if (!is_valid_pq_inter_value(inter_value)) {
+			inter_value =
+				clamps(inter_value, INTER_MIN_PQ, INTER_MAX_PQ);
+			pr_info("clamps colorshift from %d to %d\n",
+				full_pq_info.colorshift, inter_value);
+		}
+	}
+	cfg_info[cur_pic_mode].colorshift = inter_value;
+
+	/*-------------set colorshift-----------*/
+	if (!set_inter_pq) {
+		exter_value = full_pq_info.saturation;
+		if (!is_valid_pq_exter_value(exter_value)) {
+			exter_value =
+				clamps(exter_value, EXTER_MIN_PQ, EXTER_MAX_PQ);
+			pr_info("clamps saturation from %d to %d\n",
+				full_pq_info.saturation, exter_value);
+		}
+		inter_value = map_pq_exter_to_inter(PQ_SATURATION, exter_value);
+	} else {
+		inter_value = full_pq_info.saturation;
+		if (!is_valid_pq_inter_value(inter_value)) {
+			inter_value =
+				clamps(inter_value, INTER_MIN_PQ, INTER_MAX_PQ);
+			pr_info("clamps saturation from %d to %d\n",
+				full_pq_info.saturation, inter_value);
+		}
+	}
+	cfg_info[cur_pic_mode].saturation = inter_value;
+
+	update_cp_cfg();
+
+	if (debug_dolby & 0x200) {
+		pr_info("----------%s: mode:%d----------\n", __func__, mode);
+		exter_value = map_pq_inter_to_exter(PQ_BRIGHTNESS,
+						    cfg_info[mode].brightness);
+		pr_info("%s: [inter:%d, exter:%d]\n",
+			pq_item_str[PQ_BRIGHTNESS],
+			cfg_info[mode].brightness,
+			exter_value);
+
+		exter_value = map_pq_inter_to_exter(PQ_CONTRAST,
+						    cfg_info[mode].contrast);
+		pr_info("%s: [inter:%d, exter:%d]\n",
+			pq_item_str[PQ_CONTRAST],
+			cfg_info[mode].contrast,
+			exter_value);
+
+		exter_value = map_pq_inter_to_exter(PQ_COLORSHIFT,
+						    cfg_info[mode].colorshift);
+		pr_info("%s: [inter:%d, exter:%d]\n",
+			pq_item_str[PQ_COLORSHIFT],
+			cfg_info[mode].colorshift,
+			exter_value);
+
+		exter_value = map_pq_inter_to_exter(PQ_SATURATION,
+						    cfg_info[mode].saturation);
+		pr_info("%s: [inter:%d, exter:%d]\n",
+			pq_item_str[PQ_SATURATION],
+			cfg_info[mode].saturation,
+			exter_value);
+	}
+}
+
+static ssize_t amdolby_vision_set_inter_pq_show
+		(struct class *cla,
+		 struct class_attribute *attr,
+		 char *buf)
+{
+	return snprintf(buf, 40, "%d\n",
+		set_inter_pq);
+}
+
+static ssize_t amdolby_vision_set_inter_pq_store
+		(struct class *cla,
+		 struct class_attribute *attr,
+		 const char *buf, size_t count)
+
+{
+	size_t r;
+
+	pr_info("cmd: %s\n", buf);
+	r = kstrtoint(buf, 0, &set_inter_pq);
+	if (r != 0)
+		return -EINVAL;
+	return count;
+}
+
+static ssize_t amdolby_vision_load_cfg_status_show
+		(struct class *cla,
+		 struct class_attribute *attr,
+		 char *buf)
+{
+	return snprintf(buf, 40, "%d\n",
+		load_bin_config);
+}
+
+static ssize_t amdolby_vision_load_cfg_status_store
+		(struct class *cla,
+		 struct class_attribute *attr,
+		 const char *buf, size_t count)
+{
+	size_t r;
+	int value = 0;
+
+	pr_info("%s: cmd: %s\n", __func__, buf);
+	r = kstrtoint(buf, 0, &value);
+	if (r != 0)
+		return -EINVAL;
+	load_bin_config = value;
+	if (load_bin_config)
+		update_cp_cfg();
+	else
+		pq_config_set_flag = false;
+	return count;
+}
+
+static ssize_t  amdolby_vision_pq_info_show
+		(struct class *cla,
+		 struct class_attribute *attr, char *buf)
+{
+	int pos = 0;
+	int exter_value = 0;
+	int inter_value = 0;
+	int i = 0;
+	const char *pq_usage_str = {
+	"\n"
+	"------------------------- set pq usage ------------------------\n"
+	"echo picture_mode value > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"echo brightness value   > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"echo contrast value     > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"echo colorshift value   > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"echo saturation value   > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"echo all v1 v2 v3 v4 v5 > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"echo reset value        > /sys/class/amdolby_vision/dv_pq_info;\n"
+	"\n"
+	"picture_mode range: [0, num_picture_mode-1]\n"
+	"brightness   range: [-256, 256]\n"
+	"contrast     range: [-256, 256]\n"
+	"colorshift   range: [-256, 256]\n"
+	"saturation   range: [-256, 256]\n"
+	"reset            0: reset pict mode/all pq for all pict mode]\n"
+	"                 1: reset pq for all picture mode]\n"
+	"                 2: reset pq for current picture mode]\n"
+	"---------------------------------------------------------------\n"
+	};
+
+	if (!load_bin_config) {
+		pr_info("no load_bin_config\n");
+		return 0;
+	}
+
+	pos += sprintf(buf + pos,
+		       "\n==== show current picture mode info ====\n");
+
+	pos += sprintf(buf + pos,
+		       "num_picture_mode:          [%d]\n", num_picture_mode);
+	for (i = 0; i < num_picture_mode; i++) {
+		pos += sprintf(buf + pos,
+			       "picture_mode   %d:          [%s]\n",
+			       cfg_info[i].id, cfg_info[i].pic_mode_name);
+	}
+	pos += sprintf(buf + pos, "\n\n");
+	pos += sprintf(buf + pos,
+		       "current picture mode:      [%d]\n", cur_pic_mode);
+
+	pos += sprintf(buf + pos,
+		       "current picture mode name: [%s]\n",
+		       cfg_info[cur_pic_mode].pic_mode_name);
+
+	inter_value = cfg_info[cur_pic_mode].brightness;
+	exter_value = map_pq_inter_to_exter(PQ_BRIGHTNESS, inter_value);
+	pos += sprintf(buf + pos,
+		       "current brightness:        [inter:%d][exter:%d]\n",
+		       inter_value, exter_value);
+
+	inter_value = cfg_info[cur_pic_mode].contrast;
+	exter_value = map_pq_inter_to_exter(PQ_CONTRAST, inter_value);
+	pos += sprintf(buf + pos,
+		       "current contrast:          [inter:%d][exter:%d]\n",
+		       inter_value, exter_value);
+
+	inter_value = cfg_info[cur_pic_mode].colorshift;
+	exter_value = map_pq_inter_to_exter(PQ_COLORSHIFT, inter_value);
+	pos += sprintf(buf + pos,
+		       "current colorshift:        [inter:%d][exter:%d]\n",
+		       inter_value, exter_value);
+
+	inter_value = cfg_info[cur_pic_mode].saturation;
+	exter_value = map_pq_inter_to_exter(PQ_SATURATION, inter_value);
+	pos += sprintf(buf + pos,
+		       "current saturation:        [inter:%d][exter:%d]\n",
+		       inter_value, exter_value);
+	pos += sprintf(buf + pos, "========================================\n");
+
+	pos += sprintf(buf + pos, "%s\n", pq_usage_str);
+
+	return pos;
+}
+
+static ssize_t amdolby_vision_pq_info_store
+		(struct class *cla,
+		 struct class_attribute *attr,
+		 const char *buf, size_t count)
+{
+	char *buf_orig;
+	char *parm[MAX_PARAM] = {NULL};
+	struct dv_full_pq_info_s full_pq_info;
+	enum pq_reset_e pq_reset;
+	int val = 0;
+	int val1 = 0;
+	int val2 = 0;
+	int val3 = 0;
+	int val4 = 0;
+	int val5 = 0;
+	int item = -1;
+
+	if (!load_bin_config)
+		return count;
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+
+	pr_info("%s: cmd: %s\n", __func__, buf_orig);
+	parse_param_amdolby_vision(buf_orig, (char **)&parm);
+	if (!parm[0])
+		goto ERR;
+
+	if (!strcmp(parm[0], "picture_mode")) {
+		if (kstrtoint(parm[1], 10, &val) != 0)
+			goto ERR;
+		if (is_valid_pic_mode(val))
+			set_pic_mode(val);
+		else
+			pr_info("err picture_mode\n");
+	} else if (!strcmp(parm[0], "brightness")) {
+		if (kstrtoint(parm[1], 10, &val) != 0)
+			goto ERR;
+
+		item = PQ_BRIGHTNESS;
+	} else if (!strcmp(parm[0], "contrast")) {
+		if (kstrtoint(parm[1], 10, &val) != 0)
+			goto ERR;
+
+		item = PQ_CONTRAST;
+	} else if (!strcmp(parm[0], "colorshift")) {
+		if (kstrtoint(parm[1], 10, &val) != 0)
+			goto ERR;
+
+		item = PQ_COLORSHIFT;
+	} else if (!strcmp(parm[0], "saturation")) {
+		if (kstrtoint(parm[1], 10, &val) != 0)
+			goto ERR;
+		item = PQ_SATURATION;
+	} else if (!strcmp(parm[0], "all")) {
+		if (kstrtoint(parm[1], 10, &val1) != 0 ||
+		    kstrtoint(parm[2], 10, &val2) != 0 ||
+		    kstrtoint(parm[3], 10, &val3) != 0 ||
+		    kstrtoint(parm[4], 10, &val4) != 0 ||
+		    kstrtoint(parm[5], 10, &val5) != 0)
+			goto ERR;
+		full_pq_info.pic_mode_id = val1;
+		full_pq_info.brightness = val2;
+		full_pq_info.contrast = val3;
+		full_pq_info.colorshift = val4;
+		full_pq_info.saturation = val5;
+		set_full_pq_value(full_pq_info);
+	} else if (!strcmp(parm[0], "reset")) {
+		if (kstrtoint(parm[1], 10, &val) != 0)
+			goto ERR;
+		pq_reset = val;
+		restore_dv_pq_setting(pq_reset);
+	} else {
+		pr_info("unsupport cmd\n");
+	}
+	if (item != -1)
+		set_single_pq_value(cur_pic_mode, item, val);
+ERR:
+	kfree(buf_orig);
+	return count;
+}
+
+static ssize_t amdolby_vision_bin_config_show
+	(struct class *cla,
+	 struct class_attribute *attr,
+	 char *buf)
+{
+	int mode = 0;
+	struct pq_config_s *pq_config = NULL;
+	struct TargetDisplayConfig *config = NULL;
+
+	if (!load_bin_config) {
+		pr_info("no load_bin_config\n");
+		return 0;
+	}
+
+	pr_info("There are %d picture modes\n", num_picture_mode);
+	for (mode = 0; mode < num_picture_mode; mode++) {
+		pr_info("================ DV picture mode: %s =================\n",
+			cfg_info[mode].pic_mode_name);
+		pq_config = &bin_to_cfg[mode];
+		config = &pq_config->target_display_config;
+		pr_info("gamma:               %d\n",
+			config->gamma);
+		pr_info("eotf:                %d-%s\n",
+			config->eotf,
+			eotf_str[config->eotf]);
+		pr_info("rangeSpec:           %d\n",
+			config->rangeSpec);
+		pr_info("maxPq:               %d\n",
+			config->maxPq);
+		pr_info("minPq:               %d\n",
+			config->minPq);
+		pr_info("maxPq_dm3:           %d\n",
+			config->maxPq_dm3);
+		pr_info("min_lin:             %d\n",
+			config->min_lin);
+		pr_info("max_lin:             %d\n",
+			config->max_lin);
+		pr_info("max_lin_dm3:         %d\n",
+			config->max_lin_dm3);
+		pr_info("tPrimaries:          %d,%d,%d,%d,%d,%d,%d,%d\n",
+			config->tPrimaries[0],
+			config->tPrimaries[1],
+			config->tPrimaries[2],
+			config->tPrimaries[3],
+			config->tPrimaries[4],
+			config->tPrimaries[5],
+			config->tPrimaries[6],
+			config->tPrimaries[7]);
+		pr_info("mSWeight:            %d\n",
+			config->mSWeight);
+		pr_info("trimSlopeBias:       %d\n",
+			config->trimSlopeBias);
+		pr_info("trimOffsetBias:      %d\n",
+			config->trimOffsetBias);
+		pr_info("trimPowerBias:       %d\n",
+			config->trimPowerBias);
+		pr_info("msWeightBias:        %d\n",
+			config->msWeightBias);
+		pr_info("chromaWeightBias:    %d\n",
+			config->chromaWeightBias);
+		pr_info("saturationGainBias:  %d\n",
+			config->saturationGainBias);
+		pr_info("brightness:          %d\n",
+			config->brightness);
+		pr_info("contrast:            %d\n",
+			config->contrast);
+		pr_info("dColorShift:         %d\n",
+			config->dColorShift);
+		pr_info("dSaturation:         %d\n",
+			config->dSaturation);
+		pr_info("dBacklight:          %d\n",
+			config->dBacklight);
+		pr_info("dbgExecParamsPrint:  %d\n",
+			config->dbgExecParamsPrintPeriod);
+		pr_info("dbgDmMdPrintPeriod:  %d\n",
+			config->dbgDmMdPrintPeriod);
+		pr_info("dbgDmCfgPrintPeriod: %d\n",
+			config->dbgDmCfgPrintPeriod);
+		pr_info("\n");
+		pr_info("------ Global Dimming configuration ------\n");
+		pr_info("gdEnable:            %d\n",
+			config->gdConfig.gdEnable);
+		pr_info("gdWMin:              %d\n",
+			config->gdConfig.gdWMin);
+		pr_info("gdWMin:              %d\n",
+			config->gdConfig.gdWMax);
+		pr_info("gdWMm:               %d\n",
+			config->gdConfig.gdWMm);
+		pr_info("gdWDynRngSqrt:       %d\n",
+			config->gdConfig.gdWDynRngSqrt);
+		pr_info("gdWeightMean:        %d\n",
+			config->gdConfig.gdWeightMean);
+		pr_info("gdWeightStd:         %d\n",
+			config->gdConfig.gdWeightStd);
+		pr_info("gdDelayMilliSec_hdmi:%d\n",
+			config->gdConfig.gdDelayMilliSec_hdmi);
+		pr_info("gdRgb2YuvExt:        %d\n",
+			config->gdConfig.gdRgb2YuvExt);
+		pr_info("gdWDynRngSqrt:       %d\n",
+			config->gdConfig.gdWDynRngSqrt);
+		pr_info("gdM33Rgb2Yuv:        %d %d,%d\n",
+			config->gdConfig.gdM33Rgb2Yuv[0][0],
+			config->gdConfig.gdM33Rgb2Yuv[0][1],
+			config->gdConfig.gdM33Rgb2Yuv[0][2]);
+		pr_info("                     %d,%d,%d\n",
+			config->gdConfig.gdM33Rgb2Yuv[1][0],
+			config->gdConfig.gdM33Rgb2Yuv[1][1],
+			config->gdConfig.gdM33Rgb2Yuv[1][2]);
+		pr_info("                     %d,%d,%d\n",
+			config->gdConfig.gdM33Rgb2Yuv[2][0],
+			config->gdConfig.gdM33Rgb2Yuv[2][1],
+			config->gdConfig.gdM33Rgb2Yuv[2][2]);
+		pr_info("gdWDynRngSqrt:       %d\n",
+			config->gdConfig.gdM33Rgb2YuvScale2P);
+		pr_info("gdRgb2YuvOffExt:     %d\n",
+			config->gdConfig.gdRgb2YuvOffExt);
+		pr_info("gdV3Rgb2YuvOff:      %d,%d,%d\n",
+			config->gdConfig.gdV3Rgb2YuvOff[0],
+			config->gdConfig.gdV3Rgb2YuvOff[1],
+			config->gdConfig.gdV3Rgb2YuvOff[2]);
+		pr_info("gdUpBound:           %d\n",
+			config->gdConfig.gdUpBound);
+		pr_info("gdLowBound:          %d\n",
+			config->gdConfig.gdLowBound);
+		pr_info("lastMaxPq:           %d\n",
+			config->gdConfig.lastMaxPq);
+		pr_info("gdWMinPq:            %d\n",
+			config->gdConfig.gdWMinPq);
+		pr_info("gdWMaxPq:            %d\n",
+			config->gdConfig.gdWMaxPq);
+		pr_info("gdWMmPq:             %d\n",
+			config->gdConfig.gdWMmPq);
+		pr_info("gdTriggerPeriod:     %d\n",
+			config->gdConfig.gdTriggerPeriod);
+		pr_info("gdTriggerLinThresh:  %d\n",
+			config->gdConfig.gdTriggerLinThresh);
+		pr_info("gdDelayMilliSec_ott: %d\n",
+			config->gdConfig.gdDelayMilliSec_ott);
+		pr_info("gdRiseWeight:        %d\n",
+			config->gdConfig.gdRiseWeight);
+		pr_info("gdFallWeight:        %d\n",
+			config->gdConfig.gdFallWeight);
+		pr_info("gdDelayMilliSec_ll:  %d\n",
+			config->gdConfig.gdDelayMilliSec_ll);
+		pr_info("gdContrast:          %d\n",
+			config->gdConfig.gdContrast);
+		pr_info("\n");
+
+		pr_info("------ Adaptive boost configuration ------\n");
+		pr_info("abEnable:            %d\n",
+			config->abConfig.abEnable);
+		pr_info("abHighestTmax:       %d\n",
+			config->abConfig.abHighestTmax);
+		pr_info("abLowestTmax:        %d\n",
+			config->abConfig.abLowestTmax);
+		pr_info("abRiseWeight:        %d\n",
+			config->abConfig.abRiseWeight);
+		pr_info("abFallWeight:        %d\n",
+			config->abConfig.abFallWeight);
+		pr_info("abDelayMilliSec_hdmi:%d\n",
+			config->abConfig.abDelayMilliSec_hdmi);
+		pr_info("abDelayMilliSec_ott: %d\n",
+			config->abConfig.abDelayMilliSec_ott);
+		pr_info("abDelayMilliSec_ll:  %d\n",
+			config->abConfig.abDelayMilliSec_ll);
+		pr_info("\n");
+
+		pr_info("------- Ambient light configuration ------\n");
+		pr_info("ambient:            %d\n",
+			config->ambientConfig.ambient);
+		pr_info("tFrontLux:          %d\n",
+			config->ambientConfig.tFrontLux);
+		pr_info("tFrontLuxScale:     %d\n",
+			config->ambientConfig.tFrontLuxScale);
+		pr_info("tRearLum:           %d\n",
+			config->ambientConfig.tRearLum);
+		pr_info("tRearLumScale:      %d\n",
+			config->ambientConfig.tRearLumScale);
+		pr_info("tWhitexy:           %d, %d\n",
+			config->ambientConfig.tWhitexy[0],
+			config->ambientConfig.tWhitexy[1]);
+		pr_info("tSurroundReflection:%d\n",
+			config->ambientConfig.tSurroundReflection);
+		pr_info("tScreenReflection:  %d\n",
+			config->ambientConfig.tScreenReflection);
+		pr_info("alDelay:            %d\n",
+			config->ambientConfig.alDelay);
+		pr_info("alRise:             %d\n",
+			config->ambientConfig.alRise);
+		pr_info("alFall:             %d\n",
+			config->ambientConfig.alFall);
+
+		pr_info("vsvdb:              %d,%d,%d,%d,%d,%d,%d\n",
+			config->vsvdb[0],
+			config->vsvdb[1],
+			config->vsvdb[2],
+			config->vsvdb[3],
+			config->vsvdb[4],
+			config->vsvdb[5],
+			config->vsvdb[6]);
+		pr_info("\n");
+		pr_info("---------------- ocscConfig --------------\n");
+		pr_info("lms2RgbMat:         %d,%d,%d\n",
+			config->ocscConfig.lms2RgbMat[0][0],
+			config->ocscConfig.lms2RgbMat[0][1],
+			config->ocscConfig.lms2RgbMat[0][2]);
+		pr_info("                    %d,%d,%d\n",
+			config->ocscConfig.lms2RgbMat[1][0],
+			config->ocscConfig.lms2RgbMat[1][1],
+			config->ocscConfig.lms2RgbMat[1][2]);
+		pr_info("                    %d,%d,%d\n",
+			config->ocscConfig.lms2RgbMat[2][0],
+			config->ocscConfig.lms2RgbMat[2][1],
+			config->ocscConfig.lms2RgbMat[2][2]);
+		pr_info("lms2RgbMatScale:    %d\n",
+			config->ocscConfig.lms2RgbMatScale);
+		pr_info("\n");
+
+		pr_info("dm31_avail:         %d\n",
+			config->dm31_avail);
+		pr_info("brightnessPreservat:%d\n",
+			config->brightnessPreservation);
+		pr_info("num_total_viewing_m:%d\n",
+			config->num_total_viewing_modes);
+		pr_info("viewing_mode_valid: %d\n",
+			config->viewing_mode_valid);
+		pr_info("\n");
+	}
+	return 0;
+}
+
 int register_dv_functions(const struct dolby_vision_func_s *func)
 {
 	int ret = -1;
@@ -9287,6 +10379,26 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			pr_info("*** register_dv_tv_functions. version %s ***\n",
 				func->version_info);
 			p_funcs_tv = func;
+			if (is_meson_txlx() || is_meson_tm2()) {
+				pq_config =
+					vmalloc(sizeof(struct pq_config_s));
+				if (!pq_config)
+					return -ENOMEM;
+				pq_config_fake =
+					(struct pq_config_s *)pq_config;
+				tv_dovi_setting =
+				vmalloc(sizeof(struct tv_dovi_setting_s));
+				if (!tv_dovi_setting) {
+					vfree(pq_config_fake);
+					pq_config_fake = NULL;
+					p_funcs_tv = NULL;
+					return -ENOMEM;
+				}
+			}
+			if (is_meson_tm2_tvmode()) {
+				if (load_dv_pq_config_data())
+					load_bin_config = true;
+			}
 		} else
 			return ret;
 		ret = 0;
@@ -9320,17 +10432,7 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 		else
 			dolby_vision_run_mode_delay = RUN_MODE_DELAY;
 
-		if (is_meson_txlx() || is_meson_tm2()) {
-			pq_config =  vmalloc(sizeof(struct pq_config_s));
-			if (!pq_config)
-				return -ENOMEM;
-			pq_config_fake = (struct pq_config_s *)pq_config;
 
-			tv_dovi_setting =
-				vmalloc(sizeof(struct tv_dovi_setting_s));
-			if (!tv_dovi_setting)
-			return -ENOMEM;
-		}
 		adjust_vpotch();
 	}
 	__invoke_psci_fn_smc(0x82000080, 0, 0, 0);
@@ -9570,9 +10672,138 @@ static int amdolby_vision_release(struct inode *inode, struct file *file)
 static long amdolby_vision_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
-	return 0;
-}
+	int ret = 0;
+	int mode_num = 0;
+	int mode_id = 0;
+	s16 pq_value = 0;
+	enum pq_item_e pq_item;
+	enum pq_reset_e pq_reset;
 
+	struct pic_mode_info_s pic_info;
+	struct dv_pq_info_s pq_info;
+	struct dv_full_pq_info_s pq_full_info;
+	void __user *argp = (void __user *)arg;
+
+	if (debug_dolby & 0x200)
+		pr_info("[DV]: %s: cmd_nr = 0x%x\n",
+			__func__, _IOC_NR(cmd));
+
+	if (!load_bin_config) {
+		pr_info("[DV] pq ioctl function disabled !!\n");
+		return ret;
+	}
+
+	switch (cmd) {
+	case DV_IOC_GET_DV_PIC_MODE_NUM:
+		mode_num = get_pic_mode_num();
+		put_user(mode_num, (u32 __user *)argp);
+		break;
+	case DV_IOC_GET_DV_PIC_MODE_NAME:
+		if (copy_from_user(&pic_info, argp,
+				   sizeof(struct pic_mode_info_s)) == 0) {
+			mode_id = pic_info.pic_mode_id;
+			strcpy(pic_info.name, get_pic_mode_name(mode_id));
+			if (debug_dolby & 0x200)
+				pr_info("[DV]: get mode %d, name %s\n",
+					pic_info.pic_mode_id, pic_info.name);
+			if (copy_to_user(argp,
+					 &pic_info,
+					 sizeof(struct pic_mode_info_s)))
+				ret = -EFAULT;
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	case DV_IOC_GET_DV_PIC_MODE_ID:
+		mode_id = get_pic_mode();
+		put_user(mode_id, (u32 __user *)argp);
+		break;
+	case DV_IOC_SET_DV_PIC_MODE_ID:
+		if (copy_from_user(&mode_id, argp, sizeof(s32)) == 0) {
+			set_pic_mode(mode_id);
+			if (debug_dolby & 0x200)
+				pr_info("[DV]: set mode %d\n", mode_id);
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	case DV_IOC_GET_DV_SINGLE_PQ_VALUE:
+		if (copy_from_user(&pq_info, argp,
+				   sizeof(struct dv_pq_info_s)) == 0) {
+			mode_id = pq_info.pic_mode_id;
+			pq_item = pq_info.item;
+			pq_info.value = get_single_pq_value(mode_id, pq_item);
+
+			if (debug_dolby & 0x200)
+				pr_info("[DV]: get mode %d, pq %s, value %d\n",
+					mode_id,
+					pq_item_str[pq_item],
+					pq_info.value);
+
+			if (copy_to_user(argp,
+					 &pq_info,
+					 sizeof(struct dv_pq_info_s)))
+				ret = -EFAULT;
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	case DV_IOC_GET_DV_FULL_PQ_VALUE:
+		if (copy_from_user(&pq_full_info, argp,
+				   sizeof(struct dv_full_pq_info_s)) == 0) {
+			mode_id = pq_full_info.pic_mode_id;
+			pq_full_info = get_full_pq_value(mode_id);
+
+			if (copy_to_user(argp,
+					 &pq_full_info,
+					 sizeof(struct dv_full_pq_info_s)))
+				ret = -EFAULT;
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	case DV_IOC_SET_DV_SINGLE_PQ_VALUE:
+		if (copy_from_user(&pq_info, argp,
+				   sizeof(struct dv_pq_info_s)) == 0) {
+			mode_id = pq_info.pic_mode_id;
+			pq_item = pq_info.item;
+			pq_value = pq_info.value;
+			set_single_pq_value(mode_id, pq_item, pq_value);
+
+			if (debug_dolby & 0x200)
+				pr_info("[DV]: set mode %d, pq %s, value %d\n",
+					mode_id,
+					pq_item_str[pq_item],
+					pq_value);
+
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	case DV_IOC_SET_DV_FULL_PQ_VALUE:
+		if (copy_from_user(&pq_full_info, argp,
+				   sizeof(struct dv_full_pq_info_s)) == 0) {
+			set_full_pq_value(pq_full_info);
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	case DV_IOC_SET_DV_PQ_RESET:
+		if (copy_from_user(&pq_reset, argp,
+				   sizeof(enum pq_reset_e)) == 0) {
+			restore_dv_pq_setting(pq_reset);
+			if (debug_dolby & 0x200)
+				pr_info("[DV]: reset mode %d\n", pq_reset);
+		} else {
+			ret = -EFAULT;
+		}
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
 
 #ifdef CONFIG_COMPAT
 static long amdolby_vision_compat_ioctl(struct file *file, unsigned int cmd,
@@ -9598,27 +10829,6 @@ static const struct file_operations amdolby_vision_fops = {
 #endif
 	.poll = amdolby_vision_poll,
 };
-
-static void parse_param_amdolby_vision(char *buf_orig, char **parm)
-{
-	char *ps, *token;
-	unsigned int n = 0;
-	char delim1[3] = " ";
-	char delim2[2] = "\n";
-
-	ps = buf_orig;
-	strcat(delim1, delim2);
-	while (1) {
-		token = strsep(&ps, delim1);
-		if (token == NULL)
-			break;
-		if (*token == '\0')
-			continue;
-		parm[n++] = token;
-		if (n >= MAX_PARAM)
-			break;
-	}
-}
 
 static const char *amdolby_vision_debug_usage_str = {
 	"Usage:\n"
@@ -9945,15 +11155,30 @@ static ssize_t amdolby_vision_core3_switch_store(struct class *cla,
 
 static struct class_attribute amdolby_vision_class_attrs[] = {
 	__ATTR(debug, 0644,
-	amdolby_vision_debug_show, amdolby_vision_debug_store),
+	       amdolby_vision_debug_show,
+	       amdolby_vision_debug_store),
 	__ATTR(dv_mode, 0644,
-	amdolby_vision_dv_mode_show, amdolby_vision_dv_mode_store),
+	       amdolby_vision_dv_mode_show,
+	       amdolby_vision_dv_mode_store),
 	__ATTR(dv_reg, 0220,
-	NULL, amdolby_vision_reg_store),
+	       NULL, amdolby_vision_reg_store),
 	__ATTR(core1_switch, 0644,
-	amdolby_vision_core1_switch_show, amdolby_vision_core1_switch_store),
+	       amdolby_vision_core1_switch_show,
+	       amdolby_vision_core1_switch_store),
 	__ATTR(core3_switch, 0644,
-	amdolby_vision_core3_switch_show, amdolby_vision_core3_switch_store),
+	       amdolby_vision_core3_switch_show,
+	       amdolby_vision_core3_switch_store),
+	__ATTR(dv_bin_config, 0644,
+	       amdolby_vision_bin_config_show, NULL),
+	__ATTR(dv_pq_info, 0644,
+	       amdolby_vision_pq_info_show,
+	       amdolby_vision_pq_info_store),
+	__ATTR(dv_set_inter_pq, 0644,
+	       amdolby_vision_set_inter_pq_show,
+	       amdolby_vision_set_inter_pq_store),
+	__ATTR(dv_load_cfg_status, 0644,
+	       amdolby_vision_load_cfg_status_show,
+	       amdolby_vision_load_cfg_status_store),
 	__ATTR_NULL
 };
 

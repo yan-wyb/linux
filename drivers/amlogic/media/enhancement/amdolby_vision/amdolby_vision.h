@@ -651,6 +651,28 @@ struct dovi_setting_s {
 #endif
 };
 
+struct dv_cfg_info_s {
+	int id;
+	char pic_mode_name[32];
+	s16  brightness;        /*Brightness */
+	s16  contrast;          /*Contrast */
+	s16  colorshift;        /*ColorShift or Tint*/
+	s16  saturation;        /*Saturation or color */
+	u8  vsvdb[7];
+};
+
+struct dv_pq_center_value_s {
+	s16  brightness;        /*Brightness */
+	s16  contrast;          /*Contrast */
+	s16  colorshift;        /*ColorShift or Tint*/
+	s16  saturation;        /*Saturation or color */
+};
+
+struct dv_pq_range_s {
+	s16  left;
+	s16  right;
+};
+
 #ifdef V1_6_1
 #define PREFIX_SEI_NUT 39
 #define SUFFIX_SEI_NUT 40
