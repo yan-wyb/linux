@@ -35,6 +35,7 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/list.h>
 #include <linux/amlogic/scpi_protocol.h>
 
 #include "meson_mhu.h"
@@ -49,10 +50,24 @@ static char *dsp_name[] = {
 	"dspb_dev",
 };
 
+struct dsp_mbox {
+	int dsp_id;
+	int channel_id;
+	struct mutex mutex;
+	struct list_head dsp_list;
+	dev_t dsp_no;
+	struct cdev dsp_cdev;
+	struct device *dsp_dev;
+	char dsp_name[32];
+};
+
 /* for list */
 spinlock_t dsp_lock;
 static LIST_HEAD(mbox_list);
 static DEFINE_MUTEX(chan_mutex);
+
+static struct list_head dsp_devs = LIST_HEAD_INIT(dsp_devs);
+static struct class *dsp_class;
 
 enum USR_CMD {
 	MBOX_USER_CMD = 0x1001,
@@ -283,13 +298,11 @@ static ssize_t mbox_message_write(struct file *filp,
 	unsigned long flags;
 	int cmd;
 	struct device *dev = dsp_scpi_device;
-	struct inode *inode = filp->f_inode;
 	int chan_index = 1;
-	struct device *dsp_dev = &mbox_cdev.dsp_dev[0];
+	struct dsp_mbox *dsp_mbox_dev = filp->private_data;
 
-	if (inode->i_rdev == mbox_cdev.dsp_dev[1].devt) {
+	if (dsp_mbox_dev->dsp_id == 1) {
 		chan_index = 3;
-		dsp_dev = &mbox_cdev.dsp_dev[1];
 	}
 
 	if (count > MBOX_ALLOWED_SIZE) {
@@ -346,17 +359,17 @@ static ssize_t mbox_message_write(struct file *filp,
 	cl.dev = dev;
 	cl.tx_block = true;
 	cl.tx_tout = 2000;
-	mutex_lock(&dsp_dev->mutex);
+	mutex_lock(&dsp_mbox_dev->mutex);
 	chan = mbox_request_channel(&cl, chan_index);
 	if (IS_ERR(chan)) {
-		mutex_unlock(&dsp_dev->mutex);
+		mutex_unlock(&dsp_mbox_dev->mutex);
 		dev_err(dev, "Failed Req Chan\n");
 		ret = PTR_ERR(chan);
 		goto err_probe3;
 	}
 	ret = mbox_send_message(chan, (void *)(&data_buf));
 	mbox_free_channel(chan);
-	mutex_unlock(&dsp_dev->mutex);
+	mutex_unlock(&dsp_mbox_dev->mutex);
 	if (ret < 0) {
 		dev_err(dev, "Failed to send message via mailbox %d\n", ret);
 	} else {
@@ -415,71 +428,97 @@ static ssize_t mbox_message_read(struct file *filp, char __user *userbuf,
 	return ret;
 }
 
+static int mbox_message_open(struct inode *inode, struct file *filp)
+{
+	struct cdev *cdev = inode->i_cdev;
+	struct dsp_mbox *dev = container_of(cdev, struct dsp_mbox, dsp_cdev);
+
+	filp->private_data = dev;
+	return 0;
+}
+
 static const struct file_operations mbox_message_ops = {
 	.write	= mbox_message_write,
 	.read	= mbox_message_read,
-	.open	= simple_open,
+	.open	= mbox_message_open,
 };
 
-void cdev_set_parent(struct cdev *p, struct kobject *kobj)
+static void dsp_cleanup_devs(void)
 {
-	WARN_ON(!kobj->state_initialized);
-	p->kobj.parent = kobj;
-}
+	struct dsp_mbox *cur, *n;
 
-int cdev_device_add(struct cdev *cdev, struct device *dev)
-{
-	int rc = 0;
-
-	if (dev->devt) {
-		cdev_set_parent(cdev, &dev->kobj);
-		rc = cdev_add(cdev, dev->devt, 1);
-		if (rc)
-			return rc;
+	list_for_each_entry_safe(cur, n, &dsp_devs, dsp_list) {
+		if (cur->dsp_dev) {
+			cdev_del(&cur->dsp_cdev);
+			device_del(cur->dsp_dev);
+		}
+		list_del(&cur->dsp_list);
+		kfree(cur);
 	}
-	rc = device_add(dev);
-	if (rc)
-		cdev_del(cdev);
-	return rc;
 }
 
 static int init_char_cdev(struct device *dev)
 {
-	int err;
+	int err = 0;
 	int nr_minor = 0;
 	int i = 0;
+	dev_t dsp_dev;
+	int dsp_major;
 
 	of_property_read_u32(dev->of_node,
 			     "nr-dsp", &nr_minor);
 	if (nr_minor == 0 || nr_minor > NR_DSP)
 		nr_minor = NR_DSP;
 
-	err = alloc_chrdev_region(&mbox_cdev.dsp_no, 0, nr_minor, DRIVER_NAME);
+	dsp_class = class_create(THIS_MODULE, "dsp_mbox");
+	if (IS_ERR(dsp_class))
+		goto err;
+
+	err = alloc_chrdev_region(&dsp_dev, 0, nr_minor, DRIVER_NAME);
 	if (err < 0) {
 		dev_err(dev, "%s dsp alloc dev_t number failed\n", __func__);
 		err = -1;
-		goto err2;
+		goto class_err;
 	}
 
+	dsp_major = MAJOR(dsp_dev);
 	for (i = 0; i < nr_minor; i++) {
-		mbox_cdev.dsp_dev[i].init_name = dsp_name[i];
-		cdev_init(&mbox_cdev.dsp_cdev[i], &mbox_message_ops);
-		mbox_cdev.dsp_cdev[i].owner = THIS_MODULE;
-		mbox_cdev.dsp_dev[i].devt = MKDEV(MAJOR(mbox_cdev.dsp_no), i);
-		device_initialize(&mbox_cdev.dsp_dev[i]);
-		err = cdev_device_add(&mbox_cdev.dsp_cdev[i],
-				      &mbox_cdev.dsp_dev[i]);
-		if (err < 0) {
-			dev_err(dev, "%s: could not add character device\n",
-				mbox_cdev.dsp_dev[i].init_name);
-			goto err1;
+		struct dsp_mbox *cur =
+			kzalloc(sizeof(struct dsp_mbox), GFP_KERNEL);
+		if (!cur) {
+			dev_err(dev, "mbox unable to alloc dev\n");
+			goto out_err;
 		}
+
+		cur->dsp_id = i;
+		cur->channel_id = i * 2 + 1;
+		cur->dsp_no = MKDEV(dsp_major, i);
+		mutex_init(&cur->mutex);
+		snprintf(cur->dsp_name, 32, dsp_name[i]);
+
+		cdev_init(&cur->dsp_cdev, &mbox_message_ops);
+		err = cdev_add(&cur->dsp_cdev, cur->dsp_no, 1);
+		if (err) {
+			dev_err(dev, "mbox fail to add cdev\n");
+			goto out_err;
+		}
+
+		cur->dsp_dev =
+			device_create(dsp_class, NULL, cur->dsp_no,
+					cur, "%s", cur->dsp_name);
+		if (IS_ERR(cur->dsp_dev)) {
+			dev_err(dev, "mbox fail to create device\n");
+			goto out_err;
+		}
+		list_add_tail(&cur->dsp_list, &dsp_devs);
 	}
 	return 0;
-err1:
-	put_device(&mbox_cdev.dsp_dev[0]);
-	put_device(&mbox_cdev.dsp_dev[1]);
-err2:
+out_err:
+	dsp_cleanup_devs();
+	unregister_chrdev_region(dsp_dev, nr_minor);
+class_err:
+	class_destroy(dsp_class);
+err:
 	return err;
 }
 
@@ -592,7 +631,7 @@ static int mhu_dsp_probe(struct platform_device *pdev)
 
 	err = init_char_cdev(dev);
 	if (err < 0) {
-		pr_info("init cdev fail\n");
+		dev_err(dev, "init cdev fail\n");
 		return err;
 	}
 

@@ -83,11 +83,4 @@ struct mhu_ctlr {
 	struct mbox_controller mbox_con;
 	struct mhu_chan *channels;
 };
-
-struct mbox_cdev {
-	dev_t dsp_no;
-	struct cdev dsp_cdev[NR_DSP];
-	struct device dsp_dev[NR_DSP];
-	struct class *dsp_cdev_class;
-} mbox_cdev;
 #endif
