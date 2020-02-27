@@ -223,7 +223,9 @@ bool vdin_is_dolby_input(struct vdin_dev_s *devp);
 bool vdin_is_dolby_tunnel_444_input(struct vdin_dev_s *devp);
 bool vdin_is_dolby_signal_in(struct vdin_dev_s *devp);
 void vdin_dolby_de_tunnel_to_12bit(struct vdin_dev_s *devp,
-					unsigned int onoff);
+					  unsigned int onoff);
+void vdin_wr_frame_en(unsigned int ch, unsigned int onoff);
+void vdin_set_mif_onoff(struct vdin_dev_s *devp, unsigned int rdma_enable);
 
 #endif
 

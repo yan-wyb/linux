@@ -750,6 +750,10 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	devp->unreliable_vs_cnt_pre = 0;
 	devp->unreliable_vs_idx = 0;
 
+	/* write vframe as default */
+	devp->vframe_wr_en = 1;
+	devp->vframe_wr_en_pre = 1;
+
 	if (time_en)
 		pr_info("vdin.%d start time: %ums, run time:%ums.\n",
 				devp->index, jiffies_to_msecs(jiffies),
@@ -1580,10 +1584,10 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		vdin_drop_frame_info(devp, "reset_flag");
 		return IRQ_HANDLED;
 	}
+
 	vf_drop_cnt = vdin_drop_cnt;
-
 	offset = devp->addr_offset;
-
+	vdin_set_mif_onoff(devp, devp->flags & VDIN_FLAG_RDMA_ENABLE);
 	isr_log(devp->vfp);
 	devp->irq_cnt++;
 	/* debug interrupt interval time
@@ -2089,6 +2093,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 	spin_lock_irqsave(&devp->isr_lock, flags);
 	devp->vdin_reset_flag = vdin_vsync_reset_mif(devp->index);
 	offset = devp->addr_offset;
+	vdin_set_mif_onoff(devp, devp->flags & VDIN_FLAG_RDMA_ENABLE);
 
 	if (devp)
 		/* avoid null pointer oops */
@@ -2189,6 +2194,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 			goto irq_handled;
 		}
 	}
+
 	next_wr_vfe = provider_vf_peek(devp->vfp);
 
 	if (!next_wr_vfe) {
@@ -3110,6 +3116,16 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		if (vdin_dbg_en)
 			pr_info("vdin_pc_mode:%d\n", vdin_pc_mode);
+		break;
+	case TVIN_IOC_S_FRAME_WR_EN:
+		if (copy_from_user(&devp->vframe_wr_en, argp,
+				   sizeof(unsigned int))) {
+			ret = -EFAULT;
+			break;
+		}
+		if (vdin_dbg_en)
+			pr_info("%s wr vframe en: %d\n", __func__,
+				devp->vframe_wr_en);
 		break;
 	default:
 		ret = -ENOIOCTLCMD;

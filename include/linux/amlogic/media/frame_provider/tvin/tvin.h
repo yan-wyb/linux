@@ -481,6 +481,7 @@ struct tvafe_pin_mux_s {
 #define TVIN_IOC_S_CANVAS_ADDR  _IOW(_TM_T, 0x4f,\
 	struct vdin_set_canvas_s)
 #define TVIN_IOC_S_PC_MODE		_IOW(_TM_T, 0x50, unsigned int)
+#define TVIN_IOC_S_FRAME_WR_EN		_IOW(_TM_T, 0x51, unsigned int)
 
 
 #define TVIN_IOC_S_CANVAS_RECOVERY  _IO(_TM_T, 0x0a)

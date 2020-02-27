@@ -950,6 +950,8 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("afbce_flag: 0x%x\n", devp->afbce_flag);
 	pr_info("afbce_mode: %d, afbce_valid: %d\n", devp->afbce_mode,
 		devp->afbce_valid);
+	pr_info("write vframe en: %d, pre: %d\n", devp->vframe_wr_en,
+		devp->vframe_wr_en_pre);
 	if (devp->afbce_mode == 1 || devp->double_wr) {
 		for (i = 0; i < devp->vfmem_max_cnt; i++) {
 			pr_info("head(%d) addr:0x%lx, size:0x%x\n",
@@ -2441,6 +2443,18 @@ start_chk:
 				vdin_dolby_desc_sc_enable(devp, mode);
 			}
 		}
+	} else if (!strcmp(parm[0], "wr_frame_en")) {
+		if (parm[1]) {
+			if (kstrtouint(parm[1], 10, &devp->vframe_wr_en) == 0)
+				pr_info("vdin.%d vframe_wr_en %d\n",
+					devp->index, devp->vframe_wr_en);
+			else
+				pr_err("parse para err\n");
+		} else {
+			pr_err("miss para, current vframe_wr_en:%d\n",
+			       devp->vframe_wr_en);
+		}
+
 	} else {
 		pr_info("unknown command\n");
 	}

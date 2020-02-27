@@ -2449,6 +2449,36 @@ void vdin_set_wr_mif(struct vdin_dev_s *devp)
 	}
 }
 
+void vdin_wr_frame_en(unsigned int ch, unsigned int onoff)
+{
+	struct vdin_dev_s *devp = vdin_get_dev(ch);
+
+	if (devp->vframe_wr_en != onoff)
+		devp->vframe_wr_en = onoff;
+}
+EXPORT_SYMBOL(vdin_wr_frame_en);
+
+void vdin_set_mif_onoff(struct vdin_dev_s *devp, unsigned int rdma_enable)
+{
+	unsigned int offset = devp->addr_offset;
+
+	if (devp->vframe_wr_en_pre == devp->vframe_wr_en)
+		return;
+
+	#if CONFIG_AMLOGIC_MEDIA_RDMA
+	if (rdma_enable) {
+		rdma_write_reg_bits(devp->rdma_handle, VDIN_WR_CTRL2 + offset,
+				    devp->vframe_wr_en ? 0 : 1,
+				    DISCARD_BEF_LINE_FIFO_BIT,
+				    DISCARD_BEF_LINE_FIFO_WID);
+		rdma_write_reg_bits(devp->rdma_handle, VDIN_WR_CTRL + offset,
+				    devp->vframe_wr_en, WR_REQ_EN_BIT,
+				    WR_REQ_EN_WID);
+	}
+	#endif
+	devp->vframe_wr_en_pre = devp->vframe_wr_en;
+}
+
 /***************************global function**********************************/
 
 

@@ -546,6 +546,8 @@ struct vdin_dev_s {
 	unsigned int interlace_force_drop;
 	unsigned int frame_drop_num;
 	unsigned int skip_disp_md_check;
+	unsigned int vframe_wr_en;
+	unsigned int vframe_wr_en_pre;
 };
 
 struct vdin_hist_s {
