@@ -241,6 +241,11 @@ static unsigned int cfg_ll_id = 2;
 module_param(cfg_ll_id, uint, 0664);
 MODULE_PARM_DESC(cfg_ll_id, "\n cfg_ll_id\n");
 
+/*bit0: 0-> efuse, 1->no efuse; */
+/*bit1: 1->ko loaded*/
+/*bit2: 1-> value updated*/
+static int support_info;
+
 static uint dolby_vision_on_count;
 static bool dolby_vision_el_disable;
 
@@ -10395,6 +10400,13 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 		}
 		pr_info("efuse_mode=%d reg_value = 0x%x\n",
 			efuse_mode, reg_value);
+
+		support_info = efuse_mode ? 0 : 1;/*bit0=1 => no efuse*/
+		support_info = support_info | (1 << 1); /*bit1=1 => ko loaded*/
+		support_info = support_info | (1 << 2); /*bit2=1 => updated*/
+
+		pr_info("dv capability %d\n", support_info);
+
 		/*stb core doesn't need run mode*/
 		/*TV core need run mode and the value is 2*/
 		if (is_meson_g12() || is_meson_txlx_stbmode()
@@ -11095,6 +11107,14 @@ static ssize_t amdolby_vision_core3_switch_show(struct class *cla,
 		core3_switch);
 }
 
+static ssize_t amdolby_vision_dv_support_info_show(struct class *cla,
+			struct class_attribute *attr, char *buf)
+{
+	pr_dolby_dbg("show dv capability %d\n", support_info);
+	return snprintf(buf, 40, "%d\n",
+		support_info);
+}
+
 static ssize_t amdolby_vision_core3_switch_store(struct class *cla,
 			struct class_attribute *attr,
 			const char *buf, size_t count)
@@ -11152,6 +11172,8 @@ static struct class_attribute amdolby_vision_class_attrs[] = {
 	__ATTR(dv_load_cfg_status, 0644,
 	       amdolby_vision_load_cfg_status_show,
 	       amdolby_vision_load_cfg_status_store),
+	__ATTR(support_info, 0444,
+	       amdolby_vision_dv_support_info_show, NULL),
 	__ATTR_NULL
 };
 
