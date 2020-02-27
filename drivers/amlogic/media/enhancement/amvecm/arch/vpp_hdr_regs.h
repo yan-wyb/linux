@@ -65,6 +65,8 @@ extern struct am_regs_s r_lut_hdr_sdr_level3;
 #define VD1_HDR2_MATRIXI_CLIP              0x381a
 #define VD1_HDR2_MATRIXO_CLIP              0x381b
 #define VD1_HDR2_CGAIN_OFFT                0x381c
+/*TL1 hist read is 0x3840, tm2 is 0x381d*/
+#define VD1_HDR2_HIST_RD_2                 0x381d
 #define VD1_EOTF_LUT_ADDR_PORT             0x381e
 #define VD1_EOTF_LUT_DATA_PORT             0x381f
 #define VD1_OETF_LUT_ADDR_PORT             0x3820

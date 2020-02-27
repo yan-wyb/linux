@@ -7534,7 +7534,7 @@ static int vpp_matrix_update(
 		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC) ||
 		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB)) {
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
-				get_hist(VD1_HDR, HIST_O_BEFORE);
+				get_hist(VD1_HDR, HIST_E_RGBMAX);
 			else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 				get_hist(VD1_HDR, HIST_E_RGBMAX);
 		}
@@ -7585,13 +7585,22 @@ static int vpp_matrix_update(
 		cur_hdr_policy = get_hdr_policy();
 	}
 
-	if (hdr10p_meta_updated &&
-		hdr10_plus_process_mode[vd_path] == PROC_MATCH)
-		hdr10_plus_process_update(0);
-
-	if ((hdr_process_mode[vd_path] == PROC_MATCH) &&
-	    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB))
-		hdr10_tm_process_update(p);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) &&
+	(get_cpu_type() != MESON_CPU_MAJOR_ID_TL1)) {
+		if ((hdr_process_mode[vd_path] == PROC_HDR_TO_SDR) &&
+		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB))
+			hdr10_tm_process_update(p);
+		if (hdr10p_meta_updated &&
+			hdr10_plus_process_mode[vd_path] == PROC_HDRP_TO_SDR)
+			hdr10_plus_process_update(0);
+	} else {
+		if ((hdr_process_mode[vd_path] == PROC_MATCH) &&
+		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB))
+			hdr10_tm_process_update(p);
+		if (hdr10p_meta_updated &&
+			hdr10_plus_process_mode[vd_path] == PROC_MATCH)
+			hdr10_plus_process_update(0);
+	}
 
 	/* eye protection mode */
 	if (signal_change_flag & SIG_WB_CHG)

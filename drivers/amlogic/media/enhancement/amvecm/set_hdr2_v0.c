@@ -1958,7 +1958,10 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 	total_pixel = 0;
 	for (i = 0; i < 128; i++) {
 		WRITE_VPP_REG_BITS(hist_ctrl_port, i, 16, 8);
-		num_pixel = READ_VPP_REG(hist_ctrl_port + 3);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
+			num_pixel = READ_VPP_REG(VD1_HDR2_HIST_RD_2);
+		else
+			num_pixel = READ_VPP_REG(hist_ctrl_port + 3);
 		total_pixel += num_pixel;
 		hdr_hist[NUM_HDR_HIST - 1][i] = num_pixel;
 	}
@@ -1969,12 +1972,8 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 			num_pixel += hdr_hist[NUM_HDR_HIST - 1][i];
 			if (num_pixel * 100 / total_pixel >=
 			percentile_percent[percentile_index]) {
-				if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
-					percentile[percentile_index] =
-					(i + 1) * 10000 / 128;
-				else
-					percentile[percentile_index] =
-						hist_maxrgb_luminance[i];
+				percentile[percentile_index] =
+					hist_maxrgb_luminance[i];
 				if (percentile[percentile_index] == 0)
 					percentile[percentile_index] = 1;
 				percentile_index++;
@@ -2784,6 +2783,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	set_hdr_matrix(module_sel, HDR_OUT_MTX, &hdr_mtx_param, NULL);
 
 	set_c_gain(module_sel, &hdr_lut_param);
+
+	hdr_hist_config(module_sel, &hdr_lut_param);
 
 	return hdr_process_select;
 }

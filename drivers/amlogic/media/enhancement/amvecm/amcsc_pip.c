@@ -1096,8 +1096,6 @@ void video_post_process(
 		} else if (hdr_process_mode[vd_path] == PROC_HDR_TO_SDR) {
 			if (vd_path == VD1_PATH) {
 				hdr_proc(VD1_HDR, HDR_SDR, vinfo);
-				hdr10_plus_process_update(
-					content_max_lumin[vd_path]);
 			} else {
 				hdr_proc(VD2_HDR, HDR_SDR, vinfo);
 			}
