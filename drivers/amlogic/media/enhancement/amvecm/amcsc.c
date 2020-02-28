@@ -83,10 +83,6 @@ void hdr_vd1_off(void)
 		VD1_HDR, HDR_BYPASS, get_current_vinfo(), NULL);
 	pr_csc(8, "am_vecm: module=VD1_HDR, process=HDR_BYPASS(%d, %d)\n",
 		HDR_BYPASS, cur_hdr_process);
-	cur_hdr_process = hdr_func(
-		VD1_HDR, HLG_BYPASS, get_current_vinfo(), NULL);
-	pr_csc(8, "am_vecm: module=VD1_HDR, process=HLG_BYPASS(%d, %d)\n",
-		HLG_BYPASS, cur_hdr_process);
 }
 
 void hdr_vd2_off(void)
@@ -97,6 +93,16 @@ void hdr_vd2_off(void)
 		VD2_HDR, HDR_BYPASS, get_current_vinfo(), NULL);
 	pr_csc(8, "am_vecm: module=VD2_HDR, process=HDR_BYPASS(%d, %d)\n",
 	       HDR_BYPASS, cur_hdr_process);
+}
+
+void hdr_vd1_iptmap(void)
+{
+	enum hdr_process_sel cur_hdr_process;
+
+	cur_hdr_process = hdr_func(
+		VD1_HDR, IPT_MAP, get_current_vinfo(), NULL);
+	pr_csc(8, "am_vecm: module=VD1_HDR, process=IPT_MAP(%d, %d)\n",
+		IPT_MAP, cur_hdr_process);
 }
 
 static struct hdr_data_t *phdr;
