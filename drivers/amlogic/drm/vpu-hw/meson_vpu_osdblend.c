@@ -211,6 +211,15 @@ static void osd_blend1_size_set(struct osdblend_reg_s *reg,
 	VSYNCOSD_WR_MPEG_REG(reg->viu_osd_blend1_size,
 		(v_size << 16) | h_size);
 }
+/*osd blend0 size config*/
+static void osd_dv_core_size_set(u32 h_size, u32 v_size)
+{
+	VSYNCOSD_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL1,
+			     ((h_size + 0x40) << 16) |
+			     (v_size + 0x80));
+	VSYNCOSD_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL2,
+			     (h_size << 16) | v_size);
+}
 /*osd blend0 & blend1 4 din inputs premult flag config as 0 default*/
 void osd_blend01_premult_config(struct osdblend_reg_s *reg)
 {
@@ -496,6 +505,10 @@ static void osdblend_set_state(struct meson_vpu_block *vblk,
 	#else
 	osdblend_hw_update(reg, mvobs);
 	#endif
+	/*osd dv core size same with blend0 size*/
+	if (vblk->pipeline->osd_version >= OSD_V1)
+		osd_dv_core_size_set(mvobs->input_width[OSD_SUB_BLEND0],
+				     mvobs->input_height[OSD_SUB_BLEND0]);
 
 	DRM_DEBUG("%s set_state done.\n", osdblend->base.name);
 }

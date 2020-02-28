@@ -63,7 +63,23 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 					struct drm_property *property,
 					uint64_t *val)
 {
+	struct am_meson_crtc *amcrtc;
+	struct am_meson_crtc_state *meson_crtc_state;
 
+	amcrtc = to_am_meson_crtc(crtc);
+	meson_crtc_state = to_am_meson_crtc_state(state);
+	if (property == amcrtc->prop_hdr_policy) {
+		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+		meson_crtc_state->hdr_policy = get_hdr_policy();
+		#endif
+		*val = meson_crtc_state->hdr_policy;
+	} else if (property == amcrtc->prop_dv_policy) {
+		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		meson_crtc_state->dv_policy = get_dolby_vision_policy();
+		#endif
+		*val = meson_crtc_state->dv_policy;
+	} else
+		DRM_INFO("unsupported crtc property\n");
 	return 0;
 }
 
@@ -72,6 +88,23 @@ static int meson_crtc_atomic_set_property(struct drm_crtc *crtc,
 					struct drm_property *property,
 					uint64_t val)
 {
+	struct am_meson_crtc *amcrtc;
+	struct am_meson_crtc_state *meson_crtc_state;
+
+	amcrtc = to_am_meson_crtc(crtc);
+	meson_crtc_state = to_am_meson_crtc_state(state);
+	if (property == amcrtc->prop_hdr_policy) {
+		meson_crtc_state->hdr_policy = val;
+		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+		set_hdr_policy(val);
+		#endif
+	} else if (property == amcrtc->prop_dv_policy) {
+		meson_crtc_state->dv_policy = val;
+		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		set_dolby_vision_policy(val);
+		#endif
+	} else
+		DRM_INFO("unsupported crtc property\n");
 	return 0;
 }
 
@@ -251,6 +284,70 @@ static const struct drm_crtc_helper_funcs am_crtc_helper_funcs = {
 	.atomic_flush		= am_meson_crtc_atomic_flush,
 };
 
+/* Optional hdr_policy properties. */
+static const struct drm_prop_enum_list drm_hdr_policy_enum_list[] = {
+	{ DRM_MODE_HDR_FOLLOW_SINK, "HDR_follow_sink" },
+	{ DRM_MODE_HDR_FOLLOW_SOURCE, "HDR_follow_source" },
+};
+
+/* Optional dv_policy properties. */
+static const struct drm_prop_enum_list drm_dv_policy_enum_list[] = {
+	{ DRM_MODE_DV_FOLLOW_SINK, "DV_follow_sink" },
+	{ DRM_MODE_DV_FOLLOW_SOURCE, "DV_follow_source" },
+};
+
+int drm_plane_create_hdr_policy_property(struct drm_crtc *crtc)
+{
+	struct drm_device *dev = crtc->dev;
+	struct drm_property *prop;
+	struct am_meson_crtc *amcrtc;
+	int hdr_policy;
+
+	#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
+	hdr_policy = get_hdr_policy();
+	#else
+	hdr_policy = DRM_MODE_HDR_FOLLOW_SINK
+	#endif
+
+	amcrtc = to_am_meson_crtc(crtc);
+	prop = drm_property_create_enum(dev, 0, "hdr_policy",
+					drm_hdr_policy_enum_list,
+					ARRAY_SIZE(drm_hdr_policy_enum_list));
+	if (!prop)
+		return -ENOMEM;
+
+	drm_object_attach_property(&crtc->base, prop, hdr_policy);
+	amcrtc->prop_hdr_policy = prop;
+
+	return 0;
+}
+
+int drm_plane_create_dv_policy_property(struct drm_crtc *crtc)
+{
+	struct drm_device *dev = crtc->dev;
+	struct drm_property *prop;
+	struct am_meson_crtc *amcrtc;
+	int dv_policy;
+
+	#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	dv_policy = get_dolby_vision_policy();
+	#else
+	dv_policy = DRM_MODE_DV_FOLLOW_SINK
+	#endif
+
+	amcrtc = to_am_meson_crtc(crtc);
+	prop = drm_property_create_enum(dev, 0, "dv_policy",
+					drm_dv_policy_enum_list,
+					ARRAY_SIZE(drm_dv_policy_enum_list));
+	if (!prop)
+		return -ENOMEM;
+
+	drm_object_attach_property(&crtc->base, prop, dv_policy);
+	amcrtc->prop_dv_policy = prop;
+
+	return 0;
+}
+
 int am_meson_crtc_create(struct am_meson_crtc *amcrtc)
 {
 	struct meson_drm *priv = amcrtc->priv;
@@ -270,6 +367,8 @@ int am_meson_crtc_create(struct am_meson_crtc *amcrtc)
 		return ret;
 	}
 
+	drm_plane_create_hdr_policy_property(crtc);
+	drm_plane_create_dv_policy_property(crtc);
 	drm_crtc_helper_add(crtc, &am_crtc_helper_funcs);
 	osd_drm_init(&osd_meson_dev);
 
