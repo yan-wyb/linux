@@ -590,6 +590,11 @@ static int tsync_mode_switch(int mode, unsigned long diff_pts, int jump_pts)
 	int old_tsync_av_mode = tsync_av_mode;
 	char VA[] = "VA--";
 	unsigned long oldtimeout = tsync_av_dynamic_timeout_ms;
+	u32 pcr, vpts, apts;
+
+	pcr = timestamp_pcrscr_get();
+	vpts = timestamp_vpts_get();
+	apts = timestamp_apts_get();
 
 	if (tsync_mode == TSYNC_MODE_PCRMASTER) {
 		pr_info
@@ -627,6 +632,21 @@ static int tsync_mode_switch(int mode, unsigned long diff_pts, int jump_pts)
 			tsync_av_dynamic_duration_ms = 0;
 		} else {
 			/* / */
+			if (abs(vpts-apts) < tsync_av_threshold_min ||
+			diff_pts < tsync_av_threshold_min) {
+				pr_info("-wcs-< tsync_av_threshold_min--\n");
+				tsync_av_mode = TSYNC_STATE_S;
+				tsync_mode = TSYNC_MODE_AMASTER;
+				tsync_av_latest_switch_time_ms = jiffies_ms;
+				tsync_av_dynamic_duration_ms = 0;
+			} else if (abs(vpts-apts) < tsync_av_threshold_max ||
+			diff_pts < tsync_av_threshold_max) {
+				pr_info("-wcs-< tsync_av_threshold_max--\n");
+				tsync_av_mode = TSYNC_STATE_D;
+				tsync_mode = TSYNC_MODE_VMASTER;
+				tsync_av_latest_switch_time_ms = jiffies_ms;
+				tsync_av_dynamic_duration_ms = 20*1000;
+			}
 		}
 		if (tsync_mode != old_tsync_mode
 			|| tsync_av_mode != old_tsync_av_mode)
