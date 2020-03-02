@@ -1578,15 +1578,31 @@ dma_retry_plane1:
 			}
 		}
 	}
-				/* memset(buf, 0xff, nand_page_size); */
-				memset(oob_buf, 0x22, user_byte_num);
-				pr_info("%s %d read ecc failed here at",
-					__func__, __LINE__);
-				pr_info("page:%d, blk:%d chip[%d]\n",
-					page_addr,
-					(page_addr >> pages_per_blk_shift),
-					i);
-				mtd->ecc_stats.failed++;
+			/* memset(buf, 0xff, nand_page_size); */
+			memset(oob_buf, 0x22, user_byte_num);
+			pr_info("%s %d read ecc failed here at",
+				__func__, __LINE__);
+			pr_info("page:%d, blk:%d chip[%d]\n",
+				page_addr,
+				(page_addr >> pages_per_blk_shift),
+				i);
+
+			pr_info("%s %d pimux_reg0: 0x%x\n",
+				__func__, __LINE__,
+				amlnf_read_reg32(controller->pimux_reg0));
+			pr_info("%s %d pimux_reg1 0x%x\n",
+				__func__, __LINE__,
+				amlnf_read_reg32(controller->pimux_reg1));
+			pr_info("%s %d clk setting value: 0x%x\n",
+				__func__, __LINE__,
+				amlnf_read_reg32(controller->nand_clk_reg));
+			pr_info("%s %d CFG setting value: 0x%x\n",
+				__func__, __LINE__,
+				NFC_GET_CFG(controller));
+			pr_info("%s %d NAND_CLK_CNTL_INNER: 0x%x\n",
+				__func__, __LINE__,
+				amlnf_read_reg32(controller->nand_clk_upper));
+			mtd->ecc_stats.failed++;
 			if (aml_chip->support_new_nand == 1) {
 				if ((new_nand_info->type)
 					&& (new_nand_info->type < 10)) {

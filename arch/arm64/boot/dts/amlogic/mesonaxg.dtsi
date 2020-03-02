@@ -1060,8 +1060,7 @@
 				"emmc_nand_d4",
 				"emmc_nand_d5",
 				"emmc_nand_d6",
-				"emmc_nand_d7",
-				"nand_rb0";
+				"emmc_nand_d7";
 			function = "nand";
 			bias-pull-down;
 		};
@@ -1089,8 +1088,7 @@
 				"nand_ale",
 				"nand_cle",
 				"nand_wen_clk",
-				"nand_ren_wr",
-				"nand_rb0";
+				"nand_ren_wr";
 			function = "nand";
 			input-enable;
 		};
