@@ -56,6 +56,26 @@ static void am_meson_fb_output_poll_changed(struct drm_device *dev)
 #endif
 }
 
+int am_meson_atomic_check(struct drm_device *dev,
+			  struct drm_atomic_state *state)
+{
+	int ret;
+
+	ret = drm_atomic_helper_check_modeset(dev, state);
+	if (ret)
+		return ret;
+
+	ret = drm_atomic_normalize_zpos(dev, state);
+	if (ret)
+		return ret;
+
+	ret = drm_atomic_helper_check_planes(dev, state);
+	if (ret)
+		return ret;
+
+	return ret;
+}
+
 static const struct drm_mode_config_funcs meson_mode_config_funcs = {
 	.output_poll_changed = am_meson_fb_output_poll_changed,
 	.atomic_check        = drm_atomic_helper_check,

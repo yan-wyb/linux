@@ -428,6 +428,13 @@ u32 get_video_angle(void)
 }
 EXPORT_SYMBOL(get_video_angle);
 
+void set_video_zorder(u32 zorder, u32 index)
+{
+	if (index < 2)
+		glayer_info[index].zorder = zorder;
+}
+EXPORT_SYMBOL(set_video_zorder);
+
 /*for video related files only.*/
 void video_module_lock(void)
 {

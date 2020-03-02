@@ -29,6 +29,9 @@
 #include "osd_drm.h"
 #include "meson_fb.h"
 
+#define MESON_PLANE_BEGIN_ZORDER	1
+#define MESON_PLANE_END_ZORDER		65
+
 struct am_meson_plane_state {
 	struct drm_plane_state base;
 	u32 premult_en;

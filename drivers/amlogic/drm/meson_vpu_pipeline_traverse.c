@@ -544,7 +544,7 @@ int vpu_video_pipeline_check_block(struct meson_vpu_pipeline_state *mvps,
 	for (i = 0; i < MESON_MAX_VIDEO; i++) {
 		if (!mvps->video_plane_info[i].enable)
 			continue;
-		block = &mvps->pipeline->video[0]->base;
+		block = &mvps->pipeline->video[i]->base;
 		if (block->ops && block->ops->check_state) {
 			mvbs = meson_vpu_block_get_state(block, state);
 			ret = block->ops->check_state(block,
@@ -568,8 +568,6 @@ void vpu_pipeline_enable_block(int *combination, int num_planes,
 	struct meson_vpu_block **mvb;
 	struct meson_vpu_block *block;
 
-	//mvps->enable_blocks = 0;
-
 	for (i = 0; i < MESON_MAX_OSDS; i++) {
 		if (!mvps->plane_info[i].enable)
 			continue;
@@ -586,6 +584,45 @@ void vpu_pipeline_enable_block(int *combination, int num_planes,
 	}
 	/*TODO*/
 	//for (i = 0; i < MESON_MAX_VIDEO; i++)
+}
+
+void vpu_pipeline_clean_block(int *combination, int num_planes,
+			      struct meson_vpu_pipeline_state *mvps,
+			      struct drm_atomic_state *state)
+{
+	int i, j, osd_index;
+	struct meson_vpu_traverse *mvt;
+	struct meson_vpu_block **mvb;
+	struct meson_vpu_block *block;
+	struct meson_vpu_block_state *mvbs;
+
+	for (i = 0; i < MESON_MAX_OSDS; i++) {
+		if (!mvps->plane_info[i].enable)
+			continue;
+		osd_index = mvps->plane_index[i];
+		mvt = &mvps->osd_traverse[osd_index];
+		mvb = mvt->path[combination[i]];
+
+		for (j = 0; j < MESON_MAX_BLOCKS; j++) {
+			block = mvb[j];
+			if (!block)
+				break;
+			if (block->ops && block->ops->check_state) {
+				mvbs = meson_vpu_block_get_state(block, state);
+				mvbs->checked = 0;
+			}
+		}
+	}
+	/*clean video wrapper block*/
+	for (i = 0; i < MESON_MAX_VIDEO; i++) {
+		if (!mvps->video_plane_info[i].enable)
+			continue;
+		block = &mvps->pipeline->video[i]->base;
+		if (block->ops && block->ops->check_state) {
+			mvbs = meson_vpu_block_get_state(block, state);
+			mvbs->checked = 0;
+		}
+	}
 }
 
 /**
@@ -615,7 +652,7 @@ int combinate_layer_path(int *path_num_array, int num_planes,
 					       num_planes, mvps, state);
 		if (!ret)
 			break;
-
+		vpu_pipeline_clean_block(combination, num_planes, mvps, state);
 		i++;
 		combination[num_planes - 1] = i;
 

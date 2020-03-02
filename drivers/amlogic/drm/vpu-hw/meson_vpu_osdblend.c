@@ -345,11 +345,15 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 	}
 	/*check the unsupport case firstly*/
 	if (num_plane_port0 > OSD_LEND_MAX_IN_NUM_PORT0 ||
-		num_plane_port1 > OSD_LEND_MAX_IN_NUM_PORT1)
+		num_plane_port1 > OSD_LEND_MAX_IN_NUM_PORT1) {
+		DRM_DEBUG("unsupport zorder %d\n", __LINE__);
 		return -1;
+	}
 	if (mvps->pipeline->osd_version <= OSD_V2 &&
-		num_plane_port1)
+		num_plane_port1) {
+		DRM_DEBUG("unsupport zorder %d\n", __LINE__);
 		return -1;
+	}
 	/*zorder check for one dout-port with multi plane*/
 	for (i = 0; i < num_plane_port1; i++) {
 		m = plane_index_port1[i];
@@ -360,8 +364,10 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 			delta_zorder_flag = ((delta_zorder[0] < 0) !=
 				(delta_zorder[1] < 0));
 			if (num_plane_port0 >= 2 && j > 0 &&
-				delta_zorder_flag)
+				delta_zorder_flag) {
+				DRM_DEBUG("unsupport zorder %d\n", __LINE__);
 				return -1;
+			}
 			delta_zorder[1] = delta_zorder[0];
 			/*find the max zorder as dout port zorder*/
 			if (mvps->dout_zorder[OSD_LEND_OUT_PORT0] <
@@ -372,8 +378,10 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 		delta_zorder[2] = delta_zorder[0];
 		delta_zorder_flag = ((delta_zorder[2] < 0) !=
 			(delta_zorder[3] < 0));
-		if (num_plane_port1 >= 2 && i > 0 && delta_zorder_flag)
+		if (num_plane_port1 >= 2 && i > 0 && delta_zorder_flag) {
+			DRM_DEBUG("unsupport zorder %d\n", __LINE__);
 			return -1;
+		}
 		delta_zorder[3] = delta_zorder[2];
 		if (mvps->dout_zorder[OSD_LEND_OUT_PORT1] <
 			mvps->plane_info[m].zorder)
@@ -385,6 +393,7 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 	 *according to input zorder and dout sel
 	 */
 	mvobs->input_mask = 0;
+	DRM_DEBUG("num_plane_port0=%d\n", num_plane_port0);
 	for (i = 0; i < num_plane_port0; i++) {
 		mvobs->input_mask |= 1 << i;
 		j = plane_index_port0[i];
@@ -397,7 +406,7 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 			max_height = mvps->osd_scope_pre[j].v_end + 1;
 	}
 	for (i = 0; i < num_plane_port0; i++) {
-		for (j = 1; j < num_plane_port0; j++) {
+		for (j = (1 + i); j < num_plane_port0; j++) {
 			if (zorder[i] > zorder[j]) {
 				swap(zorder[i], zorder[j]);
 				swap(mvobs->din_channel_mux[i],
@@ -405,6 +414,7 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 			}
 		}
 	}
+	DRM_DEBUG("num_plane_port1=%d\n", num_plane_port1);
 	for (i = 0; i < num_plane_port1; i++) {
 		m = MAX_DIN_NUM - i - 1;
 		mvobs->input_mask |= 1 << m;
@@ -418,7 +428,7 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 			max_height = mvps->osd_scope_pre[j].v_end + 1;
 	}
 	for (i = 0; i < num_plane_port1; i++) {
-		for (j = 1; j < num_plane_port1; j++) {
+		for (j = (1 + i); j < num_plane_port1; j++) {
 			if (zorder[i] > zorder[j]) {
 				swap(zorder[i], zorder[j]);
 				swap(mvobs->din_channel_mux[i],
@@ -427,6 +437,8 @@ static int osdblend_check_state(struct meson_vpu_block *vblk,
 		}
 	}
 	for (i = 0; i < MAX_DIN_NUM; i++) {
+		DRM_DEBUG("mvobs->din_channel_mux[%d]=%d\n",
+			  i, mvobs->din_channel_mux[i]);
 		if (!mvobs->din_channel_mux[i])
 			mvobs->din_channel_mux[i] = OSD_CHANNEL_NUM;
 	}

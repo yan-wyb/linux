@@ -762,7 +762,8 @@ static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 {
 	struct am_osd_plane *osd_plane;
 	struct drm_plane *plane;
-	u32 type = 0;
+	struct meson_vpu_pipeline *pipeline = priv->pipeline;
+	u32 type = 0, zpos, min_zpos, max_zpos;
 	char plane_name[8];
 	const u64 *format_modifiers = afbc_wb_modifier;
 
@@ -782,6 +783,9 @@ static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 		osd_plane->osd_reverse = DRM_REFLECT_MASK;
 	else
 		osd_plane->osd_reverse = DRM_ROTATE_0;
+	zpos = osd_plane->plane_index + pipeline->num_video;
+	min_zpos = MESON_PLANE_BEGIN_ZORDER;
+	max_zpos = MESON_PLANE_END_ZORDER;
 
 	plane = &osd_plane->base;
 	sprintf(plane_name, "osd%d", i);
@@ -798,6 +802,7 @@ static struct am_osd_plane *am_plane_create(struct meson_drm *priv, int i)
 		drm_mode_create_rotation_property(priv->drm,
 						  DRM_ROTATE_0 |
 						  DRM_REFLECT_MASK);
+	drm_plane_create_zpos_property(plane, zpos, min_zpos, max_zpos);
 	drm_plane_helper_add(plane, &am_osd_helper_funcs);
 	osd_drm_debugfs_add(&osd_plane->plane_debugfs_dir,
 			    plane_name, osd_plane->plane_index);
@@ -810,6 +815,7 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 	struct am_video_plane *video_plane;
 	struct drm_plane *plane;
 	char plane_name[8];
+	u32 zpos, min_zpos, max_zpos;
 	const u64 *format_modifiers = video_wb_modifier;
 
 	video_plane = devm_kzalloc(priv->drm->dev, sizeof(*video_plane),
@@ -819,6 +825,9 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 
 	video_plane->drv = priv;
 	video_plane->plane_index = i;
+	zpos = video_plane->plane_index;
+	min_zpos = MESON_PLANE_BEGIN_ZORDER;
+	max_zpos = MESON_PLANE_END_ZORDER;
 
 	plane = &video_plane->base;
 	sprintf(plane_name, "video%d", i);
@@ -830,6 +839,7 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 				 format_modifiers,
 				 DRM_PLANE_TYPE_OVERLAY, plane_name);
 
+	drm_plane_create_zpos_property(plane, zpos, min_zpos, max_zpos);
 	drm_plane_helper_add(plane, &am_video_helper_funcs);
 	osd_drm_debugfs_add(&video_plane->plane_debugfs_dir,
 			    plane_name, video_plane->plane_index);
@@ -843,6 +853,19 @@ int am_meson_plane_create(struct meson_drm *priv)
 	struct meson_vpu_pipeline *pipeline = priv->pipeline;
 	int i, osd_index, video_index;
 
+	/*video plane*/
+	for (i = 0; i < pipeline->num_video; i++) {
+		video_index = pipeline->video[i]->base.index;
+		video_plane = am_video_plane_create(priv, video_index);
+
+		if (!video_plane)
+			return -ENOMEM;
+
+		priv->video_planes[i++] = video_plane;
+		priv->num_planes++;
+	}
+	DRM_DEBUG("create %d video plane done\n", pipeline->num_video);
+	/*osd plane*/
 	for (i = 0; i < pipeline->num_osds; i++) {
 		osd_index = pipeline->osds[i]->base.index;
 		plane = am_plane_create(priv, osd_index);
@@ -855,19 +878,7 @@ int am_meson_plane_create(struct meson_drm *priv)
 
 		priv->planes[priv->num_planes++] = plane;
 	}
-	/*video plane*/
-	for (i = 0; i < pipeline->num_video; i++) {
-		video_index = pipeline->video[i]->base.index;
-		video_plane = am_video_plane_create(priv, video_index);
-
-		if (!video_plane)
-			return -ENOMEM;
-
-		priv->video_planes[i++] = video_plane;
-		priv->num_planes++;
-	}
-
-	DRM_DEBUG("%s. enter\n", __func__);
+	DRM_DEBUG("create %d osd plane done\n", pipeline->num_osds);
 
 	return 0;
 }
