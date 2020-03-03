@@ -683,10 +683,13 @@ static void lc_config(int enable,
 
 	/* try to detect out of spec signal level */
 	flag_full = 0;
-	if (detect_signal_range_en == 2)
+	if (detect_signal_range_en == 2) {
 		flag_full = signal_detect(vf->prop.hist.vpp_gamma);
-	else
+		if (vf->type & VIDTYPE_RGB_444)
+			flag_full = 1;
+	} else {
 		flag_full = detect_signal_range_en;
+	}
 
 	if (flag_full != flag_full_pre) {
 		pr_info("signal changed, flag_full:%d->%d\n",

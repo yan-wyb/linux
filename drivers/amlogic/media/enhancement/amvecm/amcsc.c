@@ -5707,6 +5707,7 @@ static void rgb_mode_process(
 	enum vd_path_e vd_path,
 	enum hdr_type_e *source_type)
 {
+	enum hdr_process_sel m_sel, m_gmt_sel;
 	struct matrix_s m = {
 		{0, 0, 0},
 		{
@@ -5724,17 +5725,20 @@ static void rgb_mode_process(
 			gamut_convert_process(
 				vinfo, source_type,
 				vd_path, &m, 10);
-
+		m_sel =
+		signal_range ? RGB_YUVF : SRGB_YUVF;
+		m_gmt_sel =
+		signal_range ? SDR_RGB_GMT_CONV : SDR_SRGB_GMT_CONV;
 		if (vd_path == VD1_PATH)
 			hdr_func(
 			VD1_HDR,
-			gamut_conv_enable ? SDR_RGB_GMT_CONV : RGB_YUVF,
+			gamut_conv_enable ? m_gmt_sel : m_sel,
 			vinfo,
 			gamut_conv_enable ? &m : NULL);
 		else
 			hdr_func(
 			VD2_HDR,
-			gamut_conv_enable ? SDR_RGB_GMT_CONV : RGB_YUVF,
+			gamut_conv_enable ? m_gmt_sel : m_sel,
 			vinfo,
 			gamut_conv_enable ? &m : NULL);
 		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
@@ -7305,14 +7309,19 @@ static void video_process(
 		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
 			mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
 		else {
-			if (vf->type & VIDTYPE_RGB_444)
+			if (vf->type & VIDTYPE_RGB_444) {
+				WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 0, 1, 1);
+				WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 0, 1, 1);
 				mtx_setting(
 				POST2_MTX,
 				MATRIX_YUV709F_RGB, MTX_ON);
-			else
+			} else {
+				WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 1, 1, 1);
+				WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 1, 1, 1);
 				mtx_setting(
 				POST2_MTX,
 				csc_type, MTX_ON);
+			}
 		}
 	}
 
