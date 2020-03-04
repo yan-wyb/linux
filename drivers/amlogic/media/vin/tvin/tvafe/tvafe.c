@@ -1136,6 +1136,11 @@ static long tvafe_ioctl(struct file *file,
 			__func__, tvin_sig_fmt_str(fmt));
 		if (fmt != TVIN_SIG_FMT_NULL)
 			manual_flag = 1;
+		if (tvin_get_sm_status(tvafe->parm.index)
+				== TVIN_SM_STATUS_NOSIG) {
+			tvafe_pr_info("%s: reset_tvin_smr.\n", __func__);
+			reset_tvin_smr(tvafe->parm.index);
+		}
 		break;
 	case TVIN_IOC_G_AFE_CVBS_STD:
 		if (tvafe->cvd2.info.state == TVAFE_CVD2_STATE_FIND)
