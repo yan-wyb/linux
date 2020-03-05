@@ -4825,6 +4825,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		cur_disp_omx_index = 0;
 		dovi_drop_flag = false;
 		dovi_drop_frame_num = 0;
+		video_inuse = 0;
 		mutex_unlock(&omx_mutex);
 	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
 		video_vf_light_unreg_provider(1);
@@ -4851,7 +4852,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		dovi_drop_flag = false;
 		dovi_drop_frame_num = 0;
 		mutex_unlock(&omx_mutex);
-		//init_hdr_info();
+		video_inuse = 1;
 
 /*notify di 3d mode is frame*/
 /*alternative mode,passing two buffer in one frame */
@@ -8067,14 +8068,10 @@ static ssize_t video_inuse_show(struct class *class,
 	size_t r;
 
 	mutex_lock(&video_inuse_mutex);
-	if (video_inuse == 0) {
-		r = sprintf(buf, "%d\n", video_inuse);
-		video_inuse = 1;
-		pr_info("video_inuse return 0,set 1\n");
-	} else {
-		r = sprintf(buf, "%d\n", video_inuse);
-		pr_info("video_inuse = %d\n", video_inuse);
-	}
+
+	r = sprintf(buf, "%d\n", video_inuse);
+	pr_info("video_inuse = %d\n", video_inuse);
+
 	mutex_unlock(&video_inuse_mutex);
 	return r;
 }
