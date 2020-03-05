@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 
-#define RX_VER0 "ver.2020/01/16"
+#define RX_VER0 "ver.2020/03/05"
 /*
  *
  *
@@ -280,8 +280,8 @@ struct rx_video_info {
 #define DUMP_MODE_EMP	0
 #define DUMP_MODE_TMDS	1
 #define TMDS_BUFFER_SIZE	0x2000000 /*32M*/
-#define EMP_BUFFER_SIZE		0x200000	/*2M*/
-#define EMP_BUFF_MAX_PKT_CNT ((EMP_BUFFER_SIZE/2)/32 - 200)
+#define EMP_BUFFER_SIZE		0x1000	/*4k*/
+#define EMP_BUFF_MAX_PKT_CNT 32 /* 1024/32 */
 #define TMDS_DATA_BUFFER_SIZE	0x200000
 
 struct rx_fastswitch_mode {
