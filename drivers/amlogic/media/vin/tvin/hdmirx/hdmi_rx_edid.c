@@ -1077,12 +1077,30 @@ bool is_ddc_idle(unsigned char port_id)
 	return false;
 }
 
-static enum edid_ver_e rx_get_edid_ver(uint8_t *p_edid)
+enum edid_ver_e rx_parse_edid_ver(uint8_t *p_edid)
 {
 	if (edid_tag_extract(p_edid, HF_VENDOR_DB_TAG))
 		return EDID_V20;
 	else
 		return EDID_V14;
+}
+
+enum edid_ver_e get_edid_selection(uint8_t port)
+{
+	u_char tmp_slt = edid_select >> (4 * port);
+	enum edid_ver_e edid_slt = EDID_V14;
+
+	if (tmp_slt & 0x2) {
+		if (rx.fs_mode.hdcp_ver[port] == HDCP_VER_22)
+			edid_slt = EDID_V20;
+		else
+			edid_slt = EDID_V14;
+	} else if (tmp_slt & 0x1) {
+		edid_slt = EDID_V20;
+	} else {
+		edid_slt = EDID_V14;
+	}
+	return edid_slt;
 }
 
 void rx_edid_fill_to_register(
@@ -1097,7 +1115,7 @@ void rx_edid_fill_to_register(
 	u_int tmp_cksum2 = 0;
 	u_int tmp_addr;
 	u_char *pedid;
-	u_char tmp_slt = 0;
+	enum edid_ver_e edid_slt = EDID_V14;
 
 	if (!(pedid1 && pphy_addr && pchecksum))
 		return;
@@ -1126,21 +1144,13 @@ void rx_edid_fill_to_register(
 	}
 
 	if (rx.chip_id <= CHIP_ID_TL1) {
-		tmp_slt = edid_select >> (4 * rx.port);
-		if (tmp_slt & 0x2) {
-			/* auto: todo, 1.4 edid by default */
+		edid_slt = get_edid_selection(rx.port);
+		if (edid_slt == EDID_V14) {
 			pedid = pedid1;
 			checksum = tmp_cksum1;
-			if (rx.fs_mode.hdcp_ver[rx.port] == HDCP_VER_22) {
-				pedid = pedid2;
-				checksum = tmp_cksum2;
-			}
-		} else if (tmp_slt & 0x1) {
+		} else {
 			pedid = pedid2;
 			checksum = tmp_cksum2;
-		} else {
-			pedid = pedid1;
-			checksum = tmp_cksum1;
 		}
 		if (rx.chip_id < CHIP_ID_TL1)
 			tmp_addr = TOP_EDID_OFFSET;
@@ -1160,19 +1170,14 @@ void rx_edid_fill_to_register(
 				((pphy_addr[i] >> 8) & 0xFF)) & 0xFF;
 				/*rx_pr("port %d phy:%d\n", i, pphy_addr[i]);*/
 		}
-		rx.edid_ver = rx_get_edid_ver(pedid);
 	} else if (rx.chip_id >= CHIP_ID_TM2) {
 		/* fill for port A */
-		if (edid_select & 0x2) {
-			/* auto: todo, 1.4 edid by default */
+		edid_slt = get_edid_selection(E_PORT0);
+		if (edid_slt == EDID_V14)
 			pedid = pedid1;
-			if (rx.fs_mode.hdcp_ver[0] == HDCP_VER_22)
-				pedid = pedid2;
-		} else if (edid_select & 0x1) {
+		else
 			pedid = pedid2;
-		} else {
-			pedid = pedid1;
-		}
+
 		for (i = 0; i <= 255; i++) {
 			hdmirx_wr_top(TOP_EDID_ADDR_S + i,
 				      pedid[i]);
@@ -1180,17 +1185,12 @@ void rx_edid_fill_to_register(
 				      pedid[i]);
 		}
 		/* fill for port B */
-		tmp_slt = edid_select >> 4;
-		if (tmp_slt & 0x2) {
-			/* auto: todo, 1.4 edid by default */
+		edid_slt = get_edid_selection(E_PORT1);
+		if (edid_slt == EDID_V14)
 			pedid = pedid1;
-			if (rx.fs_mode.hdcp_ver[1] == HDCP_VER_22)
-				pedid = pedid2;
-		} else if (tmp_slt & 0x1) {
+		else
 			pedid = pedid2;
-		} else {
-			pedid = pedid1;
-		}
+
 		for (i = 0; i <= 255; i++) {
 			hdmirx_wr_top(TOP_EDID_PORT2_ADDR_S + i,
 				pedid[i]);
@@ -1198,45 +1198,30 @@ void rx_edid_fill_to_register(
 				pedid[i]);
 		}
 		/* fill for port C */
-		tmp_slt = edid_select >> 8;
-		if (tmp_slt & 0x2) {
-			/* auto: todo, 1.4 edid by default */
+		edid_slt = get_edid_selection(E_PORT2);
+		if (edid_slt == EDID_V14)
 			pedid = pedid1;
-			if (rx.fs_mode.hdcp_ver[2] == HDCP_VER_22)
-				pedid = pedid2;
-		} else if (tmp_slt & 0x1) {
-			pedid =	pedid2;
-		} else {
-			pedid = pedid1;
-		}
+		else
+			pedid = pedid2;
 		for (i = 0; i <= 255; i++) {
 			hdmirx_wr_top(TOP_EDID_PORT3_ADDR_S + i,
 				pedid[i]);
 			hdmirx_wr_top(TOP_EDID_PORT3_ADDR_S + 0x100 + i,
 				pedid[i]);
 		}
+
 		/* calculate checksum for each port*/
 		for (i = 0; i < E_PORT_NUM; i++) {
-			tmp_slt = edid_select >> (4 * i);
-			if (tmp_slt & 0x2) {
-				/* auto: todo, 1.4 edid by default */
+			edid_slt = get_edid_selection(i);
+			if (edid_slt == EDID_V14)
 				checksum = tmp_cksum1;
-				if (rx.fs_mode.hdcp_ver[i] == HDCP_VER_22)
-					checksum = tmp_cksum2;
-			} else if (tmp_slt & 0x1) {
+			else
 				checksum = tmp_cksum2;
-			} else {
-				checksum = tmp_cksum1;
-			}
 			pchecksum[i] = (0x100 + checksum -
 				(pphy_addr[i] & 0xFF) -
 				((pphy_addr[i] >> 8) & 0xFF)) & 0xFF;
 			/*rx_pr("port %d phy:%d\n", i, pphy_addr[i]);*/
 		}
-		/* pedid = ((edid_select >> 4*rx.port) & 0x1) ?
-		 * pedid2 : pedid1;
-		 * rx.edid_ver = rx_get_edid_ver(pedid);
-		 */
 	}
 }
 

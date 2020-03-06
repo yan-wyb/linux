@@ -740,4 +740,6 @@ void rx_edid_update_audio_info(unsigned char *p_edid,
 						unsigned int len);
 extern bool is_ddc_idle(unsigned char port_id);
 bool need_update_edid(void);
+enum edid_ver_e get_edid_selection(uint8_t port);
+enum edid_ver_e rx_parse_edid_ver(uint8_t *p_edid);
 #endif

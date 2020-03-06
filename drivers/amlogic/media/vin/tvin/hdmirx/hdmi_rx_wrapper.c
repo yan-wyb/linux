@@ -2578,6 +2578,7 @@ unsigned int hdmirx_show_info(unsigned char *buf, int size)
 {
 	int pos = 0;
 	struct drm_infoframe_st *drmpkt;
+	enum edid_ver_e edid_slt = get_edid_selection(rx.port);
 
 	drmpkt = (struct drm_infoframe_st *)&(rx_pkt.drm_info);
 
@@ -2687,7 +2688,7 @@ unsigned int hdmirx_show_info(unsigned char *buf, int size)
 			"sts0x81c: 0x%x\n", hdmirx_rd_dwc(DWC_HDCP22_CONTROL));
 	}
 	pos += snprintf(buf + pos, size - pos,
-		"edid_ver: %s\n", rx.edid_ver == EDID_V20 ? "2.0" : "1.4");
+		"edid_select_ver: %s\n", edid_slt == EDID_V20 ? "2.0" : "1.4");
 
 	return pos;
 }
@@ -2789,8 +2790,11 @@ static void dump_clk_status(void)
 
 static void dump_video_status(void)
 {
-	rx_get_video_info();
+	enum edid_ver_e edid_slt = get_edid_selection(rx.port);
+	enum edid_ver_e edid_ver =
+		rx_parse_edid_ver(edid_temp + EDID_SIZE * edid_slt);
 
+	rx_get_video_info();
 	rx_pr("[HDMI info]\n");
 	rx_pr("colorspace %d,", rx.cur.colorspace);
 	rx_pr("dvi %d,", rx.cur.hw_dvi);
@@ -2825,7 +2829,10 @@ static void dump_video_status(void)
 			rx.port, up_phy_addr);
 	dump_clk_status();
 	rx_pr("eq=%x\n", (rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1)>>4)&0xffff);
-	rx_pr("edid_ver: %s\n", rx.edid_ver == EDID_V20 ? "2.0" : "1.4");
+	rx_pr("edid_select_ver: %s\n",
+	      edid_slt == EDID_V20 ? "2.0" : "1.4");
+	rx_pr("edid_parse_ver: %s\n",
+	      edid_ver == EDID_V20 ? "2.0" : "1.4");
 }
 
 static void dump_audio_status(void)
@@ -3138,6 +3145,8 @@ int hdmirx_debug(const char *buf, int size)
 	char *cur;
 	int cnt = 0;
 	struct edid_info_s edid_info;
+	enum edid_ver_e edid_slt = get_edid_selection(rx.port);
+	uint8_t *pedid = edid_temp + EDID_SIZE * edid_slt;
 
 	while ((buf[i]) && (buf[i] != ',') && (buf[i] != ' ')) {
 		tmpbuf[i] = buf[i];
@@ -3223,25 +3232,25 @@ int hdmirx_debug(const char *buf, int size)
 		rx_debug_pktinfo(input);
 	} else if (strncmp(tmpbuf, "parse_edid", 10) == 0) {
 		memset(&edid_info, 0, sizeof(struct edid_info_s));
-		rx_edid_parse(edid_temp, &edid_info);
+		rx_edid_parse(pedid, &edid_info);
 		rx_edid_parse_print(&edid_info);
 		rx_blk_index_print(&edid_info.cea_ext_info.blk_parse_info);
 	} else if (strncmp(tmpbuf, "parse_capds", 11) == 0) {
 		rx_prase_earc_capds_dbg();
 	} else if (strncmp(tmpbuf, "splice_capds", 12) == 0) {
-		edid_splice_earc_capds_dbg(edid_temp);
+		edid_splice_earc_capds_dbg(pedid);
 	} else if (strncmp(tmpbuf, "splice_db", 9) == 0) {
 		if (kstrtou32(tmpbuf + 9, 16, &value) < 0)
 			return -EINVAL;
-		edid_splice_data_blk_dbg(edid_temp, value);
+		edid_splice_data_blk_dbg(pedid, value);
 	} else if (strncmp(tmpbuf, "rm_db_tag", 9) == 0) {
 		if (kstrtou32(tmpbuf + 9, 16, &value) < 0)
 			return -EINVAL;
-		edid_rm_db_by_tag(edid_temp, value);
+		edid_rm_db_by_tag(pedid, value);
 	} else if (strncmp(tmpbuf, "rm_db_idx", 9) == 0) {
 		if (kstrtou32(tmpbuf + 9, 16, &value) < 0)
 			return -EINVAL;
-		edid_rm_db_by_idx(edid_temp, value);
+		edid_rm_db_by_idx(pedid, value);
 	} else if (tmpbuf[0] == 'w') {
 		rx_debug_wr_reg(buf, tmpbuf, i);
 	} else if (tmpbuf[0] == 'r') {

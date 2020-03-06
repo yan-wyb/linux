@@ -1984,8 +1984,8 @@ void clk_init(void)
 void hdmirx_20_init(void)
 {
 	unsigned long data32;
-	unsigned long scdc_en =
-		scdc_force_en ? 1 : rx.edid_ver;
+	bool scdc_en =
+		scdc_force_en ? 1 : get_edid_selection(rx.port);
 
 	data32 = 0;
 	data32 |= 1	<< 12; /* [12]     vid_data_checken */
