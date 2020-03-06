@@ -302,6 +302,7 @@ static void vpu_pipeline_planes_calc(struct meson_vpu_pipeline *pipeline,
 	u8 i;
 
 	mvps->num_plane = 0;
+	mvps->num_plane_video = 0;
 	mvps->enable_blocks = 0;
 	for (i = 0; i < pipeline->num_osds; i++) {
 		if (mvps->plane_info[i].enable) {
@@ -318,11 +319,13 @@ static void vpu_pipeline_planes_calc(struct meson_vpu_pipeline *pipeline,
 		if (mvps->video_plane_info[i].enable) {
 			mvps->enable_blocks |=
 				BIT(pipeline->video[i]->base.id);
+			mvps->num_plane_video++;
 			DRM_DEBUG("video[%d]-id=%d\n", i,
 				  pipeline->video[i]->base.id);
 		}
 	}
-	DRM_DEBUG("num_plane=%d.\n", mvps->num_plane);
+	DRM_DEBUG("num_plane=%d, video_plane_num=%d.\n",
+		  mvps->num_plane, mvps->num_plane_video);
 }
 
 int vpu_pipeline_check(struct meson_vpu_pipeline *pipeline,
@@ -336,6 +339,7 @@ int vpu_pipeline_check(struct meson_vpu_pipeline *pipeline,
 	vpu_pipeline_planes_calc(pipeline, mvps);
 
 	ret = vpu_pipeline_traverse(mvps, state);
+	vpu_video_pipeline_check_block(mvps, state);
 	DRM_DEBUG("check done--num_plane=%d.\n", mvps->num_plane);
 
 	return ret;

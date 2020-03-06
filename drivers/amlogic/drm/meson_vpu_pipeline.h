@@ -449,6 +449,7 @@ struct meson_vpu_pipeline_state {
 	struct meson_vpu_osd_layer_info plane_info[MESON_MAX_OSDS];
 	struct meson_vpu_video_layer_info video_plane_info[MESON_MAX_VIDEO];
 	u32 num_plane;
+	u32 num_plane_video;
 	/*min --> max*/
 	u32 zorder_plane_index[MESON_MAX_OSDS];
 	u32 ratio_plane_index[MESON_MAX_OSDS];
@@ -526,7 +527,8 @@ int vpu_pipeline_traverse(struct meson_vpu_pipeline_state *mvps,
 int vpu_pipeline_check_osdblend(u32 *out_port, int num_planes,
 				struct meson_vpu_pipeline_state *mvps,
 					struct drm_atomic_state *state);
-
+int vpu_video_pipeline_check_block(struct meson_vpu_pipeline_state *mvps,
+				   struct drm_atomic_state *state);
 extern struct meson_vpu_block_ops video_ops;
 extern struct meson_vpu_block_ops osd_ops;
 extern struct meson_vpu_block_ops afbc_ops;
