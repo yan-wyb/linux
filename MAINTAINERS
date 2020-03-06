@@ -15296,3 +15296,7 @@ F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_t312-panel.dtsi
 AMLOGIC ION
 M: Dezhi Kong <dezhi.kong@amlogic.com>
 F:  drivers/staging/android/ion/ion_secure_heap.c
+
+AMLOGIC DECODE RESOURCE MANAGE
+M: Baoguo Chen <baoguo.chen@amlogic.com>
+F: drivers/amlogic/media/common/resource_mgr/*
