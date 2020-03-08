@@ -508,27 +508,26 @@ static s16 pq_center[2][4];
 struct dv_pq_range_s pq_range[4];
 u8 current_vsvdb[7];
 
-#define USE_CENTER_2048 0
+#define USE_CENTER_0 0
 
 int num_picture_mode;
-static int default_pic_mode;
+static int default_pic_mode = 1;/*bright(standard) mode as default*/
 static int cur_pic_mode;/*current picture mode id*/
 static bool load_bin_config;
 static bool need_update_cfg;
 
 static const s16 EXTER_MIN_PQ = -256;
 static const s16 EXTER_MAX_PQ = 256;
-static const s16 INTER_MIN_PQ; //0
+static const s16 INTER_MIN_PQ = -4096;
 static const s16 INTER_MAX_PQ = 4095;
-static const s16 INTER_CENTER_PQ = 2048;
 
 #define LEFT_RANGE_BRIGHTNESS  (-1536) /*limit the range*/
 #define RIGHT_RANGE_BRIGHTNESS (1536)
-#define LEFT_RANGE_CONTRAST    (0)
+#define LEFT_RANGE_CONTRAST    (-4096)
 #define RIGHT_RANGE_CONTRAST   (4095)
-#define LEFT_RANGE_COLORSHIFT  (0)
+#define LEFT_RANGE_COLORSHIFT  (-4096)
 #define RIGHT_RANGE_COLORSHIFT (4095)
-#define LEFT_RANGE_SATURATION  (0)
+#define LEFT_RANGE_SATURATION  (-4096)
 #define RIGHT_RANGE_SATURATION (4095)
 
 const char *pq_item_str[] = {"brightness",
@@ -9395,12 +9394,12 @@ static void restore_dv_pq_setting(enum pq_reset_e pq_reset)
 static void set_dv_pq_center(void)
 {
 	int mode = 0;
-#if USE_CENTER_2048
+#if USE_CENTER_0
 	for (mode = 0; mode < num_picture_mode; mode++) {
-		pq_center[mode][0] = 2048;
-		pq_center[mode][1] = 2048;
-		pq_center[mode][2] = 2048;
-		pq_center[mode][3] = 2048;
+		pq_center[mode][0] = 0;
+		pq_center[mode][1] = 0;
+		pq_center[mode][2] = 0;
+		pq_center[mode][3] = 0;
 	}
 #else
 	for (mode = 0; mode < num_picture_mode; mode++) {
@@ -10058,7 +10057,7 @@ static ssize_t amdolby_vision_pq_info_store
 
 	pr_info("%s: cmd: %s\n", __func__, buf_orig);
 	parse_param_amdolby_vision(buf_orig, (char **)&parm);
-	if (!parm[0])
+	if (!parm[0] || !parm[1])
 		goto ERR;
 
 	if (!strcmp(parm[0], "picture_mode")) {
