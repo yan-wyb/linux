@@ -10889,7 +10889,7 @@ unsigned int dolby_vision_check_enable(void)
 {
 	int dv_mode = 0;
 	/*check if dovi enable in uboot*/
-	if (is_meson_g12()) {
+	if (is_meson_g12() || is_meson_tm2_stbmode()) {
 		if (dolby_vision_on_in_uboot) {
 			dolby_vision_enable = 1;
 			if ((READ_VPP_DV_REG(DOLBY_CORE3_DIAG_CTRL) & 0xff)
