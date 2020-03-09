@@ -50,7 +50,10 @@ void aml_tdm_enable(
 		offset = EE_AUDIO_TDMIN_B_CTRL
 				- EE_AUDIO_TDMIN_A_CTRL;
 		reg = EE_AUDIO_TDMIN_A_CTRL + offset * index;
-		aml_audiobus_update_bits(actrl, reg, 1<<31, is_enable<<31);
+		aml_audiobus_update_bits(actrl,
+					 reg,
+					 1 << 31 | 1 << 26,
+					 is_enable << 31 | 1 << 26);
 	}
 
 }
@@ -961,4 +964,14 @@ int aml_tdmout_get_mute(int tdmout_id)
 	value = audiobus_read(reg);
 
 	return value & 0x1;
+}
+
+int aml_tdmin_get_status(int tdm_id)
+{
+	unsigned int reg, offset;
+
+	offset = EE_AUDIO_TDMIN_B_STAT - EE_AUDIO_TDMIN_A_STAT;
+	reg = EE_AUDIO_TDMIN_A_STAT + offset * tdm_id;
+
+	return audiobus_read(reg);
 }

@@ -311,9 +311,19 @@ static const struct snd_kcontrol_new snd_tdm_c_controls[] = {
 static irqreturn_t aml_tdm_ddr_isr(int irq, void *devid)
 {
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)devid;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct device *dev = rtd->platform->dev;
+	struct aml_tdm *p_tdm = (struct aml_tdm *)dev_get_drvdata(dev);
 
 	if (!snd_pcm_running(substream))
 		return IRQ_HANDLED;
+
+	if ((substream->stream == SNDRV_PCM_STREAM_CAPTURE) &&
+	    p_tdm->chipinfo->reset_tdmin &&
+	    (aml_tdmin_get_status(p_tdm->id) & 0x3ff)) {
+		pr_info("%s(), reset tdmin, jiffies:%lu\n", __func__, jiffies);
+		snd_pcm_stop_xrun(substream);
+	}
 
 	snd_pcm_period_elapsed(substream);
 

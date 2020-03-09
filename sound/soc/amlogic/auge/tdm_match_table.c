@@ -60,27 +60,34 @@ struct tdm_chipinfo {
 
 	/* from tm2_revb */
 	bool separate_tohdmitx_en;
+
+	/* only for A113D */
+	bool reset_tdmin;
 };
 
 
 struct tdm_chipinfo axg_tdma_chipinfo = {
 	.id          = TDM_A,
 	.no_mclkpad_ctrl = true,
+	.reset_tdmin = true,
 };
 
 struct tdm_chipinfo axg_tdmb_chipinfo = {
 	.id          = TDM_B,
 	.no_mclkpad_ctrl = true,
+	.reset_tdmin = true,
 };
 
 struct tdm_chipinfo axg_tdmc_chipinfo = {
 	.id          = TDM_C,
 	.no_mclkpad_ctrl = true,
+	.reset_tdmin = true,
 };
 
 struct tdm_chipinfo axg_tdminlb_chipinfo = {
 	.id          = TDM_LB,
 	.no_mclkpad_ctrl = true,
+	.reset_tdmin = true,
 };
 
 struct tdm_chipinfo g12a_tdma_chipinfo = {
