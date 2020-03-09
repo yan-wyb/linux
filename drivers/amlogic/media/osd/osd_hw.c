@@ -112,6 +112,7 @@ static u32 rdma_dt_cnt;
 static void osd_clone_pan(u32 index, u32 yoffset, int debug_flag);
 static void osd_set_dummy_data(u32 index, u32 alpha);
 static void osd_wait_vsync_hw_viu1(void);
+static void osd_setting_default_hwc(void);
 
 struct hw_osd_reg_s hw_osd_reg_array[HW_OSD_COUNT];
 
@@ -3442,6 +3443,8 @@ void osd_enable_hw(u32 index, u32 enable)
 	osd_hw.enable[index] = enable;
 	output_index = get_output_device_id(index);
 	if (get_osd_hwc_type(index) != OSD_G12A_NEW_HWC) {
+		if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE)
+			osd_setting_default_hwc();
 		add_to_update_list(index, OSD_ENABLE);
 		osd_wait_vsync_hw(index);
 	} else if (osd_hw.hwc_enable[output_index] &&
