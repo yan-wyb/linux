@@ -900,22 +900,6 @@ static int hifi4dsp_platform_probe(struct platform_device *pdev)
 	dma_alloc_from_contiguous(&pdev->dev,
 				  PAGE_ALIGN(reservememsize) >> PAGE_SHIFT, 0);
 	pr_info("cma alloc hifi4 mem region success!\n");
-	if (cma_pages != NULL) {
-		hifi4_rmem.base = page_to_phys(cma_pages);
-		if (!PageHighMem(cma_pages)) {
-			fw_addr = phys_to_virt(hifi4_rmem.base);
-			pr_info("kernel addr map1 phys:0x%lx->virt:0x%lx\n",
-				(unsigned long)hifi4_rmem.base,
-				(unsigned long)fw_addr);
-		} else {
-			fw_addr = mm_vmap(hifi4_rmem.base, hifi4_rmem.size);
-			pr_info("kernel addr map2 phys:0x%lx->virt:0x%lx\n",
-				(unsigned long)hifi4_rmem.base,
-				(unsigned long)fw_addr);
-		}
-	}
-	else
-		goto err3;
 
 	if (dsp_cnt <= 0) {
 		goto err3;
@@ -930,16 +914,35 @@ static int hifi4dsp_platform_probe(struct platform_device *pdev)
 		pr_info("\nregister dsp-%d start\n", id);
 
 		/*get boot address*/
-		pr_debug("reserved_mem :base:0x%llx, size:0x%lx\n",
-			 (unsigned long long)hifi4_rmem.base,
-			 (unsigned long)hifi4_rmem.size);
-		hifi4base = hifi4_rmem.base + (id == 0 ?
-					       dspaoffset :
-					       dspboffset);
-		hifi4size =
-		     (id == 0 ?
-		     (dspboffset - dspaoffset) :
-		     ((unsigned long)hifi4_rmem.size - dspboffset));
+		if (cma_pages) {
+			hifi4_rmem.base = page_to_phys(cma_pages);
+
+			pr_debug("reserved_mem :base:0x%llx, size:0x%lx\n",
+				 (unsigned long long)hifi4_rmem.base,
+				 (unsigned long)hifi4_rmem.size);
+
+			hifi4base = hifi4_rmem.base + (id == 0 ?
+						       dspaoffset :
+						       dspboffset);
+			hifi4size =
+			     (id == 0 ?
+			     (dspboffset - dspaoffset) :
+			     ((unsigned long)hifi4_rmem.size - dspboffset));
+
+			if (!PageHighMem(cma_pages)) {
+				fw_addr = phys_to_virt(hifi4base);
+				pr_info("kernel addr map1 phys:0x%lx->virt:0x%lx\n",
+					(unsigned long)hifi4base,
+					(unsigned long)fw_addr);
+			} else {
+				fw_addr = mm_vmap(hifi4base, hifi4size);
+				pr_info("kernel addr map2 phys:0x%lx->virt:0x%lx\n",
+					(unsigned long)hifi4base,
+					(unsigned long)fw_addr);
+			}
+		} else
+			goto err3;
+
 		pr_debug("hifi4dsp%d, firmware :base:0x%llx, size:0x%x, virt:%lx\n",
 			 id,
 			 (unsigned long long)hifi4base,
