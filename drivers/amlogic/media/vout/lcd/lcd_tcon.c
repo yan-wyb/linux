@@ -431,7 +431,7 @@ static int lcd_tcon_deruma_lut_tl1(void)
 	/* fixed 2 byte 0 for border */
 	lcd_tcon_write_byte(0x187, 0);
 	lcd_tcon_write_byte(0x187, 0);
-	for (i = 8; i < data_cnt; i++)
+	for (i = 0; i < data_cnt; i++)
 		lcd_tcon_write_byte(0x187, data_buf[i]);
 
 	LCDPR("tcon demura_lut cnt %d\n", data_cnt);
