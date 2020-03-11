@@ -215,37 +215,37 @@ void vdin_afbce_update(struct vdin_dev_s *devp)
 	pr_info("##############################################\n");
 #endif
 
-	if ((devp->prop.dest_cfmt == TVIN_YUV444) && (devp->h_active > 2048))
+	if (((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
+	    (devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444)) &&
+	    (devp->h_active > 2048))
 		reg_fmt444_comb = 1;
 	else
 		reg_fmt444_comb = 0;
 
-	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-		(devp->prop.dest_cfmt == TVIN_NV21)) {
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
 		reg_format_mode = 2;
 		sblk_num = 12;
-	} else if ((devp->prop.dest_cfmt == TVIN_YUV422) ||
-		(devp->prop.dest_cfmt == TVIN_YUYV422) ||
-		(devp->prop.dest_cfmt == TVIN_YVYU422) ||
-		(devp->prop.dest_cfmt == TVIN_UYVY422) ||
-		(devp->prop.dest_cfmt == TVIN_VYUY422)) {
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV422:
+	case VDIN_FORMAT_CONVERT_RGB_YUV422:
+	case VDIN_FORMAT_CONVERT_GBR_YUV422:
+	case VDIN_FORMAT_CONVERT_BRG_YUV422:
 		reg_format_mode = 1;
 		sblk_num = 16;
-	} else {
+		break;
+	default:
 		reg_format_mode = 0;
 		sblk_num = 24;
+		break;
 	}
 	uncmp_bits = devp->source_bitdepth;
 
 	/* bit size of uncompression mode */
 	uncmp_size = (((((16*uncmp_bits*sblk_num)+7)>>3)+31)/32)<<1;
-	/*
-	 *pr_info("%s: dest_cfmt=%d, reg_format_mode=%d, uncmp_bits=%d,
-	 *         sblk_num=%d, uncmp_size=%d\n",
-	 *	__func__, devp->prop.dest_cfmt, reg_format_mode,
-	 *	uncmp_bits, sblk_num, uncmp_size);
-	 */
-
 	rdma_write_reg(devp->rdma_handle, AFBCE_MODE,
 		(0 & 0x7) << 29 | (0 & 0x3) << 26 | (3 & 0x3) << 24 |
 		(hold_line_num & 0x7f) << 16 |
@@ -334,6 +334,7 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 
 	pr_info("%s format_convert:%d\n", __func__, devp->format_convert);
 	vdinout_fmt = devp->format_convert;
+
 	if ((vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_RGB) ||
 	    (vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_GBR) ||
 	    (vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_BRG) ||

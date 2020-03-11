@@ -412,17 +412,25 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 		vf->duration = devp->fmt_info_p->duration;
 #endif
 		/* init canvas config */
-		/*if output fmt is nv21 or nv12 ,
+		/* if output fmt is nv21 or nv12 ,
 		 * use the two continuous canvas for one field
 		 */
-		if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-			(devp->prop.dest_cfmt == TVIN_NV21)) {
+		switch (devp->format_convert) {
+		case VDIN_FORMAT_CONVERT_YUV_NV12:
+		case VDIN_FORMAT_CONVERT_YUV_NV21:
+		case VDIN_FORMAT_CONVERT_RGB_NV12:
+		case VDIN_FORMAT_CONVERT_RGB_NV21:
 			chromaid =
-				(vdin_canvas_ids[index][(vf->index<<1)+1])<<8;
-			addr = vdin_canvas_ids[index][vf->index<<1] | chromaid;
-		} else {
+				(vdin_canvas_ids[index][(vf->index << 1) + 1])
+				<< 8;
+			addr = vdin_canvas_ids[index][vf->index << 1]
+				| chromaid;
+			break;
+		default:
 			addr = vdin_canvas_ids[index][vf->index];
+			break;
 		}
+
 		vf->canvas0Addr = vf->canvas1Addr = addr;
 
 		/* init afbce config */
@@ -620,13 +628,6 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		vdin_afbce_config(devp);
 	}
 
-#if 0
-	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-		(devp->prop.dest_cfmt == TVIN_NV21))
-		devp->vfp->size = devp->canvas_max_num;
-	else
-		devp->vfp->size = devp->canvas_max_num;
-#endif
 	if (devp->prop.fps &&
 		devp->parm.port >= TVIN_PORT_HDMI0 &&
 		devp->parm.port <= TVIN_PORT_HDMI7)
@@ -1957,8 +1958,10 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			(next_wr_vfe->vf.canvas0Addr&0xff));
 
 		/* prepare for chroma canvas*/
-		if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-			(devp->prop.dest_cfmt == TVIN_NV21))
+		if ((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_NV12) ||
+		    (devp->format_convert == VDIN_FORMAT_CONVERT_YUV_NV21) ||
+		    (devp->format_convert == VDIN_FORMAT_CONVERT_RGB_NV12) ||
+		    (devp->format_convert == VDIN_FORMAT_CONVERT_RGB_NV21))
 			vdin_set_chma_canvas_id(devp,
 				(devp->flags&VDIN_FLAG_RDMA_ENABLE),
 				(next_wr_vfe->vf.canvas0Addr>>8)&0xff);
@@ -2201,8 +2204,10 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 		vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
 			(next_wr_vfe->vf.canvas0Addr&0xff));
 
-		if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-			(devp->prop.dest_cfmt == TVIN_NV21))
+		if ((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_NV12) ||
+		    (devp->format_convert == VDIN_FORMAT_CONVERT_YUV_NV21) ||
+		    (devp->format_convert == VDIN_FORMAT_CONVERT_RGB_NV12) ||
+		    (devp->format_convert == VDIN_FORMAT_CONVERT_RGB_NV21))
 			vdin_set_chma_canvas_id(devp,
 			(devp->flags&VDIN_FLAG_RDMA_ENABLE),
 			(next_wr_vfe->vf.canvas0Addr>>8)&0xff);

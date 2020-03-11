@@ -585,20 +585,14 @@ u32 vdin_matrix_range_chk(struct vdin_dev_s *devp)
 	}
 }
 
-/*set format_convert
- *base on parameters:
- *	a.color_format
- *	b.dest_cfmt
- */
 void vdin_get_format_convert(struct vdin_dev_s *devp)
 {
 	enum vdin_format_convert_e	format_convert;
 	unsigned int port = devp->parm.port;
 	unsigned int scan_mod = devp->fmt_info_p->scan_mode;
 
-	if (IS_HDMI_SRC(port)) {
+	if (IS_HDMI_SRC(port) && !(devp->flags & VDIN_FLAG_MANUAL_CONVERSION))
 		devp->prop.dest_cfmt = TVIN_COLOR_FMT_MAX;
-	}
 
 	if (devp->prop.color_format == devp->prop.dest_cfmt) {
 		switch (devp->prop.color_format) {
@@ -697,16 +691,28 @@ enum vdin_format_convert_e vdin_get_format_convert_matrix0(
 {
 	enum vdin_format_convert_e format_convert = VDIN_FORMAT_CONVERT_MAX;
 
-	if (devp->prop.dest_cfmt == TVIN_NV21)
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
 		format_convert = VDIN_FORMAT_CONVERT_RGB_NV21;
-	else if (devp->prop.dest_cfmt == TVIN_NV12)
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
 		format_convert = VDIN_FORMAT_CONVERT_RGB_NV12;
-	else if (devp->prop.dest_cfmt == TVIN_RGB444)
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_RGB:
+	case VDIN_FORMAT_CONVERT_RGB_RGB:
 		format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
-	else if (devp->prop.dest_cfmt == TVIN_YUV444)
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV444:
+	case VDIN_FORMAT_CONVERT_RGB_YUV444:
 		format_convert = VDIN_FORMAT_CONVERT_RGB_YUV444;
-	else
+		break;
+	default:
 		format_convert = VDIN_FORMAT_CONVERT_RGB_YUV422;
+		break;
+	}
+
 	return format_convert;
 }
 
@@ -4992,7 +4998,6 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 {
 	u32 field_status;
 	u32 type = VIDTYPE_VIU_SINGLE_PLANE | VIDTYPE_VIU_FIELD;
-	enum vdin_format_convert_e	format_convert;
 
 	/* struct tvin_parm_s *parm = &devp->parm; */
 	const struct tvin_format_s *fmt_info = devp->fmt_info_p;
@@ -5025,26 +5030,35 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 		}
 	}
 
-	format_convert = devp->format_convert;
-	if ((format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
-			(format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444)) {
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_YUV444:
+	case VDIN_FORMAT_CONVERT_RGB_YUV444:
 		type |= VIDTYPE_VIU_444;
-		/*if (devp->afbce_mode_pre)*/
-		/*	type |= VIDTYPE_COMB_MODE;*/
-	} else if ((format_convert == VDIN_FORMAT_CONVERT_YUV_YUV422) ||
-			(format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422)) {
+		/*if (devp->afbce_mode_pre) */
+		/*	type |= VIDTYPE_COMB_MODE; */
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV422:
+	case VDIN_FORMAT_CONVERT_RGB_YUV422:
 		type |= VIDTYPE_VIU_422;
-	} else if ((format_convert == VDIN_FORMAT_CONVERT_YUV_RGB) ||
-		(format_convert == VDIN_FORMAT_CONVERT_RGB_RGB)) {
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_RGB:
+	case VDIN_FORMAT_CONVERT_RGB_RGB:
 		type |= VIDTYPE_RGB_444;
 		if (devp->afbce_mode_pre && vdin_chk_is_comb_mode(devp))
 			type |= VIDTYPE_COMB_MODE;
-	} else if (devp->prop.dest_cfmt == TVIN_NV21) {
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
 		type |= VIDTYPE_VIU_NV21;
 		type &= (~VIDTYPE_VIU_SINGLE_PLANE);
-	} else if (devp->prop.dest_cfmt == TVIN_NV12) {
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
 		/* type |= VIDTYPE_VIU_NV12; */
 		type &= (~VIDTYPE_VIU_SINGLE_PLANE);
+		break;
+	default:
+		break;
 	}
 
 	if (devp->afbce_valid)

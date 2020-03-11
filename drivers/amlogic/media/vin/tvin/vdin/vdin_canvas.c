@@ -126,41 +126,47 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 	unsigned int canvas_num = VDIN_CANVAS_MAX_CNT;
 	unsigned int max_buffer_num = max_buf_num;
 
-	/* todo: if new add output YUV444 format,this place should add too!!*/
-	if ((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_RGB) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_RGB) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG)) {
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_YUV444:
+	case VDIN_FORMAT_CONVERT_YUV_RGB:
+	case VDIN_FORMAT_CONVERT_RGB_YUV444:
+	case VDIN_FORMAT_CONVERT_RGB_RGB:
+	case VDIN_FORMAT_CONVERT_YUV_GBR:
+	case VDIN_FORMAT_CONVERT_YUV_BRG:
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
 			devp->canvas_w = max_buf_width *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		else
 			devp->canvas_w = max_buf_height *
 				VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
-	} else if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-		(devp->prop.dest_cfmt == TVIN_NV21)) {
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
 		devp->canvas_w = max_buf_width;
-		canvas_num = canvas_num/2;
+		canvas_num = canvas_num / 2;
 		canvas_step = 2;
-	} else{/*YUV422*/
-		/* txl new add yuv422 pack mode:canvas_w=h*2*10/8*/
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV422:
+	case VDIN_FORMAT_CONVERT_RGB_YUV422:
+	case VDIN_FORMAT_CONVERT_GBR_YUV422:
+	case VDIN_FORMAT_CONVERT_BRG_YUV422:
 		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
-		((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV422) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
-		(devp->color_depth_mode == VDIN_422_FULL_PK_EN))
-			devp->canvas_w = (max_buf_width * 5)/2;
+		    (devp->color_depth_mode == VDIN_422_FULL_PK_EN))
+			devp->canvas_w = (max_buf_width * 5) / 2;
 		else if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
-			(devp->color_depth_mode == VDIN_422_FULL_PK_DIS))
+			 (devp->color_depth_mode == VDIN_422_FULL_PK_DIS))
 			devp->canvas_w = max_buf_width *
 				VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
 		else
 			devp->canvas_w = max_buf_width *
 				VDIN_YUV422_8BIT_PER_PIXEL_BYTE;
+		break;
+	default:
+		break;
 	}
+
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
 	if (devp->force_yuv444_malloc == 1) {
@@ -176,9 +182,16 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 	devp->canvas_w = roundup(devp->canvas_w, devp->canvas_align);
 	devp->canvas_h = devp->v_active;
 
-	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-		(devp->prop.dest_cfmt == TVIN_NV21))
-		chroma_size = devp->canvas_w*devp->canvas_h/2;
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
+		chroma_size = devp->canvas_w * devp->canvas_h / 2;
+		break;
+	default:
+		break;
+	}
 
 	devp->canvas_max_size = PAGE_ALIGN(devp->canvas_w*
 			devp->canvas_h+chroma_size);
@@ -268,42 +281,47 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 	unsigned int canvas_num = VDIN_CANVAS_MAX_CNT;
 	unsigned int max_buffer_num = max_buf_num;
 
-	/* todo: if new add output YUV444 format,this place should add too!!*/
-	if ((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_RGB) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_RGB) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG)) {
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_YUV444:
+	case VDIN_FORMAT_CONVERT_YUV_RGB:
+	case VDIN_FORMAT_CONVERT_RGB_YUV444:
+	case VDIN_FORMAT_CONVERT_RGB_RGB:
+	case VDIN_FORMAT_CONVERT_YUV_GBR:
+	case VDIN_FORMAT_CONVERT_YUV_BRG:
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		else
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
-	} else if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-		(devp->prop.dest_cfmt == TVIN_NV21)) {
-		canvas_num = canvas_num/2;
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
+		canvas_num = canvas_num / 2;
 		canvas_step = 2;
 		devp->canvas_w = devp->h_active;
-		/* nv21/nv12 only have 8bit mode */
-	} else {/*YUV422*/
-		/* txl new add yuv422 pack mode:canvas-w=h*2*10/8*/
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV422:
+	case VDIN_FORMAT_CONVERT_RGB_YUV422:
+	case VDIN_FORMAT_CONVERT_GBR_YUV422:
+	case VDIN_FORMAT_CONVERT_BRG_YUV422:
 		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
-		((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV422) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV422) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_GBR_YUV422) ||
-		(devp->format_convert == VDIN_FORMAT_CONVERT_BRG_YUV422)) &&
-		(devp->color_depth_mode == VDIN_422_FULL_PK_EN))
-			devp->canvas_w = (devp->h_active * 5)/2;
+		    (devp->color_depth_mode == VDIN_422_FULL_PK_EN))
+			devp->canvas_w = (devp->h_active * 5) / 2;
 		else if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
-			(devp->color_depth_mode == VDIN_422_FULL_PK_DIS))
+			 (devp->color_depth_mode == VDIN_422_FULL_PK_DIS))
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
 		else
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV422_8BIT_PER_PIXEL_BYTE;
+		break;
+	default:
+		break;
 	}
+
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
 	if (devp->force_yuv444_malloc == 1) {
@@ -319,9 +337,16 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 	devp->canvas_w = roundup(devp->canvas_w, devp->canvas_align);
 	devp->canvas_h = devp->v_active;
 
-	if ((devp->prop.dest_cfmt == TVIN_NV12) ||
-		(devp->prop.dest_cfmt == TVIN_NV21))
-		chroma_size = devp->canvas_w*devp->canvas_h/2;
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
+		chroma_size = devp->canvas_w * devp->canvas_h / 2;
+		break;
+	default:
+		break;
+	}
 
 	devp->canvas_max_size = PAGE_ALIGN(devp->canvas_w*
 			devp->canvas_h+chroma_size);
