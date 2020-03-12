@@ -884,8 +884,11 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 		devp->parm.reserved |= para->reserved;
 
 		/*always update buf to avoid older data be captured*/
-		if (devp->parm.reserved & PARAM_STATE_SCREENCAP)
+		if ((devp->parm.reserved & PARAM_STATE_SCREENCAP) ||
+		    (devp->parm.reserved & PARAM_STATE_HISTGRAM))
 			devp->flags |= VDIN_FLAG_FORCE_RECYCLE;
+		else
+			devp->flags &= ~VDIN_FLAG_FORCE_RECYCLE;
 
 		pr_info("vdin1 add reserved = 0x%lx\n", para->reserved);
 		pr_info("vdin1 all reserved = 0x%x\n", devp->parm.reserved);
@@ -1471,31 +1474,22 @@ int vdin_vs_duration_check(struct vdin_dev_s *devp)
 int vdin_vframe_put_and_recycle(struct vdin_dev_s *devp, struct vf_entry *vfe,
 				  enum vdin_vf_put_md md)
 {
-	struct vf_entry *temp_vfe = NULL;
 	int ret = 0;
 
 	/*force recycle one frame*/
-	if ((!vfe) && (md == VDIN_VF_RECYCLE)) {
-		temp_vfe = receiver_vf_get(devp->vfp);
-		if (temp_vfe)
-			receiver_vf_put(&temp_vfe->vf, devp->vfp);
-		else
-			pr_err("[vdin.%d]force recycle error,no buffer in ready list",
-					devp->index);
-		ret = -1;
-	} else if ((devp->frame_cnt < drop_num) || (md == VDIN_VF_RECYCLE)) {
-		provider_vf_put(vfe, devp->vfp);
+	if ((devp->frame_cnt < drop_num) || (md == VDIN_VF_RECYCLE)) {
+		if (vfe)
+			provider_vf_put(vfe, devp->vfp);
+
 		vfe = receiver_vf_get(devp->vfp);
 		if (vfe)
 			receiver_vf_put(&vfe->vf, devp->vfp);
 		else
 			pr_info(">>>>> err2 vframe self receive\n");
 		ret = -1;
-	} else {
+	} else if (vfe) {
 		provider_vf_put(vfe, devp->vfp);
-		/*vf_notify_receiver(devp->name,*/
-		/*		     VFRAME_EVENT_PROVIDER_VFRAME_READY,*/
-		/*		     NULL);*/
+
 		if (time_en) {
 			vfe->vf.ready_clock[1] = sched_clock();
 			pr_info("vdin put latency %lld us.first %lld us\n",
@@ -1847,6 +1841,16 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		}
 	}
 
+	/* prepare for next input data */
+	next_wr_vfe = provider_vf_get(devp->vfp);
+	if (!next_wr_vfe) {
+		devp->vdin_irq_flag = 11;
+		vdin_drop_frame_info(devp, "no next wr vfe");
+
+		vdin_drop_cnt++;
+		goto irq_handled;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (((devp->dv.dolby_input & (1 << devp->index)) ||
 		(devp->dv.dv_flag && is_dolby_vision_enable())) &&
@@ -1951,8 +1955,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	vdin_game_mode_transfer(devp);
 
-	/* prepare for next input data */
-	next_wr_vfe = provider_vf_get(devp->vfp);
 	if (devp->afbce_mode == 0) {
 		vdin_set_canvas_id(devp, (devp->flags&VDIN_FLAG_RDMA_ENABLE),
 			(next_wr_vfe->vf.canvas0Addr&0xff));
@@ -3182,6 +3184,9 @@ static ssize_t vdin_read(struct file *file, char __user *buf,
 		return 0;
 
 	vfe = receiver_vf_get(devp->vfp);
+	if (!vfe)
+		return 0;
+
 	/*index = report_canvas_index;*/
 	index = vfe->vf.index;
 	devp->keystone_entry[index] = vfe;
