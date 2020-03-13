@@ -3963,7 +3963,7 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 		}
 		if (table_name & nr_table)
 			ctrl_reg_flag = set_nr_ctrl_reg_table(addr, value);
-		if (table_name & TABLE_NAME_DI)
+		if (table_name & (TABLE_NAME_DI | TABLE_NAME_NR))
 			mov_flg = di_patch_mov_db(addr, value);
 		if (!ctrl_reg_flag && !mov_flg)
 			DI_Wr(addr, value);

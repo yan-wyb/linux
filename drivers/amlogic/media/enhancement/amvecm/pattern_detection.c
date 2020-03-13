@@ -1047,13 +1047,16 @@ static int multicast_color_checker(struct vframe_s *vf)
 	hue_flg = 3840 * 2160 * 7 - total_hue_hist * 1000;
 
 	if ((sat_flg > 0) && (hue_flg > 0) &&
-	    (vf->di_gmv > di_size * mltcast_ratio1 / 16))
+	    (vf->di_gmv > di_size * mltcast_ratio1 / 16) &&
+	    (vf->di_gmv < di_size * 15 / 16))
 		flag = 1;
 	else if ((sat_flg > 0) && (hue_flg > 0) &&
-		 (vf->di_gmv > di_size * mltcast_ratio2 / 16))
+		 (vf->di_gmv > di_size * mltcast_ratio2 / 16) &&
+		 (vf->di_gmv < di_size * 15 / 16))
 		flag = 2;
 	else if ((hue_hist[31] > total_hue_hist * 9 / 10) &&
-		 (vf->di_cm_cnt > di_size * mltcast_ratio1 / 16))
+		 (vf->di_cm_cnt > di_size * mltcast_ratio1 / 16) &&
+		(vf->di_gmv < di_size * 15 / 16))
 		flag = 3;
 	else
 		flag = 0;
