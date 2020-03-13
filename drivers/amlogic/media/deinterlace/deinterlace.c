@@ -1711,9 +1711,9 @@ unsigned char is_bypass(vframe_t *vf_in)
 		return 1;
 	}
 
-	if (di_pre_stru.cur_prog_flag &&
-	    ((di_pre_stru.cur_width > 1920) ||
-	    (di_pre_stru.cur_height > 1080) ||
+	if (/*di_pre_stru.cur_prog_flag && */
+	    ((di_pre_stru.cur_width > default_width) ||
+	    (di_pre_stru.cur_height > (default_height + 8)) ||
 	    (di_pre_stru.cur_inp_type & VIDTYPE_VIU_444) ||
 	    (di_pre_stru.cur_inp_type & VIDTYPE_RGB_444)))
 		return 1;
