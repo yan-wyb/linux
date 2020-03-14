@@ -1913,7 +1913,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		(devp->flags & VDIN_FLAG_SNOW_FLAG))
 		curr_wr_vf->height = 480;
 	curr_wr_vfe->flag |= VF_FLAG_NORMAL_FRAME;
-	if (devp->auto_ratio_en && (devp->parm.port >= TVIN_PORT_CVBS0) &&
+	if ((devp->parm.port >= TVIN_PORT_CVBS0) &&
 		(devp->parm.port <= TVIN_PORT_CVBS3))
 		vdin_set_display_ratio(devp, curr_wr_vf);
 	if ((devp->flags&VDIN_FLAG_RDMA_ENABLE) &&
