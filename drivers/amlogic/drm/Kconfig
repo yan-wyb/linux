@@ -58,6 +58,17 @@ config DRM_MESON_HDMI
 		We should confirm AMLOGIC_HDMITX is configured if
 		DRM_MESON_HDMI is selected.
 
+config DRM_MESON_CVBS
+	tristate "support drm cvbs function for meson drm display."
+	default n
+	depends on DRM_MESON
+	depends on AMLOGIC_CVBS_OUTPUT
+	help
+		add drm cvbs support.
+		use internal amlogic media vout cvbs driver.
+		We should confirm AMLOGIC_CVBSOUT is configured if
+		DRM_MESON_CVBS is selected.
+
 config DRM_MESON_PANEL
 	tristate "support drm panel function for meson drm display."
 	default n

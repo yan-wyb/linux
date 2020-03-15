@@ -15,8 +15,10 @@
  *
  */
 
-#ifndef _CVBS_MODE_H_
-#define _CVBS_MODE_H_
+#ifndef _CVBS_OUT_H_
+#define _CVBS_OUT_H_
+
+#include <linux/amlogic/media/vout/vinfo.h>
 
 enum cvbs_mode_e {
 	MODE_480CVBS = 0,
@@ -27,4 +29,11 @@ enum cvbs_mode_e {
 	MODE_MAX,
 };
 
+extern const struct vinfo_s *get_valid_vinfo(char  *mode);
+extern enum cvbs_mode_e get_local_cvbs_mode(void);
+extern int cvbs_set_current_vmode(enum vmode_e mode);
+
 #endif
+
+
+

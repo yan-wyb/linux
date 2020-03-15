@@ -15,6 +15,10 @@ ifneq ($(CONFIG_DRM_MESON_HDMI),)
         meson-drm-y += meson_hdmi.o meson_hdcp.o
 endif
 
+ifneq ($(CONFIG_DRM_MESON_CVBS),)
+        meson-drm-y += meson_cvbs.o
+endif
+
 ifneq ($(CONFIG_DRM_MESON_PANEL),)
         meson-drm-y += meson_lcd.o
 endif

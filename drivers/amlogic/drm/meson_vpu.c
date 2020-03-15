@@ -84,6 +84,7 @@ static struct am_vout_mode am_vout_modes[] = {
 	{ "576p50hz", VMODE_HDMI, 720, 576, 50, 0},
 	{ "576i50hz", VMODE_HDMI, 720, 576, 50, DRM_MODE_FLAG_INTERLACE},
 	{ "480p60hz", VMODE_HDMI, 720, 480, 60, 0},
+	{ "576cvbs", VMODE_CVBS, 720, 576, 60, DRM_MODE_FLAG_INTERLACE},
 };
 
 

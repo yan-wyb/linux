@@ -1912,6 +1912,10 @@
 	hdcp = "disabled";
 };
 
+&drm_amcvbsout {
+	status = "disabled";
+};
+
 &drm_lcd {
 	status = "okay";
 };
