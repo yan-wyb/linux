@@ -1219,6 +1219,7 @@ int init_pattern_detect(void)
 int pattern_detect(struct vframe_s *vf)
 {
 	int flag = 0, rc = PATTERN_UNKNOWN;
+	int i;
 
 	if (!vf)
 		return 0;
@@ -1239,6 +1240,13 @@ int pattern_detect(struct vframe_s *vf)
 				pattern_index);
 			pattern_list[pattern_index].default_loader(vf);
 		}
+	}
+
+	for (pattern_index = PATTERN_START;
+		pattern_index <= PATTERN_INDEX_MAX;
+		pattern_index++) {
+		if (!(pattern_mask & (1 << pattern_index)))
+			continue;
 
 		/* check the pattern */
 		if (pattern_list[pattern_index].checker) {
@@ -1278,6 +1286,15 @@ int pattern_detect(struct vframe_s *vf)
 	}
 
 finish_detect:
+	for (i = pattern_index + 1;
+	     i <= PATTERN_INDEX_MAX;
+	     i++) {
+		if (pattern_list[i].handler) {
+			pr_pattern_detect_dbg(
+			"recover default setting for left patterns %d:\n", i);
+			pattern_list[i].handler(vf, 0);
+		}
+	}
 	last_detected_pattern = detected_pattern;
 	if (pattern_detect_debug > 0)
 		pattern_detect_debug--;
