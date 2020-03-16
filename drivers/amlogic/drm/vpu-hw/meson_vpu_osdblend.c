@@ -269,9 +269,9 @@ static void osdblend_hw_update(struct osdblend_reg_s *reg,
 	osd_blend_dummy_data_set(reg, dummy_data);
 
 	/*alpha config*/
-	osd_blend0_dummy_alpha_set(reg, 0x1ff);
+	osd_blend0_dummy_alpha_set(reg, 0);
 	osd_blend1_dummy_alpha_set(reg, 0);
-	osd_blend2_dummy_alpha_set(reg, 0x1ff);
+	osd_blend2_dummy_alpha_set(reg, 0);
 
 	/*internal channel disable default*/
 	osd_din0_input_enable_set(reg, (mvobs->input_mask >> DIN0) & 0x1);

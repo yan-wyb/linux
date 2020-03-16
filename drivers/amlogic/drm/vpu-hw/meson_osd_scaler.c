@@ -182,7 +182,7 @@ void osd_vsc_top_ini_rcv_num_set(struct osd_scaler_reg_s *reg, u32 data)
 /*vsc bank length??*/
 void osd_vsc_bank_length_set(struct osd_scaler_reg_s *reg, u32 data)
 {
-	VSYNCOSD_WR_MPEG_REG_BITS(reg->vpp_osd_vsc_ctrl0, data, 0, 2);
+	VSYNCOSD_WR_MPEG_REG_BITS(reg->vpp_osd_vsc_ctrl0, data, 0, 3);
 }
 /*********vsc config end**********/
 
@@ -244,7 +244,7 @@ void osd_hsc_ini_rcv_num0_set(struct osd_scaler_reg_s *reg, u32 data)
 /*hsc bank length*/
 void osd_hsc_bank_length_set(struct osd_scaler_reg_s *reg, u32 data)
 {
-	VSYNCOSD_WR_MPEG_REG_BITS(reg->vpp_osd_hsc_ctrl0, data, 0, 2);
+	VSYNCOSD_WR_MPEG_REG_BITS(reg->vpp_osd_hsc_ctrl0, data, 0, 3);
 }
 /*
  *hsc init pattern

@@ -179,6 +179,7 @@ am_meson_drm_display_mode_init(struct drm_connector *connector)
 	struct drm_display_mode *mode;
 	struct drm_device *dev;
 	u32 found, num_modes;
+	char *name;
 
 	if (!connector || !connector->dev)
 		return NULL;
@@ -196,7 +197,8 @@ am_meson_drm_display_mode_init(struct drm_connector *connector)
 		return NULL;
 	}
 	list_for_each_entry(mode, &connector->modes, head) {
-		if (am_meson_crtc_check_mode(mode, logo.outputmode) == true) {
+		name = am_meson_crtc_get_voutmode(mode);
+		if (!strcmp(name, logo.outputmode)) {
 			found = 1;
 			break;
 		}
@@ -414,7 +416,9 @@ static void am_meson_load_logo(struct drm_device *dev)
 				      GFP_KERNEL);
 	if (!connector_set)
 		return;
+#ifdef CONFIG_DRM_MESON_HDMI
 	connector_set[0] = am_meson_hdmi_connector();
+#endif
 	if (!connector_set[0]) {
 		DRM_INFO("%s:connector is NULL!\n", __func__);
 		kfree(connector_set);

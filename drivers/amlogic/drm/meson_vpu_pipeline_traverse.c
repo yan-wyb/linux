@@ -177,15 +177,15 @@ void vpu_pipeline_scaler_scope_size_calc(u8 index, u8 osd_index,
 	if (mvps->scaler_cnt[i] == 0) {
 		/*scope size calc*/
 		mvps->osd_scope_pre[osd_index].h_start =
-			mvps->plane_info[osd_index].src_x;
+			mvps->plane_info[osd_index].dst_x;
 		mvps->osd_scope_pre[osd_index].v_start =
-			mvps->plane_info[osd_index].src_y;
+			mvps->plane_info[osd_index].dst_y;
 		mvps->osd_scope_pre[osd_index].h_end =
 			mvps->osd_scope_pre[osd_index].h_start
-			+ mvps->plane_info[osd_index].src_w - 1;
+			+ mvps->plane_info[osd_index].dst_w - 1;
 		mvps->osd_scope_pre[osd_index].v_end =
 			mvps->osd_scope_pre[osd_index].v_start
-			+ mvps->plane_info[osd_index].src_h - 1;
+			+ mvps->plane_info[osd_index].dst_h - 1;
 	} else if (mvps->scaler_cnt[i] == 1) {
 		m = mvps->scale_blk[i][0]->index;
 		scaler_param = &mvps->scaler_param[m];
@@ -215,7 +215,7 @@ void vpu_pipeline_scaler_scope_size_calc(u8 index, u8 osd_index,
 				SCALER_IN_H_CALC_DONE |
 				SCALER_OUT_W_CALC_DONE |
 				SCALER_OUT_H_CALC_DONE;
-			/*scope size calc*/
+			/*osdblend scope size calc*/
 			mvps->osd_scope_pre[osd_index].h_start =
 				mvps->plane_info[osd_index].dst_x;
 			mvps->osd_scope_pre[osd_index].v_start =
@@ -227,17 +227,30 @@ void vpu_pipeline_scaler_scope_size_calc(u8 index, u8 osd_index,
 				mvps->osd_scope_pre[osd_index].v_start
 				+ scaler_param->output_height - 1;
 		} else {/*scaler position is after osdlend*/
-			/*scope size calc firstly*/
+			/*osdblend scope size calc firstly*/
 			mvps->osd_scope_pre[osd_index].h_start =
-				mvps->plane_info[osd_index].src_x;
+				(mvps->plane_info[osd_index].dst_x *
+				scaler_param->ratio_x) / RATIO_BASE;
 			mvps->osd_scope_pre[osd_index].v_start =
-				mvps->plane_info[osd_index].src_y;
+				(mvps->plane_info[osd_index].dst_y *
+				scaler_param->ratio_y) / RATIO_BASE;
 			mvps->osd_scope_pre[osd_index].h_end =
 				mvps->osd_scope_pre[osd_index].h_start
-				+ mvps->plane_info[osd_index].src_w - 1;
+				+ (mvps->plane_info[osd_index].dst_w *
+				scaler_param->ratio_x) / RATIO_BASE - 1;
 			mvps->osd_scope_pre[osd_index].v_end =
 				mvps->osd_scope_pre[osd_index].v_start
-				+ mvps->plane_info[osd_index].src_h - 1;
+				+ (mvps->plane_info[osd_index].dst_h *
+				scaler_param->ratio_y) / RATIO_BASE - 1;
+			/*reset osd input mif scope,avoid no match with
+			 *the result of osdblend scope
+			 */
+			mvps->plane_info[osd_index].src_w =
+				mvps->osd_scope_pre[osd_index].h_end -
+				mvps->osd_scope_pre[osd_index].h_start + 1;
+			mvps->plane_info[osd_index].src_h =
+				mvps->osd_scope_pre[osd_index].v_end -
+				mvps->osd_scope_pre[osd_index].v_start + 1;
 			/*scaler size calc*/
 			scaler_param->input_width =
 				mvps->osd_scope_pre[osd_index].h_end + 1;

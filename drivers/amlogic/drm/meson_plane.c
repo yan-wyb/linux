@@ -60,17 +60,15 @@ static u64 video_wb_modifier[] = {
 static void
 meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 			  struct drm_plane_state *state,
-			  struct drm_display_mode *disp_mode)
+			  struct meson_vpu_pipeline *pipeline)
 {
 	u32 dst_w, dst_h, src_w, src_h, scan_mode_out;
-	struct drm_display_mode *mode;
 	struct am_osd_plane *amp;
-
-	if (!IS_ERR_OR_NULL(state->crtc) && state->crtc->mode.hdisplay &&
-	    state->crtc->mode.vdisplay)
-		mode = &state->crtc->mode;
-	else
-		mode = disp_mode;
+	struct drm_atomic_state *atomic_state = state->state;
+	struct drm_crtc *crtc = pipeline->crtc;
+	unsigned int index = drm_crtc_index(crtc);
+	struct drm_crtc_state *crtc_state = atomic_state->crtcs[index].state;
+	struct drm_display_mode *mode = &crtc_state->mode;
 
 	scan_mode_out = mode->flags & DRM_MODE_FLAG_INTERLACE;
 	plane_info->src_x = state->src_x >> 16;
@@ -122,15 +120,26 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 	if ((plane_info->dst_x + plane_info->dst_w) > mode->hdisplay) {
 		if (plane_info->dst_x >= mode->hdisplay)
 			plane_info->enable = 0;
-		else
+		else {
+			dst_w = plane_info->dst_w;
+			src_w = plane_info->src_w;
 			plane_info->dst_w =
 				mode->hdisplay - plane_info->dst_x;
+			plane_info->src_w =
+				(src_w * plane_info->dst_w) / dst_w;
+		}
 	}
 	if ((plane_info->dst_y + plane_info->dst_h) > mode->vdisplay) {
 		if (plane_info->dst_y >= mode->vdisplay)
 			plane_info->enable = 0;
-		else
-			plane_info->dst_h = mode->vdisplay - plane_info->dst_y;
+		else {
+			dst_h = plane_info->dst_h;
+			src_h = plane_info->src_h;
+			plane_info->dst_h =
+				mode->vdisplay - plane_info->dst_y;
+			plane_info->src_h =
+				(src_h * plane_info->dst_h) / dst_h;
+		}
 	}
 	/*reverse process*/
 	if (plane_info->rotation & DRM_REFLECT_X)
@@ -144,16 +153,14 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 static void
 meson_video_plane_position_calc(struct meson_vpu_video_layer_info *plane_info,
 				struct drm_plane_state *state,
-			  struct drm_display_mode *disp_mode)
+				struct meson_vpu_pipeline *pipeline)
 {
 	u32 dst_w, dst_h, src_w, src_h, scan_mode_out;
-	struct drm_display_mode *mode;
-
-	if (!IS_ERR_OR_NULL(state->crtc) && state->crtc->mode.hdisplay &&
-	    state->crtc->mode.vdisplay)
-		mode = &state->crtc->mode;
-	else
-		mode = disp_mode;
+	struct drm_atomic_state *atomic_state = state->state;
+	struct drm_crtc *crtc = pipeline->crtc;
+	unsigned int index = drm_crtc_index(crtc);
+	struct drm_crtc_state *crtc_state = atomic_state->crtcs[index].state;
+	struct drm_display_mode *mode = &crtc_state->mode;
 
 	scan_mode_out = mode->flags & DRM_MODE_FLAG_INTERLACE;
 	plane_info->src_x = state->src_x >> 16;
@@ -619,7 +626,7 @@ static int meson_plane_atomic_check(struct drm_plane *plane,
 	plane_info->zorder = state->zpos;
 
 	mvps->plane_index[osd_plane->plane_index] = osd_plane->plane_index;
-	meson_plane_position_calc(plane_info, state, &mvps->pipeline->mode);
+	meson_plane_position_calc(plane_info, state, mvps->pipeline);
 	ret = meson_plane_check_size_range(plane_info);
 	if (ret < 0) {
 		plane_info->enable = 0;
@@ -680,7 +687,7 @@ static int meson_video_plane_atomic_check(struct drm_plane *plane,
 
 	mvps->plane_index[video_plane->plane_index] = video_plane->plane_index;
 	meson_video_plane_position_calc(plane_info, state,
-					&mvps->pipeline->mode);
+					mvps->pipeline);
 	ret = meson_video_plane_fb_check(plane, state, plane_info);
 	if (ret < 0) {
 		plane_info->enable = 0;

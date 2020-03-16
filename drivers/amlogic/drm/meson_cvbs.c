@@ -70,6 +70,19 @@ static struct drm_display_mode cvbs_mode[] = {
 };
 static struct am_drm_cvbs_s *am_drm_cvbs;
 
+char *am_cvbs_get_voutmode(struct drm_display_mode *mode)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(cvbs_mode); i++) {
+		if (cvbs_mode[i].hdisplay == mode->hdisplay &&
+		    cvbs_mode[i].vdisplay == mode->vdisplay &&
+		    cvbs_mode[i].vrefresh == mode->vrefresh)
+			return cvbs_mode[i].name;
+	}
+	return NULL;
+}
+
 static inline struct am_drm_cvbs_s *con_to_cvbs(struct drm_connector *con)
 {
 	return container_of(con, struct am_drm_cvbs_s, connector);
