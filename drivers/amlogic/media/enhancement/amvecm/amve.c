@@ -673,7 +673,8 @@ void ve_enable_dnlp(void)
 		if (is_meson_gxlx_cpu() || is_meson_txlx_cpu())
 			WRITE_VPP_REG_BITS(SRSHARP1_DNLP_EN, 1, 0, 1);
 		else if (is_meson_tl1_cpu() || is_meson_tm2_cpu())
-			WRITE_VPP_REG_BITS(SHARP1_DNLP_EN, 1, 0, 1);
+			WRITE_VPP_REG_BITS(
+				SRSHARP1_DNLP_EN + sr_offset[1], 1, 0, 1);
 		else
 			WRITE_VPP_REG_BITS(SRSHARP0_DNLP_EN, 1, 0, 1);
 	} else
@@ -689,7 +690,8 @@ void ve_disable_dnlp(void)
 		if (is_meson_gxlx_cpu() || is_meson_txlx_cpu())
 			WRITE_VPP_REG_BITS(SRSHARP1_DNLP_EN, 0, 0, 1);
 		else if (is_meson_tl1_cpu() || is_meson_tm2_cpu())
-			WRITE_VPP_REG_BITS(SHARP1_DNLP_EN, 0, 0, 1);
+			WRITE_VPP_REG_BITS(
+				SRSHARP1_DNLP_EN + sr_offset[1], 0, 0, 1);
 		else
 			WRITE_VPP_REG_BITS(SRSHARP0_DNLP_EN, 0, 0, 1);
 	else
