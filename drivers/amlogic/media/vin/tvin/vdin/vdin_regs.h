@@ -452,6 +452,7 @@
 #define VDIN_DNLP_HIST29    ((0x1254))/* + 0xd0100000) */
 #define VDIN_DNLP_HIST30    ((0x1255))/* + 0xd0100000) */
 #define VDIN_DNLP_HIST31    ((0x1256))/* + 0xd0100000) */
+#ifdef CONFIG_AML_LOCAL_DIMMING
 /* Bit 31, local dimming statistic enable */
 /* Bit 28, eol enable */
 /* Bit 27:25, vertical line overlap number for max finding */
@@ -492,6 +493,9 @@
 /* hend89, Bit 28:16 col9 hend, Bit 12:0 col8 hend */
 /* vend89, Bit 28:16 row9 vend, Bit 12:0 row8 vend */
 #define VDIN_LDIM_STTS_HIST_SET_REGION  ((0x1258))/* + 0xd0100000) */
+#else
+#define VDIN_RO_WRMIF_STATUS		(0x1258)
+#endif
 /* REGION STATISTIC DATA READ OUT PORT, bit 29:20 max_comp2,
  * bit 19:10 max_comp1, bit 9:0 max_comp0
  */

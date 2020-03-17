@@ -37,6 +37,7 @@
 #include <linux/mm.h>
 #include <asm/div64.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/of_fdt.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/of_irq.h>
@@ -111,6 +112,8 @@ unsigned int skip_frame_debug;
 static bool viu_hw_irq = 1;
 static bool de_fmt_flag;
 
+u32 vdin_cfg_dv12bit_en;
+
 #ifdef DEBUG_SUPPORT
 module_param(canvas_config_mode, int, 0664);
 MODULE_PARM_DESC(canvas_config_mode, "canvas configure mode");
@@ -153,8 +156,8 @@ module_param(vdin_drop_cnt, uint, 0664);
 MODULE_PARM_DESC(vdin_drop_cnt, "vdin_drop_cnt");
 
 unsigned int dv_de_scramble;
-module_param(dv_de_scramble, uint, 0664);
-MODULE_PARM_DESC(dv_de_scramble, "dv_de_scramble");
+/*module_param(dv_de_scramble, uint, 0664);*/
+/*MODULE_PARM_DESC(dv_de_scramble, "dv_de_scramble");*/
 
 unsigned int drop_num = 2;
 module_param(drop_num, uint, 0664);
@@ -561,7 +564,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	/*enable clk*/
 	vdin_clk_onoff(devp, true);
-	vdin_set_default_regmap(devp->addr_offset);
+	vdin_set_default_regmap(devp);
 	if (devp->urgent_en && (devp->index == 0))
 		vdin_urgent_patch_resume(devp->addr_offset);
 
@@ -640,8 +643,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_game_mode_check(devp);
 	vdin_vf_init(devp);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if ((devp->dv.dolby_input & (1 << devp->index)) ||
-		(devp->dv.dv_flag && is_dolby_vision_enable())) {
+	if (vdin_is_dolby_signal_in(devp)) {
 		/* config dolby mem base */
 		vdin_dolby_addr_alloc(devp, devp->vfp->size);
 		/* config dolby vision */
@@ -672,7 +674,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_hw_enable(devp);
 	vdin_set_all_regs(devp);
 	devp->dv.de_scramble = dv_de_scramble;
-	vdin_set_dolby_ll_tunnel(devp);
+	vdin_set_dolby_tunnel(devp);
 	vdin_write_mif_or_afbce_init(devp);
 	if (!(devp->parm.flag & TVIN_PARM_FLAG_CAP) &&
 		(devp->frontend) &&
@@ -690,15 +692,13 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	/*only for vdin0;vdin1 used for debug*/
-	if ((devp->dv.dolby_input & (1 << 0)) ||
-		(devp->dv.dv_flag && is_dolby_vision_enable()))
+	if (vdin_is_dolby_signal_in(devp))
 		vf_reg_provider(&devp->dv.vprov_dv);
 	else
 #endif
 		vf_reg_provider(&devp->vprov);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if ((devp->dv.dolby_input & (1 << devp->index)) ||
-		(devp->dv.dv_flag && is_dolby_vision_enable()))
+	if (vdin_is_dolby_signal_in(devp))
 		vf_notify_receiver(VDIN_DV_NAME,
 			VFRAME_EVENT_PROVIDER_START, NULL);
 	else
@@ -790,7 +790,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 
 	vdin_hw_disable(devp);
 
-	vdin_set_default_regmap(devp->addr_offset);
+	vdin_set_default_regmap(devp);
 	/*only for vdin0*/
 	if (devp->urgent_en && (devp->index == 0))
 		vdin_urgent_patch_resume(devp->addr_offset);
@@ -910,7 +910,7 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 
 	vdin_clk_onoff(devp, true);
 	/*config the vdin use default value*/
-	vdin_set_default_regmap(devp->addr_offset);
+	vdin_set_default_regmap(devp);
 	/*only for vdin0*/
 	if (devp->urgent_en && (devp->index == 0))
 		vdin_urgent_patch_resume(devp->addr_offset);
@@ -1666,9 +1666,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 		devp->last_wr_vfe = NULL;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-		if (((devp->dv.dolby_input & (1 << devp->index)) ||
-			(devp->dv.dv_flag && is_dolby_vision_enable())) &&
-			(devp->dv.dv_config == true))
+		if (vdin_is_dolby_signal_in(devp) &&
+		    (devp->dv.dv_config == true))
 			vf_notify_receiver(VDIN_DV_NAME,
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 		else
@@ -1745,7 +1744,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_source_bitdepth_reinit(devp);
 			vdin_set_wr_ctrl_vsync(devp, devp->addr_offset,
 				devp->format_convert,
-				devp->color_depth_mode, devp->source_bitdepth,
+				devp->full_pack, devp->source_bitdepth,
 				devp->flags&VDIN_FLAG_RDMA_ENABLE);
 			vdin_set_top(devp, devp->addr_offset, devp->parm.port,
 				devp->prop.color_format, devp->h_active,
@@ -1852,9 +1851,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	}
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (((devp->dv.dolby_input & (1 << devp->index)) ||
-		(devp->dv.dv_flag && is_dolby_vision_enable())) &&
-		(devp->dv.dv_config == true))
+	if (vdin_is_dolby_signal_in(devp) && devp->dv.dv_config == true)
 		vdin2nr = vf_notify_receiver(VDIN_DV_NAME,
 			VFRAME_EVENT_PROVIDER_QUREY_VDIN2NR, NULL);
 	else
@@ -1982,9 +1979,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		(devp->game_mode & VDIN_GAME_MODE_1)) {
 		/* not RDMA, or game mode 1 */
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-		if (((devp->dv.dolby_input & (1 << devp->index)) ||
-			(devp->dv.dv_flag && is_dolby_vision_enable()))
-			&& (devp->dv.dv_config == true))
+		if (vdin_is_dolby_signal_in(devp) &&
+		    (devp->dv.dv_config == true))
 			vf_notify_receiver(VDIN_DV_NAME,
 				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 		else
@@ -3248,12 +3244,110 @@ struct vdin_dev_s *vdin_get_dev(unsigned int index)
 		return vdin_devp[0];
 }
 
+static ssize_t vdin_param_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	int len = 0;
+
+	len += sprintf(buf+len, "dv12bit_en = %d\n",
+		       vdin_cfg_dv12bit_en);
+	len += sprintf(buf+len, "dv_de_scramble = %d\n",
+		       dv_de_scramble);
+	len += sprintf(buf+len, "vdin_dbg_en = %d\n",
+		       vdin_dbg_en);
+
+	return len;
+}
+
+static ssize_t vdin_param_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *bu, size_t count)
+{
+	const char *delim = " ";
+	char *token;
+	char *cur = (char *)bu;
+	u32 val;
+	struct vdin_dev_s *devp;
+
+	devp = dev_get_drvdata(dev);
+
+	token = strsep(&cur, delim);
+	if (token && strncmp(token, "dv12bit_en", 10) == 0) {
+		/*get the next param*/
+		token = strsep(&cur, delim);
+		/*string to int*/
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+		vdin_cfg_dv12bit_en = val;
+	} else if (token && strncmp(token, "dv_de_scramble", 14) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+		dv_de_scramble = val;
+	} else if (token && strncmp(token, "vdin_dbg_en", 11) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+		vdin_dbg_en = val;
+	} else {
+		pr_info("no this param\n");
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(param, 0644, vdin_param_show, vdin_param_store);
+
+int vdin_create_dev_class_files(struct device *dev)
+{
+	int ret = 0;
+
+	ret = device_create_file(dev, &dev_attr_param);
+
+	ret = vdin_create_debug_files(dev);
+
+	return ret;
+}
+
+void vdin_rm_dev_class_files(struct device *dev)
+{
+	device_remove_file(dev, &dev_attr_param);
+
+	vdin_remove_debug_files(dev);
+}
+
+static const struct match_data_s vdin_dt_xxx = {
+	.name = "vdin",
+	.hw_ver = VDIN_HW_ORG,
+	.de_tunnel_tunnel = 0,		.ipt444_to_422_12bit = 0,
+};
+
+static const struct match_data_s vdin_dt_tm2_ver_b = {
+	.name = "vdin-tm2verb",
+	.hw_ver = VDIN_HW_TM2_B,
+	.de_tunnel_tunnel = 1, /*0,1*/	.ipt444_to_422_12bit = 1, /*0,1*/
+};
+
+static const struct of_device_id vdin_dt_match[] = {
+	{
+		.compatible = "amlogic, vdin",
+		.data = &vdin_dt_xxx,
+	},
+	{
+		.compatible = "amlogic, vdin-tm2verb",
+		.data = &vdin_dt_tm2_ver_b,
+	},
+	{},
+};
+
 static int vdin_drv_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct vdin_dev_s *vdevp;
 	struct resource *res;
 	unsigned int bit_mode = VDIN_WR_COLOR_DEPTH_8BIT;
+	const struct of_device_id *of_id;
 	/* const void *name; */
 	/* int offset, size; */
 	/* struct device_node *of_node = pdev->dev.of_node; */
@@ -3292,7 +3386,8 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		ret = PTR_ERR(vdevp->dev);
 		goto fail_create_device;
 	}
-	ret = vdin_create_device_files(vdevp->dev);
+
+	ret = vdin_create_dev_class_files(vdevp->dev);
 	if (ret < 0) {
 		pr_err("%s: fail to create vdin attribute files.\n", __func__);
 		goto fail_create_dev_file;
@@ -3302,6 +3397,15 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		pr_info("\n vdin memory resource done.\n");
 	else
 		pr_info("\n vdin memory resource undefined!!\n");
+
+	/*got the dt match data*/
+	of_id = of_match_device(vdin_dt_match, &pdev->dev);
+	if (!IS_ERR_OR_NULL(of_id)) {
+		vdevp->dtdata = of_id->data;
+		pr_info("chip:%s", vdevp->dtdata->name);
+		pr_info("vdin hw_ver:%d\n", vdevp->dtdata->hw_ver);
+	}
+
 #ifdef CONFIG_CMA
 	if (!use_reserved_mem) {
 		ret = of_property_read_u32(pdev->dev.of_node,
@@ -3390,9 +3494,9 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		vdevp->output_color_depth = VDIN_COLOR_DEEPS_10BIT;
 
 	if (vdevp->color_depth_support&VDIN_WR_COLOR_DEPTH_10BIT_FULL_PCAK_MODE)
-		vdevp->color_depth_mode = VDIN_422_FULL_PK_EN;
+		vdevp->full_pack = VDIN_422_FULL_PK_EN;
 	else
-		vdevp->color_depth_mode = VDIN_422_FULL_PK_DIS;
+		vdevp->full_pack = VDIN_422_FULL_PK_DIS;
 
 	/*set afbce config*/
 	vdevp->afbce_flag = 0;
@@ -3588,7 +3692,7 @@ static int vdin_drv_remove(struct platform_device *pdev)
 
 	vdin_debugfs_exit(vdevp);/*2018-07-18 add debugfs*/
 	vf_pool_free(vdevp->vfp);
-	vdin_remove_device_files(vdevp->dev);
+	vdin_rm_dev_class_files(vdevp->dev);
 	vdin_delete_device(vdevp->index);
 	cdev_del(&vdevp->cdev);
 	vdin_devp[vdevp->index] = NULL;
@@ -3707,11 +3811,6 @@ static void vdin_drv_shutdown(struct platform_device *pdev)
 	return;
 }
 
-static const struct of_device_id vdin_dt_match[] = {
-	{       .compatible = "amlogic, vdin",   },
-	{},
-};
-
 static struct platform_driver vdin_driver = {
 	.probe		= vdin_drv_probe,
 	.remove		= vdin_drv_remove,
@@ -3723,7 +3822,7 @@ static struct platform_driver vdin_driver = {
 	.driver	= {
 		.name	        = VDIN_DRV_NAME,
 		.of_match_table = vdin_dt_match,
-}
+	}
 };
 
 /* extern int vdin_reg_v4l2(struct vdin_v4l2_ops_s *v4l2_ops); */

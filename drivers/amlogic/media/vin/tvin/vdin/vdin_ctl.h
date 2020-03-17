@@ -117,7 +117,7 @@ extern void vdin_set_prob_xy(unsigned int offset, unsigned int x,
 extern void vdin_prob_get_rgb(unsigned int offset, unsigned int *r,
 		unsigned int *g, unsigned int *b);
 extern void vdin_set_all_regs(struct vdin_dev_s *devp);
-extern void vdin_set_default_regmap(unsigned int offset);
+extern void vdin_set_default_regmap(struct vdin_dev_s *devp);
 extern void vdin_set_def_wr_canvas(struct vdin_dev_s *devp);
 void vdin_hw_enable(struct vdin_dev_s *devp);
 void vdin_hw_disable(struct vdin_dev_s *devp);
@@ -173,7 +173,7 @@ extern void vdin_set_top(struct vdin_dev_s *devp, unsigned int offset,
 		enum bt_path_e bt_path);
 extern void vdin_set_wr_ctrl_vsync(struct vdin_dev_s *devp,
 	unsigned int offset, enum vdin_format_convert_e format_convert,
-	unsigned int color_depth_mode, unsigned int source_bitdeth,
+	unsigned int full_pack, unsigned int source_bitdeth,
 	unsigned int rdma_enable);
 
 extern void vdin_urgent_patch_resume(unsigned int offset);
@@ -198,7 +198,7 @@ extern enum tvin_force_color_range_e color_range_force;
 
 extern void vdin_vlock_input_sel(unsigned int type,
 	enum vframe_source_type_e source_type);
-extern void vdin_set_dolby_ll_tunnel(struct vdin_dev_s *devp);
+extern void vdin_set_dolby_tunnel(struct vdin_dev_s *devp);
 extern void vdin_check_hdmi_hdr(struct vdin_dev_s *devp);
 extern void vdin_dobly_mdata_write_en(unsigned int offset, unsigned int en);
 extern void vdin_prob_set_xy(unsigned int offset,
@@ -216,6 +216,9 @@ void vdin_dolby_desc_sc_enable(struct vdin_dev_s *devp,
 			       unsigned int  onoff);
 bool vdin_is_dolby_input(struct vdin_dev_s *devp);
 bool vdin_is_dolby_tunnel_444_input(struct vdin_dev_s *devp);
+bool vdin_is_dolby_signal_in(struct vdin_dev_s *devp);
+void vdin_dolby_de_tunnel_to_12bit(struct vdin_dev_s *devp,
+					unsigned int onoff);
 
 #endif
 

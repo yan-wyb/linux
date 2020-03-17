@@ -185,7 +185,7 @@ static ssize_t vdin_attr_show(struct device *dev,
 	len += sprintf(buf+len,
 		"echo color_depth_support val  >/sys/class/vdin/vdinx/attr\n");
 	len += sprintf(buf+len,
-		"echo color_depth_mode val  >/sys/class/vdin/vdinx/attr\n");
+		"echo full_pack val  >/sys/class/vdin/vdinx/attr\n");
 	len += sprintf(buf+len,
 		"echo auto_cutwindow_en 0(1)  >/sys/class/vdin/vdinx/attr\n");
 	len += sprintf(buf+len,
@@ -838,7 +838,7 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("frontend_colordepth:%d\n", devp->prop.colordepth);
 	pr_info("source_bitdepth:%d\n", devp->source_bitdepth);
 	pr_info("color_depth_config:0x%x\n", devp->color_depth_config);
-	pr_info("color_depth_mode:%d\n", devp->color_depth_mode);
+	pr_info("full_pack:%d\n", devp->full_pack);
 	pr_info("color_depth_support:0x%x\n", devp->color_depth_support);
 	pr_info("cma_flag:0x%x\n", devp->cma_config_flag);
 	pr_info("auto_cutwindow_en:%d\n", devp->auto_cutwindow_en);
@@ -1028,7 +1028,7 @@ static int seq_file_vdin_state_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "frontend_colordepth:%d\n", devp->prop.colordepth);
 	seq_printf(seq, "source_bitdepth:%d\n", devp->source_bitdepth);
 	seq_printf(seq, "color_depth_config:0x%x\n", devp->color_depth_config);
-	seq_printf(seq, "color_depth_mode:%d\n", devp->color_depth_mode);
+	seq_printf(seq, "full_pack:%d\n", devp->full_pack);
 	seq_printf(seq, "color_depth_support:0x%x\n",
 		devp->color_depth_support);
 	seq_printf(seq, "cma_flag:0x%x\n", devp->cma_config_flag);
@@ -2115,13 +2115,13 @@ start_chk:
 			pr_info("color_depth_support(%d):%d\n\n", devp->index,
 				devp->color_depth_support);
 		}
-	} else if (!strcmp(parm[0], "color_depth_mode")) {
+	} else if (!strcmp(parm[0], "full_pack")) {
 		if (!parm[1])
 			pr_err("miss parameters .\n");
 		else if (kstrtoul(parm[1], 10, &val) == 0) {
-			devp->color_depth_mode = val;
-			pr_info("color_depth_mode(%d):%d\n\n", devp->index,
-				devp->color_depth_mode);
+			devp->full_pack = val;
+			pr_info("full_pack(%d):%d\n\n", devp->index,
+				devp->full_pack);
 		}
 	} else if (!strcmp(parm[0], "auto_cutwindow_en")) {
 		if (!parm[1])
@@ -2669,7 +2669,7 @@ static ssize_t vdin_cm2_store(struct device *dev,
 
 static DEVICE_ATTR(cm2, 0644, vdin_cm2_show, vdin_cm2_store);
 
-int vdin_create_device_files(struct device *dev)
+int vdin_create_debug_files(struct device *dev)
 {
 	int ret = 0;
 	ret = device_create_file(dev, &dev_attr_sig_det);
@@ -2688,7 +2688,7 @@ int vdin_create_device_files(struct device *dev)
 	ret = device_create_file(dev, &dev_attr_crop);
 	return ret;
 }
-void vdin_remove_device_files(struct device *dev)
+void vdin_remove_debug_files(struct device *dev)
 {
 	#ifdef VF_LOG_EN
 	device_remove_file(dev, &dev_attr_vf_log);
@@ -2891,7 +2891,6 @@ void vdin_remove_class_files(struct class *vdin_clsp)
 {
 	class_remove_file(vdin_clsp, &class_attr_memp);
 }
-
 
 #endif
 

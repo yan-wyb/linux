@@ -52,6 +52,24 @@
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
+
+enum vdin_hw_ver_e {
+	VDIN_HW_ORG = 0,
+	VDIN_HW_SM1,
+	VDIN_HW_TL1,
+	VDIN_HW_TM2,
+	VDIN_HW_TM2_B,
+};
+
+/* for config hw function support */
+struct match_data_s {
+	char *name;
+	enum vdin_hw_ver_e hw_ver;
+	bool de_tunnel_tunnel;
+	/* 444 de-tunnel and wr mif 12 bit mode*/
+	bool ipt444_to_422_12bit;
+};
+
 /* #define VDIN_CRYSTAL               24000000 */
 /* #define VDIN_MEAS_CLK              50000000 */
 /* values of vdin_dev_t.flags */
@@ -322,7 +340,7 @@ struct vdin_dev_s {
 
 	 /* 0:from gpio A,1:from csi2 , 2:gpio B*/
 	enum bt_path_e bt_path;
-
+	const struct match_data_s *dtdata;
 	struct timer_list timer;
 	spinlock_t isr_lock;
 	spinlock_t hist_lock;
@@ -429,7 +447,7 @@ struct vdin_dev_s {
 	 *1: full pack mode;config 10bit as 10bit
 	 *0: config 10bit as 12bit
 	 */
-	unsigned int color_depth_mode;
+	unsigned int full_pack;
 	/* output_color_depth:
 	 * when tv_input is 4k50hz_10bit or 4k60hz_10bit,
 	 * choose output color depth from dts
@@ -526,6 +544,8 @@ extern struct vframe_provider_s *vf_get_provider_by_name(
 extern bool enable_reset;
 extern unsigned int dolby_size_byte;
 extern unsigned int dv_dbg_mask;
+extern u32 vdin_cfg_dv12bit_en;
+
 extern char *vf_get_receiver_name(const char *provider_name);
 extern int start_tvin_service(int no, struct vdin_parm_s *para);
 extern int stop_tvin_service(int no);
@@ -533,8 +553,8 @@ extern int vdin_reg_v4l2(struct vdin_v4l2_ops_s *v4l2_ops);
 extern void vdin_unreg_v4l2(void);
 extern int vdin_create_class_files(struct class *vdin_clsp);
 extern void vdin_remove_class_files(struct class *vdin_clsp);
-extern int vdin_create_device_files(struct device *dev);
-extern void vdin_remove_device_files(struct device *dev);
+extern int vdin_create_debug_files(struct device *dev);
+extern void vdin_remove_debug_files(struct device *dev);
 extern int vdin_open_fe(enum tvin_port_e port, int index,
 		struct vdin_dev_s *devp);
 extern void vdin_close_fe(struct vdin_dev_s *devp);
