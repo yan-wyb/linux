@@ -2776,10 +2776,127 @@ bool black_threshold_check(u8 id)
 	return ret;
 }
 
+static void _set_video_crop(
+	struct disp_info_s *layer, int *p)
+{
+	int last_l, last_r, last_t, last_b;
+	int new_l, new_r, new_t, new_b;
+
+	if (!layer)
+		return;
+
+	last_t = layer->crop_top;
+	last_l = layer->crop_left;
+	last_b = layer->crop_bottom;
+	last_r = layer->crop_right;
+
+	new_t = layer->crop_top = p[0];
+	new_l = layer->crop_left = p[1];
+	new_b = layer->crop_bottom = p[2];
+	new_r = layer->crop_right = p[3];
+	if ((new_t != last_t) || (new_l != last_l) ||
+	    (new_b != last_b) || (new_r != last_r)) {
+		if (layer->layer_id == 0)
+			vd_layer[0].property_changed = true;
+		else if (layer->layer_id == 1)
+			vd_layer[1].property_changed = true;
+	}
+}
+
+static void _set_video_window(
+	struct disp_info_s *layer, int *p)
+{
+	int w, h;
+	int *parsed = p;
+	int last_x, last_y, last_w, last_h;
+	int new_x, new_y, new_w, new_h;
+#ifdef TV_REVERSE
+	int temp, temp1;
+	const struct vinfo_s *info = get_current_vinfo();
+#endif
+
+	if (!layer)
+		return;
+
+#ifdef TV_REVERSE
+	if (reverse) {
+		temp = parsed[0];
+		temp1 = parsed[1];
+		parsed[0] = info->width - parsed[2] - 1;
+		parsed[1] = info->height - parsed[3] - 1;
+		parsed[2] = info->width - temp - 1;
+		parsed[3] = info->height - temp1 - 1;
+	}
+#endif
+
+	last_x = layer->layer_left;
+	last_y = layer->layer_top;
+	last_w = layer->layer_width;
+	last_h = layer->layer_height;
+
+	if (parsed[0] < 0 && parsed[2] < 2) {
+		parsed[2] = 2;
+		parsed[0] = 0;
+	}
+	if (parsed[1] < 0 && parsed[3] < 2) {
+		parsed[3] = 2;
+		parsed[1] = 0;
+	}
+	w = parsed[2] - parsed[0] + 1;
+	h = parsed[3] - parsed[1] + 1;
+
+#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
+	if (video_scaler_mode) {
+		if ((w == 1) && (h == 1)) {
+			w = 0;
+			h = 0;
+		}
+		if ((content_left != parsed[0]) ||
+		    (content_top != parsed[1]) ||
+		    (content_w != w) ||
+		    (content_h != h))
+			scaler_pos_changed = 1;
+		content_left = parsed[0];
+		content_top = parsed[1];
+		content_w = w;
+		content_h = h;
+		/* video_notify_flag =*/
+		/*video_notify_flag|VIDEO_NOTIFY_POS_CHANGED; */
+	} else
+#endif
+	{
+		if ((w > 0) && (h > 0)) {
+			if ((w == 1) && (h == 1)) {
+				w = 0;
+				h = 0;
+			}
+			layer->layer_left = parsed[0];
+			layer->layer_top = parsed[1];
+			layer->layer_width = w;
+			layer->layer_height = h;
+		}
+	}
+
+	new_x = layer->layer_left;
+	new_y = layer->layer_top;
+	new_w = layer->layer_width;
+	new_h = layer->layer_height;
+
+	if ((last_x != new_x) || (last_y != new_y) ||
+	    (last_w != new_w) || (last_h != new_h)) {
+		if (layer->layer_id == 0)
+			vd_layer[0].property_changed = true;
+		else if (layer->layer_id == 1)
+			vd_layer[1].property_changed = true;
+	}
+}
+
 static void pip_swap_frame(struct vframe_s *vf)
 {
 	struct video_layer_s *layer = NULL;
 	struct disp_info_s *layer_info = NULL;
+	int axis[4];
+	int crop[4];
 	int ret;
 
 	if (!vf)
@@ -2791,6 +2908,21 @@ static void pip_swap_frame(struct vframe_s *vf)
 	if (layer->global_debug &
 		DEBUG_FLAG_PRINT_TOGGLE_FRAME)
 		pr_info("%s()\n", __func__);
+
+	if ((vf->flag & (VFRAME_FLAG_VIDEO_COMPOSER |
+	    VFRAME_FLAG_VIDEO_DRM)) &&
+	    !(debug_flag & DEBUG_FLAG_AXIS_NO_UPDATE)) {
+		axis[0] = vf->axis[0];
+		axis[1] = vf->axis[1];
+		axis[2] = vf->axis[2];
+		axis[3] = vf->axis[3];
+		crop[0] = vf->crop[0];
+		crop[1] = vf->crop[1];
+		crop[2] = vf->crop[2];
+		crop[3] = vf->crop[3];
+		_set_video_window(&glayer_info[1], axis);
+		_set_video_crop(&glayer_info[1], crop);
+	}
 
 	ret = layer_swap_frame(
 		vf, layer->layer_id, false, vinfo);
@@ -2887,6 +3019,8 @@ static void primary_swap_frame(
 	int ret;
 	struct video_layer_s *layer = NULL;
 	struct disp_info_s *layer_info = NULL;
+	int axis[4];
+	int crop[4];
 
 	ATRACE_COUNTER(__func__,  line);
 
@@ -2895,6 +3029,21 @@ static void primary_swap_frame(
 
 	layer = &vd_layer[0];
 	layer_info = &glayer_info[0];
+
+	if ((vf->flag & (VFRAME_FLAG_VIDEO_COMPOSER |
+	    VFRAME_FLAG_VIDEO_DRM)) &&
+	    !(debug_flag & DEBUG_FLAG_AXIS_NO_UPDATE)) {
+		axis[0] = vf->axis[0];
+		axis[1] = vf->axis[1];
+		axis[2] = vf->axis[2];
+		axis[3] = vf->axis[3];
+		crop[0] = vf->crop[0];
+		crop[1] = vf->crop[1];
+		crop[2] = vf->crop[2];
+		crop[3] = vf->crop[3];
+		_set_video_window(&glayer_info[0], axis);
+		_set_video_crop(&glayer_info[0], crop);
+	}
 
 	if ((layer->layer_id == 0) && vf &&
 	    !(vf->type & VIDTYPE_COMPRESS) &&
@@ -3218,6 +3367,8 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	u32 next_afbc_request = atomic_read(&gafbc_request);
 	s32 vd1_path_id = glayer_info[0].display_path_id;
 	s32 vd2_path_id = glayer_info[1].display_path_id;
+	int axis[4];
+	int crop[4];
 
 	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
 		return IRQ_HANDLED;
@@ -4187,6 +4338,21 @@ SET_FILTER:
 				get_layer_display_canvas(0);
 		}
 	}
+	if (vd_layer[0].dispbuf &&
+	    (vd_layer[0].dispbuf->flag & (VFRAME_FLAG_VIDEO_COMPOSER |
+		VFRAME_FLAG_VIDEO_DRM)) &&
+	    !(debug_flag & DEBUG_FLAG_AXIS_NO_UPDATE)) {
+		axis[0] = vd_layer[0].dispbuf->axis[0];
+		axis[1] = vd_layer[0].dispbuf->axis[1];
+		axis[2] = vd_layer[0].dispbuf->axis[2];
+		axis[3] = vd_layer[0].dispbuf->axis[3];
+		crop[0] = vd_layer[0].dispbuf->crop[0];
+		crop[1] = vd_layer[0].dispbuf->crop[1];
+		crop[2] = vd_layer[0].dispbuf->crop[2];
+		crop[3] = vd_layer[0].dispbuf->crop[3];
+		_set_video_window(&glayer_info[0], axis);
+		_set_video_crop(&glayer_info[0], crop);
+	}
 	/* setting video display property in underflow mode */
 	if (!new_frame &&
 	    vd_layer[0].dispbuf &&
@@ -4304,6 +4470,22 @@ SET_FILTER:
 			vd_layer[1].dispbuf->canvas0Addr =
 				get_layer_display_canvas(1);
 		}
+	}
+
+	if (vd_layer[1].dispbuf &&
+	    (vd_layer[1].dispbuf->flag & (VFRAME_FLAG_VIDEO_COMPOSER |
+		VFRAME_FLAG_VIDEO_DRM)) &&
+	    !(debug_flag & DEBUG_FLAG_AXIS_NO_UPDATE)) {
+		axis[0] = vd_layer[1].dispbuf->axis[0];
+		axis[1] = vd_layer[1].dispbuf->axis[1];
+		axis[2] = vd_layer[1].dispbuf->axis[2];
+		axis[3] = vd_layer[1].dispbuf->axis[3];
+		crop[0] = vd_layer[1].dispbuf->crop[0];
+		crop[1] = vd_layer[1].dispbuf->crop[1];
+		crop[2] = vd_layer[1].dispbuf->crop[2];
+		crop[3] = vd_layer[1].dispbuf->crop[3];
+		_set_video_window(&glayer_info[1], axis);
+		_set_video_crop(&glayer_info[1], crop);
 	}
 
 	/* setting video display property in underflow mode */
@@ -5121,120 +5303,6 @@ int _video_set_disable(u32 val)
 	return 0;
 }
 
-static void _set_video_crop(
-	struct disp_info_s *layer, int *p)
-{
-	int last_l, last_r, last_t, last_b;
-	int new_l, new_r, new_t, new_b;
-
-	if (!layer)
-		return;
-
-	last_t = layer->crop_top;
-	last_l = layer->crop_left;
-	last_b = layer->crop_bottom;
-	last_r = layer->crop_right;
-
-	new_t = layer->crop_top = p[0];
-	new_l = layer->crop_left = p[1];
-	new_b = layer->crop_bottom = p[2];
-	new_r = layer->crop_right = p[3];
-	if ((new_t != last_t) || (new_l != last_l) ||
-	    (new_b != last_b) || (new_r != last_r)) {
-		if (layer->layer_id == 0)
-			vd_layer[0].property_changed = true;
-		else if (layer->layer_id == 1)
-			vd_layer[1].property_changed = true;
-	}
-}
-
-static void _set_video_window(
-	struct disp_info_s *layer, int *p)
-{
-	int w, h;
-	int *parsed = p;
-	int last_x, last_y, last_w, last_h;
-	int new_x, new_y, new_w, new_h;
-#ifdef TV_REVERSE
-	int temp, temp1;
-	const struct vinfo_s *info = get_current_vinfo();
-#endif
-
-	if (!layer)
-		return;
-
-#ifdef TV_REVERSE
-	if (reverse) {
-		temp = parsed[0];
-		temp1 = parsed[1];
-		parsed[0] = info->width - parsed[2] - 1;
-		parsed[1] = info->height - parsed[3] - 1;
-		parsed[2] = info->width - temp - 1;
-		parsed[3] = info->height - temp1 - 1;
-	}
-#endif
-
-	last_x = layer->layer_left;
-	last_y = layer->layer_top;
-	last_w = layer->layer_width;
-	last_h = layer->layer_height;
-
-	if (parsed[0] < 0 && parsed[2] < 2) {
-		parsed[2] = 2;
-		parsed[0] = 0;
-	}
-	if (parsed[1] < 0 && parsed[3] < 2) {
-		parsed[3] = 2;
-		parsed[1] = 0;
-	}
-	w = parsed[2] - parsed[0] + 1;
-	h = parsed[3] - parsed[1] + 1;
-
-#ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
-	if (video_scaler_mode) {
-		if ((w == 1) && (h == 1)) {
-			w = 0;
-			h = 0;
-		}
-		if ((content_left != parsed[0]) ||
-		    (content_top != parsed[1]) ||
-		    (content_w != w) ||
-		    (content_h != h))
-			scaler_pos_changed = 1;
-		content_left = parsed[0];
-		content_top = parsed[1];
-		content_w = w;
-		content_h = h;
-		/* video_notify_flag =*/
-		/*video_notify_flag|VIDEO_NOTIFY_POS_CHANGED; */
-	} else
-#endif
-	{
-		if ((w > 0) && (h > 0)) {
-			if ((w == 1) && (h == 1)) {
-				w = 0;
-				h = 0;
-			}
-			layer->layer_left = parsed[0];
-			layer->layer_top = parsed[1];
-			layer->layer_width = w;
-			layer->layer_height = h;
-		}
-	}
-
-	new_x = layer->layer_left;
-	new_y = layer->layer_top;
-	new_w = layer->layer_width;
-	new_h = layer->layer_height;
-
-	if ((last_x != new_x) || (last_y != new_y) ||
-	    (last_w != new_w) || (last_h != new_h)) {
-		if (layer->layer_id == 0)
-			vd_layer[0].property_changed = true;
-		else if (layer->layer_id == 1)
-			vd_layer[1].property_changed = true;
-	}
-}
 #if ENABLE_UPDATE_HDR_FROM_USER
 static void config_hdr_info(const struct vframe_master_display_colour_s p)
 {

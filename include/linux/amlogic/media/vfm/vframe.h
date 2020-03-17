@@ -92,7 +92,8 @@
 #define VFRAME_FLAG_VIDEO_LINEAR		0x400
 #define VFRAME_FLAG_EMPTY_FRAME_V4L		0x800
 #define VFRAME_FLAG_FAKE_FRAME			0x1000
-
+#define VFRAME_FLAG_DOUBLE_FRAM		0x2000
+#define VFRAME_FLAG_VIDEO_DRM		0x4000
 
 enum pixel_aspect_ratio_e {
 	PIXEL_ASPECT_RATIO_1_1,
@@ -466,6 +467,8 @@ struct vframe_s {
 	 *****************/
 	u32 di_pulldown;
 	u32 di_gmv;
+	u32 axis[4];
+	u32 crop[4];
 
 	struct codec_mm_box_s mm_box;
 	struct vsif_info vsif;
