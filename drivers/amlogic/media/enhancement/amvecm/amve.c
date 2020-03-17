@@ -186,7 +186,7 @@ void ve_dnlp_load_reg(void)
 			for (i = 0; i < 16; i++)
 				WRITE_VPP_REG(SRSHARP1_DNLP_00 + i,
 					ve_dnlp_reg[i]);
-		} else if (is_meson_tl1_cpu()) {
+		} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
 			for (i = 0; i < 32; i++)
 				WRITE_VPP_REG(SHARP1_DNLP_00 + i,
 					ve_dnlp_reg_v2[i]);
@@ -212,7 +212,7 @@ static void ve_dnlp_load_def_reg(void)
 			for (i = 0; i < 16; i++)
 				WRITE_VPP_REG(SRSHARP1_DNLP_00 + i,
 					ve_dnlp_reg[i]);
-		} else if (is_meson_tl1_cpu()) {
+		} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
 			for (i = 0; i < 32; i++)
 				WRITE_VPP_REG(SHARP1_DNLP_00 + i,
 					ve_dnlp_reg_v2[i]);

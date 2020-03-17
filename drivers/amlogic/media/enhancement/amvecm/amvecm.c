@@ -235,9 +235,16 @@ MODULE_PARM_DESC(debug_game_mode_1, "\n debug_game_mode_1\n");
 unsigned int pq_user_value;
 enum hdr_type_e hdr_source_type = HDRTYPE_NONE;
 
+/*TL1~TM2 revA*/
 #define SR0_OFFSET 0xc00
 #define SR1_OFFSET 0xc80
+/*after TM2 revB*/
+#define SR0_OFFSET_V2 0x1e00
+#define SR1_OFFSET_V2 0x1f80
+#define LC_OFFSET 0x1200
+
 unsigned int sr_offset[2] = {0, 0};
+unsigned int lc_offset;
 
 unsigned int sr_demo_flag;
 
@@ -4945,6 +4952,51 @@ static void amvecm_pq_enable(int enable)
 				1, 23, 1);
 		}
 
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
+				0x3f, 0, 6);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
+				0x7, 8, 3);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_PKDRT_BLD_EN,
+				1, 0, 1);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_TIBLD_PRT,
+				3, 2, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_TIBLD_PRT,
+				3, 12, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_XTI_SDFDEN,
+				3, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_TI_BPF_EN,
+				0xf, 0, 4);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_PKLONG_PF_EN,
+				3, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_CC_PK_ADJ,
+				1, 24, 1);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_GRAPHIC_CTRL,
+				1, 10, 1);
+
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_DRTLPF_EN,
+				0x3f, 0, 6);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_DRTLPF_EN,
+				0x7, 8, 3);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_PKDRT_BLD_EN,
+				1, 0, 1);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_TIBLD_PRT,
+				3, 2, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_TIBLD_PRT,
+				3, 12, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_XTI_SDFDEN,
+				3, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_TI_BPF_EN,
+				0xf, 0, 4);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_PKLONG_PF_EN,
+				3, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_CC_PK_ADJ,
+				1, 24, 1);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_GRAPHIC_CTRL,
+				1, 10, 1);
+
+		}
+
 		white_balance_adjust(0, 1);
 
 		vecm_latch_flag |= FLAG_GAMMA_TABLE_EN;
@@ -5021,6 +5073,50 @@ static void amvecm_pq_enable(int enable)
 				0, 22, 1);
 			WRITE_VPP_REG_BITS(SRSHARP1_DB_FLT_CTRL + sr_offset[1],
 				0, 23, 1);
+		}
+
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
+				0, 0, 6);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
+				0, 8, 3);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_PKDRT_BLD_EN,
+				0, 0, 1);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_TIBLD_PRT,
+				0, 2, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_TIBLD_PRT,
+				0, 12, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_XTI_SDFDEN,
+				0, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_TI_BPF_EN,
+				0, 0, 4);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_PKLONG_PF_EN,
+				0, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_CC_PK_ADJ,
+				0, 24, 1);
+			WRITE_VPP_REG_BITS(SRSHARP0_SR7_GRAPHIC_CTRL,
+				0, 10, 1);
+
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_DRTLPF_EN,
+				0, 0, 6);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_DRTLPF_EN,
+				0, 8, 3);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_PKDRT_BLD_EN,
+				0, 0, 1);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_TIBLD_PRT,
+				0, 2, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_TIBLD_PRT,
+				0, 12, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_XTI_SDFDEN,
+				0, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_TI_BPF_EN,
+				0, 0, 4);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_PKLONG_PF_EN,
+				0, 0, 2);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_CC_PK_ADJ,
+				0, 24, 1);
+			WRITE_VPP_REG_BITS(SRSHARP1_SR7_GRAPHIC_CTRL,
+				0, 10, 1);
 		}
 
 		white_balance_adjust(0, 0);
@@ -6960,8 +7056,19 @@ tvchip_pq_setting:
 		else
 			bitdepth = 12;
 		/*sr0 & sr1 register shfit*/
-		sr_offset[0] = SR0_OFFSET;
-		sr_offset[1] = SR1_OFFSET;
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+			if (is_meson_rev_a() && is_meson_tm2_cpu()) {
+				sr_offset[0] = SR0_OFFSET;
+				sr_offset[1] = SR1_OFFSET;
+			} else {
+				sr_offset[0] = SR0_OFFSET_V2;
+				sr_offset[1] = SR1_OFFSET_V2;
+				lc_offset = LC_OFFSET;
+			}
+		} else {
+			sr_offset[0] = SR0_OFFSET;
+			sr_offset[1] = SR1_OFFSET;
+		}
 		/*cm register init*/
 		cm_init_config(bitdepth);
 		/*lc init*/

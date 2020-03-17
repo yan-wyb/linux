@@ -492,6 +492,10 @@ extern bool pd_detect_en;
 extern bool wb_en;
 extern struct pq_ctrl_s pq_cfg;
 
+extern bool wb_en;
+extern struct pq_ctrl_s pq_cfg;
+extern unsigned int lc_offset;
+
 #define CSC_FLAG_TOGGLE_FRAME	1
 #define CSC_FLAG_CHECK_OUTPUT	2
 

@@ -524,7 +524,7 @@ void ve_dnlp_calculate_reg(void)
 {
 	ulong i = 0, j = 0, cur = 0, data = 0,
 			offset = ve_dnlp_rt ? (1 << (ve_dnlp_rt - 1)) : 0;
-	if (is_meson_tl1_cpu()) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
 		for (i = 0; i < 32; i++) {
 			ve_dnlp_reg_v2[i] = 0;
 			cur = i << 1;
