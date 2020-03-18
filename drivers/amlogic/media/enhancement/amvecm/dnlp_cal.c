@@ -29,6 +29,7 @@
 #include <linux/amlogic/media/amvecm/ve.h>
 #include "dnlp_algorithm/dnlp_alg.h"
 #include <linux/amlogic/media/amvecm/amvecm.h>
+#include "ai_pq/ai_pq.h"
 
 bool ve_en;
 unsigned int ve_dnlp_rt;
@@ -550,6 +551,14 @@ void ve_dnlp_calculate_reg(void)
 	}
 }
 
+void ai_dnlp_param_update(int value)
+{
+	dnlp_alg_param.dnlp_final_gain = value;
+	if (dnlp_insmod_ok == 0)
+		return;
+	dnlp_dbg_node_copy();
+}
+
 void ve_set_v3_dnlp(struct ve_dnlp_curve_param_s *p)
 {
 	ulong i = 0;
@@ -855,6 +864,7 @@ void ve_set_v3_dnlp(struct ve_dnlp_curve_param_s *p)
 		/* disable dnlp */
 		ve_disable_dnlp();
 	}
-
+	/*ai pq get dnlp final gain*/
+	aipq_base_dnlp_param(dnlp_alg_param.dnlp_final_gain);
 }
 

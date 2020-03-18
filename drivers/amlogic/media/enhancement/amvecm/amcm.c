@@ -32,6 +32,8 @@
 #include "amcsc.h"
 #include "local_contrast.h"
 #include "amve.h"
+#include "ai_pq/ai_pq.h"
+#include "cm2_adj.h"
 
 #define pr_amcm_dbg(fmt, args...)\
 	do {\
@@ -206,6 +208,8 @@ void am_set_regmap(struct am_regs_s *p)
 					(temp & (~(p->am_reg[i].mask))) |
 					(p->am_reg[i].val & p->am_reg[i].mask));
 			}
+
+			default_sat_param(p->am_reg[i].addr, p->am_reg[i].val);
 			break;
 		case REG_TYPE_INDEX_GAMMA:
 			break;
@@ -288,6 +292,10 @@ void am_set_regmap(struct am_regs_s *p)
 					(aml_read_vcbus(p->am_reg[i].addr) &
 					(~(p->am_reg[i].mask))) |
 					(p->am_reg[i].val & p->am_reg[i].mask));
+				aipq_base_peaking_param(
+					p->am_reg[i].addr,
+					p->am_reg[i].mask,
+					p->am_reg[i].val);
 			}
 			break;
 /* #endif */

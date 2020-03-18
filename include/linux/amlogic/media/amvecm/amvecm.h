@@ -564,5 +564,26 @@ extern void enable_osd1_mtx(unsigned int en);
 void set_cur_hdr_policy(uint policy);
 bool di_api_mov_sel(unsigned int mode,
 		    unsigned int *pdate);
-#endif /* AMVECM_H */
 
+int amvecm_set_saturation_hue(int mab);
+
+/*ai detected scenes*/
+enum detect_scene_e {
+	BLUE_SCENE = 0,
+	GREEN_SCENE,
+	SKIN_TONE_SCENE,
+	PEAKING_SCENE,
+	SATURATION_SCENE,
+	DYNAMIC_CONTRAST_SCENE,
+	NOISE_SCENE,
+	SCENE_MAX
+};
+
+/*detected single scene process*/
+struct single_scene_s {
+	int enable;
+	int (*func)(int offset, int enable);
+};
+
+extern struct single_scene_s detected_scenes[SCENE_MAX];
+#endif /* AMVECM_H */

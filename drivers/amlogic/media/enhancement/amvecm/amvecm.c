@@ -69,6 +69,7 @@
 #include "local_contrast.h"
 #include "arch/vpp_hdr_regs.h"
 #include "set_hdr2_v0.h"
+#include "ai_pq/ai_pq.h"
 
 #define pr_amvecm_dbg(fmt, args...)\
 	do {\
@@ -1216,7 +1217,7 @@ static int parse_para_pq(const char *para, int para_num, int *result)
 	return count;
 }
 
-static int amvecm_set_saturation_hue(int mab)
+int amvecm_set_saturation_hue(int mab)
 {
 	s16 mc = 0, md = 0;
 	s16 ma, mb;
@@ -1723,6 +1724,8 @@ static long amvecm_ioctl(struct file *file,
 		if (vdj_mode_flg & VDJ_FLAG_SAT_HUE)	{ /*saturation_hue*/
 			ret =
 			amvecm_set_saturation_hue(vdj_mode_s.saturation_hue);
+			/*ai pq get saturation*/
+			aipq_base_satur_param(vdj_mode_s.saturation_hue);
 		}
 		if (vdj_mode_flg & VDJ_FLAG_SAT_HUE_POST) {
 			/*saturation_hue_post*/
@@ -7206,6 +7209,9 @@ tvchip_pq_setting:
 	dnlp_alg_param_init();
 
 	vpp_pq_ctrl_config(pq_cfg);
+	/*ai pq interface*/
+	ai_detect_scene_init();
+	adaptive_param_init();
 }
 /* #endif*/
 
