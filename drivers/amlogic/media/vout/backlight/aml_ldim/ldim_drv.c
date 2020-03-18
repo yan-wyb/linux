@@ -2947,6 +2947,8 @@ int aml_ldim_get_config_dts(struct device_node *child)
 			ldim_hist_col = ldim_blk_col;
 			ldim_config.row = ldim_blk_row;
 			ldim_config.col = ldim_blk_col;
+			ldim_fw_para.hist_row = ldim_blk_row;
+			ldim_fw_para.hist_col = ldim_blk_col;
 		}
 	}
 	LDIMPR("get region row = %d, col = %d\n", ldim_blk_row, ldim_blk_col);
@@ -2990,6 +2992,8 @@ int aml_ldim_get_config_unifykey(unsigned char *buf)
 	ldim_hist_col = ldim_blk_col;
 	ldim_config.row = ldim_blk_row;
 	ldim_config.col = ldim_blk_col;
+	ldim_fw_para.hist_row = ldim_blk_row;
+	ldim_fw_para.hist_col = ldim_blk_col;
 	LDIMPR("get region row = %d, col = %d\n", ldim_blk_row, ldim_blk_col);
 
 	/* get bl_ldim_mode 1byte*/
