@@ -112,7 +112,7 @@ unsigned int skip_frame_debug;
 static bool viu_hw_irq = 1;
 static bool de_fmt_flag;
 
-u32 vdin_cfg_dv12bit_en;
+u32 vdin_cfg_444_to_422_wmif_en;
 
 #ifdef DEBUG_SUPPORT
 module_param(canvas_config_mode, int, 0664);
@@ -673,7 +673,6 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 
 	vdin_hw_enable(devp);
 	vdin_set_all_regs(devp);
-	devp->dv.de_scramble = dv_de_scramble;
 	vdin_set_dolby_tunnel(devp);
 	vdin_write_mif_or_afbce_init(devp);
 	if (!(devp->parm.flag & TVIN_PARM_FLAG_CAP) &&
@@ -762,7 +761,8 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 
 	disable_irq_nosync(devp->irq);
 
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
+	    devp->vpu_crash_irq != 0)
 		disable_irq_nosync(devp->vpu_crash_irq);
 
 	if (vdin_dbg_en)
@@ -806,7 +806,6 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 #endif
 		vf_unreg_provider(&devp->vprov);
 	devp->dv.dv_config = 0;
-	devp->dv.de_scramble = 0;
 	vdin_dolby_desc_sc_enable(devp, 0);
 
 	if (devp->afbce_mode == 1) {
@@ -2317,7 +2316,8 @@ static int vdin_open(struct inode *inode, struct file *file)
 		ret = request_irq(devp->irq, vdin_isr, IRQF_SHARED,
 				devp->irq_name, (void *)devp);
 
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
+		    devp->vpu_crash_irq != 0)
 			ret |= request_irq(devp->vpu_crash_irq, vpu_crash_isr,
 					   IRQF_SHARED,
 					   devp->vpu_crash_irq_name,
@@ -2331,7 +2331,8 @@ static int vdin_open(struct inode *inode, struct file *file)
 	/*disable irq until vdin is configured completely*/
 	disable_irq_nosync(devp->irq);
 
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
+	    devp->vpu_crash_irq != 0)
 		disable_irq_nosync(devp->vpu_crash_irq);
 
 	if (vdin_dbg_en)
@@ -2386,7 +2387,8 @@ static int vdin_release(struct inode *inode, struct file *file)
 	if (devp->flags & VDIN_FLAG_ISR_REQ) {
 		free_irq(devp->irq, (void *)devp);
 
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0)
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
+		    devp->vpu_crash_irq != 0)
 			free_irq(devp->vpu_crash_irq, (void *)devp);
 
 		if (vdin_dbg_en)
@@ -2535,7 +2537,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			enable_irq(devp->irq);
 
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
-			    devp->index == 0)
+			    devp->index == 0 && devp->vpu_crash_irq != 0)
 				enable_irq(devp->vpu_crash_irq);
 
 			if (vdin_dbg_en)
@@ -3082,7 +3084,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&idx, argp, sizeof(idx)))
 			return -EFAULT;
 		dv_de_scramble = idx;
-		devp->dv.de_scramble = dv_de_scramble;
 		vdin_dolby_desc_sc_enable(devp, dv_de_scramble);
 		break;
 	case TVIN_IOC_S_PC_MODE:
@@ -3250,11 +3251,11 @@ static ssize_t vdin_param_show(struct device *dev,
 {
 	int len = 0;
 
-	len += sprintf(buf+len, "dv12bit_en = %d\n",
-		       vdin_cfg_dv12bit_en);
-	len += sprintf(buf+len, "dv_de_scramble = %d\n",
+	len += sprintf(buf + len, "422wmif_en = %d\n",
+		       vdin_cfg_444_to_422_wmif_en);
+	len += sprintf(buf + len, "dv_de_scramble = %d\n",
 		       dv_de_scramble);
-	len += sprintf(buf+len, "vdin_dbg_en = %d\n",
+	len += sprintf(buf + len, "vdin_dbg_en = %d\n",
 		       vdin_dbg_en);
 
 	return len;
@@ -3273,13 +3274,13 @@ static ssize_t vdin_param_store(struct device *dev,
 	devp = dev_get_drvdata(dev);
 
 	token = strsep(&cur, delim);
-	if (token && strncmp(token, "dv12bit_en", 10) == 0) {
+	if (token && strncmp(token, "422wmif_en", 10) == 0) {
 		/*get the next param*/
 		token = strsep(&cur, delim);
 		/*string to int*/
 		if (!token || kstrtouint(token, 16, &val) < 0)
 			return count;
-		vdin_cfg_dv12bit_en = val;
+		vdin_cfg_444_to_422_wmif_en = val;
 	} else if (token && strncmp(token, "dv_de_scramble", 14) == 0) {
 		token = strsep(&cur, delim);
 		if (!token || kstrtouint(token, 16, &val) < 0)
@@ -3291,7 +3292,10 @@ static ssize_t vdin_param_store(struct device *dev,
 			return count;
 		vdin_dbg_en = val;
 	} else {
-		pr_info("no this param\n");
+		pr_info("----cmd list----\n");
+		pr_info("422wmif_en 0/1\n");
+		pr_info("dv_de_scramble 0/1\n");
+		pr_info("vdin_dbg_en 0/1\n");
 	}
 
 	return count;
@@ -3326,7 +3330,7 @@ static const struct match_data_s vdin_dt_xxx = {
 static const struct match_data_s vdin_dt_tm2_ver_b = {
 	.name = "vdin-tm2verb",
 	.hw_ver = VDIN_HW_TM2_B,
-	.de_tunnel_tunnel = 1, /*0,1*/	.ipt444_to_422_12bit = 1, /*0,1*/
+	.de_tunnel_tunnel = 1, /*0,1*/	.ipt444_to_422_12bit = 0, /*0,1*/
 };
 
 static const struct of_device_id vdin_dt_match[] = {
@@ -3456,12 +3460,15 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 		if (!res) {
 			pr_err("%s: can't get crash irq resource\n", __func__);
-			ret = -ENXIO;
-			goto fail_get_resource_irq;
+			/*ret = -ENXIO;*/
+			/*goto fail_get_resource_irq;*/
+			vdevp->vpu_crash_irq = 0;
+		} else {
+			vdevp->vpu_crash_irq = res->start;
+			snprintf(vdevp->vpu_crash_irq_name,
+				 sizeof(vdevp->vpu_crash_irq_name),
+				 "vpu-crash-irq");
 		}
-		vdevp->vpu_crash_irq = res->start;
-		snprintf(vdevp->vpu_crash_irq_name,
-			 sizeof(vdevp->vpu_crash_irq_name), "vpu-crash-irq");
 	}
 
 	ret = of_property_read_u32(pdev->dev.of_node,

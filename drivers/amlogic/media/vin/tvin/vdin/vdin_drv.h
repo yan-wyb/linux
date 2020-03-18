@@ -66,7 +66,7 @@ struct match_data_s {
 	char *name;
 	enum vdin_hw_ver_e hw_ver;
 	bool de_tunnel_tunnel;
-	/* 444 de-tunnel and wr mif 12 bit mode*/
+	/* tm2 verb :444 de-tunnel and wr mif 12 bit mode*/
 	bool ipt444_to_422_12bit;
 };
 
@@ -303,7 +303,6 @@ struct vdin_dv_s {
 	unsigned int dv_mem_alloced;
 	struct tvin_dv_vsif_s dv_vsif;/*dolby vsi info*/
 	bool low_latency;
-	bool de_scramble;
 };
 
 struct vdin_afbce_s {
@@ -544,7 +543,7 @@ extern struct vframe_provider_s *vf_get_provider_by_name(
 extern bool enable_reset;
 extern unsigned int dolby_size_byte;
 extern unsigned int dv_dbg_mask;
-extern u32 vdin_cfg_dv12bit_en;
+extern u32 vdin_cfg_444_to_422_wmif_en;
 
 extern char *vf_get_receiver_name(const char *provider_name);
 extern int start_tvin_service(int no, struct vdin_parm_s *para);

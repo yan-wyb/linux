@@ -2374,7 +2374,6 @@ start_chk:
 			if (kstrtouint(parm[1], 10, &mode) == 0) {
 				pr_info("dv scramble %d\n", mode);
 				dv_de_scramble = mode;
-				devp->dv.de_scramble = mode;
 				vdin_dolby_desc_sc_enable(devp, mode);
 			}
 		}

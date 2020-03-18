@@ -680,11 +680,8 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 		 *}
 		 */
 		if (devp->prop.color_format == TVIN_YUV422) {
-			if (devp->dtdata->ipt444_to_422_12bit &&
-			    vdin_cfg_dv12bit_en) /*vdin de-tunnel to 422 12bit*/
-				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
-			else	/*rx will tunneled to 444*/
-				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV444;
+			/*rx will tunneled to 444*/
+			format_convert = VDIN_FORMAT_CONVERT_YUV_YUV444;
 		} else if (devp->prop.color_format == TVIN_RGB444) {
 			format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
 		} else {
@@ -692,6 +689,10 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 		}
 	}
 #endif
+	/*hw test:vdin de-tunnel to 422 12bit*/
+	if (devp->dtdata->ipt444_to_422_12bit && vdin_cfg_444_to_422_wmif_en)
+		format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
+
 	devp->format_convert = format_convert;
 
 	pr_info("%s cfmt:%d, dstcfmt:%d\n", __func__,
@@ -2931,7 +2932,7 @@ void vdin_set_dolby_tunnel(struct vdin_dev_s *devp)
 		/*hdmi rx call back, 422 tunnel to 444*/
 		sm_ops->hdmi_dv_config(true, devp->frontend);
 		/*vdin de tunnel and tunnel for vdin scaling*/
-		if (devp->dtdata->de_tunnel_tunnel && devp->dv.de_scramble)
+		if (devp->dtdata->de_tunnel_tunnel && dv_de_scramble)
 			vdin_dolby_desc_sc_enable(devp, 1);
 		else
 			vdin_dolby_desc_sc_enable(devp, 0);
@@ -3262,9 +3263,9 @@ void vdin_set_default_regmap(struct vdin_dev_s *devp)
 	/* [28:16] input_win.vs               = 0 */
 	/* [12: 0] input_win.ve               = 0 */
 	wr(offset, VDIN_WIN_V_START_END, 0x00000000);
-
+	/*hw verify:de-tunnel 444 to 422 12bit*/
 	if (devp->dtdata->ipt444_to_422_12bit)
-		vdin_dolby_de_tunnel_to_12bit(devp, 0);
+		vdin_dolby_de_tunnel_to_12bit(devp, false);
 }
 
 void vdin_hw_enable(struct vdin_dev_s *devp)
@@ -3921,10 +3922,8 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 	else
 		devp->full_pack = VDIN_422_FULL_PK_DIS;
 
-	if (vdin_is_dolby_signal_in(devp) &&
-	    devp->dtdata->ipt444_to_422_12bit &&
-	    devp->prop.color_format == TVIN_YUV422 &&
-	    vdin_cfg_dv12bit_en)
+	/*hw verify:de-tunnel 444 to 422 12bit*/
+	if (devp->dtdata->ipt444_to_422_12bit && vdin_cfg_444_to_422_wmif_en)
 		devp->full_pack = VDIN_422_FULL_PK_DIS;
 
 	if ((devp->output_color_depth) &&
@@ -4022,14 +4021,12 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
 		}
 
-		/*dv 444 de-tunnel and wt mif 12 bit mode*/
-		if (vdin_is_dolby_signal_in(devp) &&
-		    devp->dtdata->ipt444_to_422_12bit &&
-		    vdin_cfg_dv12bit_en &&
-		    devp->prop.color_format == TVIN_YUV422) {
+		/*hw verify:de-tunnel 444 to 422 12bit*/
+		if (devp->dtdata->ipt444_to_422_12bit &&
+		    vdin_cfg_444_to_422_wmif_en) {
 			/*devp->source_bitdepth = VDIN_COLOR_DEEPS_12BIT;*/
 			devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
-			vdin_dolby_de_tunnel_to_12bit(devp, 1);
+			vdin_dolby_de_tunnel_to_12bit(devp, true);
 		}
 		break;
 	default:
