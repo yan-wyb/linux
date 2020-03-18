@@ -180,6 +180,7 @@ struct tvafe_cvd2_s {
 	struct tvafe_cvd2_hw_data_s hw_data[3];
 	struct tvafe_cvd2_hw_data_s hw;
 	struct tvafe_cvd2_info_s info;
+	const unsigned int *acd_table;
 	struct tvafe_reg_table_s *pq_conf;
 	unsigned int fmt_loop_cnt;
 	unsigned char hw_data_cur;

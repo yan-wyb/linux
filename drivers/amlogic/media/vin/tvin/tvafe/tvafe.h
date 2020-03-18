@@ -106,6 +106,7 @@ struct tvafe_dev_s {
 
 	struct tvafe_info_s tvafe;
 
+	const unsigned int (*acd_table)[ACD_REG_NUM+1];
 	struct tvafe_reg_table_s **pq_conf;
 
 	unsigned int cma_config_en;

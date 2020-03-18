@@ -596,7 +596,7 @@
 	};
 
 	tvafe {
-		compatible = "amlogic, tvafe-tm2";
+		compatible = "amlogic, tvafe-tm2_b";
 		/*memory-region = <&tvafe_cma_reserved>;*/
 		status = "disabled";
 		flag_cma = <1>;/*1:share with codec_mm;0:cma alone*/

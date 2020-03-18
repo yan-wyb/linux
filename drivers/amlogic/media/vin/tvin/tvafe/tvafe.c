@@ -167,19 +167,32 @@ struct tvafe_dev_s *tvafe_get_dev(void)
 	return tvafe_dev_local;
 }
 
-static int tvafe_pq_config_update(struct tvafe_dev_s *devp,
+static int tvafe_config_init(struct tvafe_dev_s *devp,
 				  enum tvin_port_e port)
 {
-	if ((port == TVIN_PORT_CVBS1) || (port == TVIN_PORT_CVBS2)) {
+	/* init variable */
+	memset(&devp->tvafe, 0, sizeof(struct tvafe_info_s));
+
+	if ((port == TVIN_PORT_CVBS1) || (port == TVIN_PORT_CVBS2)) { /* avin */
+		if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TM2_B)
+			devp->acd_table = cvbs_acd_table_tm2_b;
+		else
+			devp->acd_table = cvbs_acd_table;
+
 		devp->pq_conf = s_tvafe_data->cvbs_pq_conf;
 		if (tvafe_dbg_print & TVAFE_DBG_NORMAL) {
-			tvafe_pr_info("%s: select cvbs_pq config\n",
+			tvafe_pr_info("%s: select cvbs config\n",
 				      __func__);
 		}
-	} else {
+	} else { /* atv */
+		if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TM2_B)
+			devp->acd_table = rf_acd_table_tm2_b;
+		else
+			devp->acd_table = rf_acd_table;
+
 		devp->pq_conf = s_tvafe_data->rf_pq_conf;
 		if (tvafe_dbg_print & TVAFE_DBG_NORMAL) {
-			tvafe_pr_info("%s: select rf_pq config\n",
+			tvafe_pr_info("%s: select rf config\n",
 				      __func__);
 		}
 	}
@@ -335,9 +348,7 @@ static int tvafe_dec_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 #ifdef CONFIG_CMA
 	tvafe_cma_alloc(devp);
 #endif
-	/* init variable */
-	memset(tvafe, 0, sizeof(struct tvafe_info_s));
-	tvafe_pq_config_update(devp, port);
+	tvafe_config_init(devp, port);
 	/**enable and reset tvafe clock**/
 	tvafe_enable_module(true);
 	devp->flags &= (~TVAFE_POWERDOWN_IN_IDLE);
@@ -352,9 +363,9 @@ static int tvafe_dec_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
 
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
 	/*only txlx chip enabled*/
-	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
-		tvafe_cpu_type() == CPU_TYPE_TL1 ||
-		tvafe_cpu_type() == CPU_TYPE_TM2) {
+	if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TXLX ||
+		tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+		tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) {
 		/*synctip set to 0 when tvafe working&&av connected*/
 		/*enable clamp if av connected*/
 		if (port == TVIN_PORT_CVBS1) {
@@ -449,9 +460,9 @@ static void tvafe_dec_start(struct tvin_frontend_s *fe, enum tvin_sig_fmt_e fmt)
 		W_APB_REG(CVD2_H_LOOP_MAXSTATE, 0x9);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
-	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
-		tvafe_cpu_type() == CPU_TYPE_TL1 ||
-		tvafe_cpu_type() == CPU_TYPE_TM2) {
+	if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TXLX ||
+		tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+		tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) {
 		if (port == TVIN_PORT_CVBS1)
 			tvafe_avin_detect_ch1_anlog_enable(0);
 		else if (port == TVIN_PORT_CVBS2)
@@ -516,9 +527,9 @@ static void tvafe_dec_stop(struct tvin_frontend_s *fe, enum tvin_port_e port)
 		tvafe_cvd2_set_default_de(&tvafe->cvd2);
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
-	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
-		tvafe_cpu_type() == CPU_TYPE_TL1 ||
-		tvafe_cpu_type() == CPU_TYPE_TM2) {
+	if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TXLX ||
+		tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+		tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) {
 		if (port == TVIN_PORT_CVBS1)
 			tvafe_avin_detect_ch1_anlog_enable(1);
 		else if (port == TVIN_PORT_CVBS2)
@@ -586,9 +597,9 @@ static void tvafe_dec_close(struct tvin_frontend_s *fe)
 	tvafe_cma_release(devp);
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
-	if (tvafe_cpu_type() == CPU_TYPE_TXLX ||
-		tvafe_cpu_type() == CPU_TYPE_TL1 ||
-		tvafe_cpu_type() == CPU_TYPE_TM2) {
+	if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TXLX ||
+		tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+		tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) {
 		/*avsync tip set 1 to resume av detect*/
 		if (tvafe->parm.port == TVIN_PORT_CVBS1) {
 			avport_opened = 0;
@@ -1403,7 +1414,7 @@ static void tvafe_user_parameters_config(struct device_node *of_node)
 }
 
 static struct meson_tvafe_data meson_txl_tvafe_data = {
-	.cpu_id = CPU_TYPE_TXL,
+	.cpu_id = TVAFE_CPU_TYPE_TXL,
 	.name = "meson-txl-tvafe",
 
 	.cvbs_pq_conf = NULL,
@@ -1411,7 +1422,7 @@ static struct meson_tvafe_data meson_txl_tvafe_data = {
 };
 
 static struct meson_tvafe_data meson_txlx_tvafe_data = {
-	.cpu_id = CPU_TYPE_TXLX,
+	.cpu_id = TVAFE_CPU_TYPE_TXLX,
 	.name = "meson-txlx-tvafe",
 
 	.cvbs_pq_conf = NULL,
@@ -1419,7 +1430,7 @@ static struct meson_tvafe_data meson_txlx_tvafe_data = {
 };
 
 static struct meson_tvafe_data meson_tl1_tvafe_data = {
-	.cpu_id = CPU_TYPE_TL1,
+	.cpu_id = TVAFE_CPU_TYPE_TL1,
 	.name = "meson-tl1-tvafe",
 
 	.cvbs_pq_conf = NULL,
@@ -1427,8 +1438,16 @@ static struct meson_tvafe_data meson_tl1_tvafe_data = {
 };
 
 static struct meson_tvafe_data meson_tm2_tvafe_data = {
-	.cpu_id = CPU_TYPE_TM2,
+	.cpu_id = TVAFE_CPU_TYPE_TM2,
 	.name = "meson-tm2-tvafe",
+
+	.cvbs_pq_conf = NULL,
+	.rf_pq_conf = NULL,
+};
+
+static struct meson_tvafe_data meson_tm2_b_tvafe_data = {
+	.cpu_id = TVAFE_CPU_TYPE_TM2_B,
+	.name = "meson-tm2_b-tvafe",
 
 	.cvbs_pq_conf = NULL,
 	.rf_pq_conf = NULL,
@@ -1447,8 +1466,10 @@ static const struct of_device_id meson_tvafe_dt_match[] = {
 	}, {
 		.compatible = "amlogic, tvafe-tm2",
 		.data		= &meson_tm2_tvafe_data,
+	}, {
+		.compatible = "amlogic, tvafe-tm2_b",
+		.data		= &meson_tm2_b_tvafe_data,
 	},
-	{},
 };
 
 static unsigned int tvafe_use_reserved_mem;
@@ -1741,7 +1762,7 @@ static int tvafe_drv_resume(struct platform_device *pdev)
 
 static void tvafe_drv_shutdown(struct platform_device *pdev)
 {
-	if (tvafe_cpu_type() == CPU_TYPE_TL1) {
+	if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1) {
 		W_APB_BIT(TVFE_VAFE_CTRL0, 0, 19, 1);
 		W_APB_BIT(TVFE_VAFE_CTRL1, 0, 8, 1);
 	}

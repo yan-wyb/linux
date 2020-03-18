@@ -371,30 +371,13 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 	W_APB_BIT(CVD2_RESET_REGISTER, 1, SOFT_RST_BIT, SOFT_RST_WID);
 
 	/* for rf&cvbs source acd table */
-	if ((cvd2->vd_port == TVIN_PORT_CVBS3) ||
-		(cvd2->vd_port == TVIN_PORT_CVBS0)) {
-
-		for (i = 0; i < (ACD_REG_NUM+1); i++) {
-			if (i == 0x21 || i == 0x22 || i == 0x2f)
-				continue;
-			W_APB_REG(((ACD_BASE_ADD+i)<<2),
-					(rf_acd_table[cvd2->config_fmt-
-					TVIN_SIG_FMT_CVBS_NTSC_M][i]));
-		}
-
-
-	} else {
-
-		for (i = 0; i < (ACD_REG_NUM+1); i++) {
-
-			if (i == 0x21 || i == 0x22 || i == 0x2f)
-				continue;
-			W_APB_REG(((ACD_BASE_ADD+i)<<2),
-					(cvbs_acd_table[cvd2->config_fmt-
-					TVIN_SIG_FMT_CVBS_NTSC_M][i]));
-		}
-
+	for (i = 0; i < (ACD_REG_NUM+1); i++) {
+		if (i == 0x21 || i == 0x22 || i == 0x2f)
+			continue;
+		W_APB_REG(((ACD_BASE_ADD+i)<<2), cvd2->acd_table[i]);
 	}
+
+
 	/*cvd filter config*/
 	tvafe_cvd2_filter_config();
 
@@ -408,8 +391,8 @@ static void tvafe_cvd2_write_mode_reg(struct tvafe_cvd2_s *cvd2,
 
 	/*setting for snow*/
 	if (tvafe_get_snow_cfg() &&
-		(tvafe_cpu_type() == CPU_TYPE_TL1 ||
-		tvafe_cpu_type() == CPU_TYPE_TM2)) {
+		(tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+		tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2)) {
 		W_APB_BIT(CVD2_OUTPUT_CONTROL, 3, 5, 2);
 		W_APB_REG(ACD_REG_6C, 0x80500000);
 	}
@@ -833,13 +816,15 @@ static void tvafe_cvd2_info_init(struct tvafe_cvd2_s *cvd2)
 	/* set default value if needed */
 	cvd2->info.scene_colorful = 1;
 
-	if (devp->pq_conf) {
-		index = cvd2->config_fmt - TVIN_SIG_FMT_CVBS_NTSC_M;
+	index = cvd2->config_fmt - TVIN_SIG_FMT_CVBS_NTSC_M;
+	if (devp->acd_table)
+		cvd2->acd_table = devp->acd_table[index];
+	else
+		tvafe_pr_err("%s: cvd2 acd_table is null\n", __func__);
+	if (devp->pq_conf)
 		cvd2->pq_conf = devp->pq_conf[index];
-	} else {
-		tvafe_pr_err("%s: cvd2 pq_conf is null\n",
-			     __func__);
-	}
+	else
+		tvafe_pr_err("%s: cvd2 pq_conf is null\n", __func__);
 }
 
 /*
@@ -2381,8 +2366,8 @@ inline void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 				W_APB_BIT(CVD2_ACTIVE_VIDEO_HSTART, temp,
 					HACTIVE_START_BIT, HACTIVE_START_WID);
 				/* 0x12d */
-				if (tvafe_cpu_type() == CPU_TYPE_TL1 ||
-					tvafe_cpu_type() == CPU_TYPE_TM2) {
+				if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+				    tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) {
 					temp = 0x20 * cvd2->info.hs_adj_level;
 					delta = temp / 4;
 				}
@@ -2775,8 +2760,8 @@ void tvafe_cvd2_rf_ntsc50_en(bool v)
 void tvafe_snow_config(unsigned int onoff)
 {
 	if (tvafe_snow_function_flag == 0 ||
-		tvafe_cpu_type() == CPU_TYPE_TL1 ||
-		tvafe_cpu_type() == CPU_TYPE_TM2)
+		tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+		tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2)
 		return;
 	if (onoff)
 		W_APB_BIT(CVD2_OUTPUT_CONTROL, 3, BLUE_MODE_BIT, BLUE_MODE_WID);
@@ -2786,15 +2771,15 @@ void tvafe_snow_config(unsigned int onoff)
 
 void tvafe_snow_config_clamp(unsigned int onoff)
 {
-	if ((tvafe_cpu_type() == CPU_TYPE_TM2) && onoff) {
+	if ((tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) && onoff) {
 		/* 0x6d is tm2 adjust snow gain */
 		W_APB_REG(ACD_REG_6D, 0x03000000);
-	} else if ((tvafe_cpu_type() == CPU_TYPE_TM2) && !onoff) {
+	} else if ((tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) && !onoff) {
 		W_APB_REG(ACD_REG_6D, 0x00000000);
 	}
 
-	if (tvafe_cpu_type() == CPU_TYPE_TL1 ||
-	    tvafe_cpu_type() == CPU_TYPE_TM2) {
+	if (tvafe_cpu_type() == TVAFE_CPU_TYPE_TL1 ||
+	    tvafe_cpu_type() >= TVAFE_CPU_TYPE_TM2) {
 		if (onoff)
 			vdin_adjust_tvafesnow_brightness();
 		return;
