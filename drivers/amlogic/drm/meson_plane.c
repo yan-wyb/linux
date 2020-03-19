@@ -827,8 +827,10 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 
 	video_plane = devm_kzalloc(priv->drm->dev, sizeof(*video_plane),
 				   GFP_KERNEL);
-	if (!video_plane)
+	if (!video_plane) {
+		DRM_INFO("no memory to alloc video plane\n");
 		return 0;
+	}
 
 	video_plane->drv = priv;
 	video_plane->plane_index = i;
@@ -850,6 +852,7 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 	drm_plane_helper_add(plane, &am_video_helper_funcs);
 	osd_drm_debugfs_add(&video_plane->plane_debugfs_dir,
 			    plane_name, video_plane->plane_index);
+	DRM_INFO("video plane %d create done\n", i);
 	return video_plane;
 }
 
@@ -868,7 +871,7 @@ int am_meson_plane_create(struct meson_drm *priv)
 		if (!video_plane)
 			return -ENOMEM;
 
-		priv->video_planes[i++] = video_plane;
+		priv->video_planes[i] = video_plane;
 		priv->num_planes++;
 	}
 	DRM_DEBUG("create %d video plane done\n", pipeline->num_video);

@@ -1908,6 +1908,9 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 	/*freerun for game mode*/
 	if (next_vf->flag & VFRAME_FLAG_GAME_MODE)
 		return true;
+	/*freerun for drm video*/
+	if (next_vf->flag & VFRAME_FLAG_VIDEO_DRM)
+		return true;
 
 	if (step_enable) {
 		if (step_flag)

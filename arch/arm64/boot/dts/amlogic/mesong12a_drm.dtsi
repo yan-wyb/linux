@@ -253,6 +253,14 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x0>;
 				};
+				video2_block: block@14 {
+					id = /bits/ 8 <VIDEO2_BLOCK>;
+					index = /bits/ 8  <1>;
+					type = /bits/ 8  <7>;
+					block_name = "video2_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x0>;
+				};
 			};
 		};
 

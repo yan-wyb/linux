@@ -113,8 +113,7 @@ static int vp_vf_states(struct vframe_states *states, void *op_arg)
 
 	states->vf_pool_size = BUFFER_NUM;
 	states->buf_recycle_num = 0;
-	states->buf_free_num = BUFFER_NUM
-		- kfifo_len(&video->ready_q);
+	states->buf_free_num = kfifo_len(&video->free_q);
 	states->buf_avail_num = kfifo_len(&video->ready_q);
 	return 0;
 }
@@ -250,8 +249,6 @@ static void video_set_state(struct meson_vpu_block *vblk,
 	} else {
 		DRM_INFO("free_q get fail!");
 	}
-	amvideo_set_scaler_para(mvvs->dst_x, mvvs->dst_y, mvvs->dst_w,
-				mvvs->dst_h, 0);
 	DRM_DEBUG("plane_index=%d,HW-video=%d, byte_stride=%d\n",
 		  mvvs->plane_index, vblk->index, byte_stride);
 	DRM_DEBUG("phy_addr=0x%x,phy_addr2=0x%x\n",
@@ -267,6 +264,7 @@ static void video_hw_enable(struct meson_vpu_block *vblk)
 		DRM_DEBUG("enable break for NULL.\n");
 		return;
 	}
+	set_video_enabled(1, vblk->index);
 	DRM_DEBUG("%s enable done.\n", video->base.name);
 }
 
@@ -278,6 +276,7 @@ static void video_hw_disable(struct meson_vpu_block *vblk)
 		DRM_DEBUG("disable break for NULL.\n");
 		return;
 	}
+	set_video_enabled(0, vblk->index);
 	if (video->video_path_reg) {
 		vf_unreg_provider(&video->vprov);
 		video->video_path_reg = 0;
@@ -307,11 +306,18 @@ static void video_hw_init(struct meson_vpu_block *vblk)
 	kfifo_reset(&video->display_q);
 	for (i = 0; i < BUFFER_NUM; i++)
 		kfifo_put(&video->free_q, &video->vframe[i]);
-	snprintf(video->vfm_map_chain, VP_MAP_STRUCT_SIZE,
-		 "%s %s", video->base.name,
-		 "amvideo");
+	if (vblk->id == VIDEO1_BLOCK)
+		snprintf(video->vfm_map_chain, VP_MAP_STRUCT_SIZE,
+			 "%s %s", video->base.name,
+			 "amvideo");
+	else if (vblk->id == VIDEO2_BLOCK)
+		snprintf(video->vfm_map_chain, VP_MAP_STRUCT_SIZE,
+			 "%s %s", video->base.name,
+			 "videopip");
+	else
+		DRM_DEBUG("unsupported block id %d\n", vblk->id);
 	snprintf(video->vfm_map_id, VP_MAP_STRUCT_SIZE,
-		 "video-map");
+		 "video-map-%d", vblk->index);
 	vfm_map_add(video->vfm_map_id, video->vfm_map_chain);
 	vf_provider_init(&video->vprov,
 			 video->base.name,

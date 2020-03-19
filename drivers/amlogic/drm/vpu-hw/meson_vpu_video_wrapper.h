@@ -19,5 +19,4 @@
 #define _MESON_VPU_VIDEO_WRAPPER_H_
 
 #define HW_VIDEO_MIF_NUM 2
-
 #endif
