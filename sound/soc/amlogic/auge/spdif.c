@@ -1313,9 +1313,10 @@ static int aml_dai_spdif_prepare(
 		if (p_spdif->chipinfo)
 			separated = p_spdif->chipinfo->separate_tohdmitx_en;
 		spdifout_to_hdmitx_ctrl(separated, p_spdif->id);
-		/* notify to hdmitx */
-		spdif_notify_to_hdmitx(substream, p_spdif->codec_type);
-
+		if (get_spdif_to_hdmitx_id() == p_spdif->id) {
+			/* notify to hdmitx */
+			spdif_notify_to_hdmitx(substream, p_spdif->codec_type);
+		}
 	} else {
 		struct toddr *to = p_spdif->tddr;
 		struct toddr_fmt fmt;

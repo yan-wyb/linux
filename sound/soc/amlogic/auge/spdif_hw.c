@@ -700,3 +700,25 @@ void aml_spdifin_sample_mode_filter_en(void)
 {
 	audiobus_update_bits(EE_AUDIO_SPDIFIN_CTRL6, 0x1 << 12, 0x1 << 12);
 }
+
+int get_spdif_to_hdmitx_id(void)
+{
+	int val = audiobus_read(EE_AUDIO_TOHDMITX_CTRL0) & 0x3;
+	int ret = 0;
+
+	if (val == 3)
+		ret = 1;
+	else if (val == 0)
+		ret = 0;
+	else
+		pr_err("%s(), inval config\n", __func__);
+
+	return ret;
+}
+
+void set_spdif_to_hdmitx_id(int spdif_id)
+{
+	audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+			     0x3, spdif_id << 1 | spdif_id);
+}
+
