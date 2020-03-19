@@ -15265,3 +15265,16 @@ AMLOGIC DRM DRIVER
 M:  Dezhi Kong <dezhi.kong@amlogic.com>
 F:  drivers/amlogic/drm/vpu-hw/meson_vpu_video_wrapper.c
 F:  drivers/amlogic/drm/vpu-hw/meson_vpu_video_wrapper.h
+
+AMLOGIC TM2_REVB DTS
+M:  changqing gao <changqing.gao@amlogic.com>
+F:  arch/arm/boot/dts/amlogic/tm2_revb_t962e2_ab311.dts
+F:  arch/arm/boot/dts/amlogic/tm2_revb_t962e2_ab319.dts
+F:  arch/arm/boot/dts/amlogic/tm2_revb_t962x3_ab301.dts
+F:  arch/arm/boot/dts/amlogic/tm2_revb_t962x3_ab309.dts
+F:  arch/arm/boot/dts/amlogic/tm2_revb_t962x3_t312.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962e2_ab311.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962e2_ab319.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962x3_ab301.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962x3_ab309.dts
+F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962x3_t312.dts
