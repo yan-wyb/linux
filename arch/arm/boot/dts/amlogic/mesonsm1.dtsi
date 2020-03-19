@@ -498,10 +498,10 @@
 		compatible = "amlogic,sm1-power-domain";
 		reg = <0xff62fc00 0xf0>,
 		      <0xff8000e8 0x10>,
-		      <0xff63c100 0x40>,
+		      <0xff63c100 0x70>,
 		      <0xffd01080 0x20>;
-		vpu_mempd_reg3 = <0xc>;
-		vpu_mempd_reg4 = <0x10>;
+		vpu_mempd_reg3 = <0x3c>;
+		vpu_mempd_reg4 = <0x40>;
 		status = "okay";
 	};
 

@@ -624,10 +624,10 @@
 		compatible = "amlogic,tm2-power-domain";
 		reg = <0xff62fc00 0xd0>,
 		      <0xff8000e8 0x10>,
-		      <0xff63c100 0x40>,
+		      <0xff63c100 0x70>,
 		      <0xffd01080 0x20>;
-		vpu_mempd_reg3 = <0x38>;
-		vpu_mempd_reg4 = <0x30>;
+		vpu_mempd_reg3 = <0x68>;
+		vpu_mempd_reg4 = <0x60>;
 		status = "okay";
 	};
 
