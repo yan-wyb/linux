@@ -95,6 +95,19 @@ struct ldim_dev_config_s {
 			    unsigned int len);
 };
 
+struct ldim_rmem_s {
+	void *wr_mem_vaddr1;
+	phys_addr_t wr_mem_paddr1;
+	void *wr_mem_vaddr2;
+	phys_addr_t wr_mem_paddr2;
+	void *rd_mem_vaddr1;
+	phys_addr_t rd_mem_paddr1;
+	void *rd_mem_vaddr2;
+	phys_addr_t rd_mem_paddr2;
+	unsigned int wr_mem_size;
+	unsigned int rd_mem_size;
+};
+
 /*******global API******/
 struct aml_ldim_driver_s {
 	unsigned char valid_flag;
@@ -105,6 +118,7 @@ struct aml_ldim_driver_s {
 
 	struct ldim_config_s *ldim_conf;
 	struct ldim_dev_config_s *ldev_conf;
+	struct ldim_rmem_s *rmem;
 	unsigned int *hist_matrix;
 	unsigned int *max_rgb;
 	unsigned short *ldim_test_matrix;

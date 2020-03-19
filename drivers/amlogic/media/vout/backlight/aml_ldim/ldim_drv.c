@@ -71,19 +71,6 @@ struct ldim_dev_s {
 	struct cdev *aml_ldim_cdevp;
 };
 
-static struct ldim_rmem_s ldim_rmem = {
-	.wr_mem_vaddr1 = NULL,
-	.wr_mem_paddr1 = 0,
-	.wr_mem_vaddr2 = NULL,
-	.wr_mem_paddr2 = 0,
-	.rd_mem_vaddr1 = NULL,
-	.rd_mem_paddr1 = 0,
-	.wr_mem_vaddr2 = NULL,
-	.wr_mem_paddr2 = 0,
-	.wr_mem_size = 0x3000,
-	.rd_mem_size = 0x1000,
-};
-
 static struct ldim_dev_s ldim_dev;
 static struct LDReg_s nPRM;
 static struct FW_DAT_s FDat;
@@ -157,6 +144,19 @@ static struct ldim_config_s ldim_config = {
 	.bl_mode = 1,
 	.bl_en = 1,
 	.hvcnt_bypass = 0,
+};
+
+static struct ldim_rmem_s ldim_rmem = {
+	.wr_mem_vaddr1 = NULL,
+	.wr_mem_paddr1 = 0,
+	.wr_mem_vaddr2 = NULL,
+	.wr_mem_paddr2 = 0,
+	.rd_mem_vaddr1 = NULL,
+	.rd_mem_paddr1 = 0,
+	.wr_mem_vaddr2 = NULL,
+	.wr_mem_paddr2 = 0,
+	.wr_mem_size = 0x3000,
+	.rd_mem_size = 0x1000,
 };
 
 void ldim_delay(int ms)
@@ -584,117 +584,62 @@ static void ldim_off_vs_brightness(void)
 
 void ldim_on_vs_arithmetic_tm2(void)
 {
-	unsigned int *local_ldim_hist = NULL;
-	unsigned int *local_ldim_max_rgb = NULL;
 	unsigned int *local_ldim_buf;
 	int region_num;
 	int i;
 
-	local_ldim_hist = kcalloc(ldim_hist_row * ldim_hist_col * 16,
-				  sizeof(unsigned int), GFP_KERNEL);
-	if (local_ldim_hist == NULL)
+	if (!ldim_driver.hist_matrix)
 		return;
-	local_ldim_max_rgb = kcalloc(ldim_hist_row * ldim_hist_col * 3,
-				     sizeof(unsigned int), GFP_KERNEL);
-	if (local_ldim_max_rgb == NULL) {
-		kfree(local_ldim_hist);
+	if (!ldim_driver.max_rgb)
 		return;
-	}
-
-	local_ldim_buf = kcalloc(ldim_hist_row * ldim_hist_col,
-				 sizeof(unsigned int), GFP_KERNEL);
-	if (local_ldim_buf == NULL) {
-		kfree(local_ldim_hist);
-		kfree(local_ldim_max_rgb);
-		return;
-	}
 
 	region_num = ldim_hist_row * ldim_hist_col;
-	local_ldim_buf = (unsigned int *)ldim_rmem.wr_mem_vaddr1;
+	local_ldim_buf = kcalloc(region_num * 20,
+				 sizeof(unsigned int), GFP_KERNEL);
+	if (!local_ldim_buf)
+		return;
+
+	/*stts_read*/
+	memcpy(local_ldim_buf, ldim_rmem.wr_mem_vaddr1,
+	       region_num * 20 * sizeof(unsigned int));
 	for (i = 0; i < region_num; i++) {
-		memcpy(&local_ldim_hist[i * 16], &local_ldim_buf[i * 20],
+		memcpy(&ldim_driver.hist_matrix[i * 16],
+		       &local_ldim_buf[i * 20],
 		       16 * sizeof(unsigned int));
-		memcpy(&local_ldim_max_rgb[i * 3],
+		memcpy(&ldim_driver.max_rgb[i * 3],
 		       &local_ldim_buf[(i * 20) + 16],
 		       3 * sizeof(unsigned int));
 	}
-#if 0
-	for (i = 0; i < region_num * 16; i++) {
-		LDIMPR("local_ldim_hist[%d]: %04x\n",
-		       i, local_ldim_hist[i]);
-	}
-	for (i = 0; i < region_num * 3; i++) {
-		LDIMPR("local_ldim_max_rgb[%d]: %04x\n",
-		       i, local_ldim_max_rgb[i]);
-	}
-	LDIMPR("ldim_alg_en: %d\n", ldim_alg_en);
-#endif
+
 	if (ldim_alg_en) {
 		if (ldim_fw_para.fw_alg_frm) {
 			ldim_fw_para.fw_alg_frm(&ldim_fw_para,
-						local_ldim_max_rgb,
-						local_ldim_hist);
+						ldim_driver.max_rgb,
+						ldim_driver.hist_matrix);
 		}
 	}
-	kfree(local_ldim_hist);
-	kfree(local_ldim_max_rgb);
+
+	kfree(local_ldim_buf);
 }
 
 static void ldim_on_vs_arithmetic(void)
 {
-	unsigned int *local_ldim_hist = NULL;
-	unsigned int *local_ldim_max = NULL;
-	unsigned int *local_ldim_max_rgb = NULL;
-	unsigned int i;
-
 	if (ldim_top_en == 0)
 		return;
-	local_ldim_hist = kcalloc(ldim_hist_row*ldim_hist_col*16,
-			sizeof(unsigned int), GFP_KERNEL);
-	if (local_ldim_hist == NULL)
-		return;
 
-	local_ldim_max = kcalloc(ldim_hist_row*ldim_hist_col,
-			sizeof(unsigned int), GFP_KERNEL);
-	if (local_ldim_max == NULL) {
-		kfree(local_ldim_hist);
-		return;
-	}
-	local_ldim_max_rgb = kcalloc(ldim_hist_row*ldim_hist_col*3,
-			sizeof(unsigned int), GFP_KERNEL);
-	if (local_ldim_max_rgb == NULL) {
-		kfree(local_ldim_hist);
-		kfree(local_ldim_max);
-		return;
-	}
-	/* spin_lock_irqsave(&ldim_isr_lock, flags); */
-	memcpy(local_ldim_hist, ldim_driver.hist_matrix,
-		ldim_hist_row*ldim_hist_col*16*sizeof(unsigned int));
-	memcpy(local_ldim_max, ldim_driver.max_rgb,
-		ldim_hist_row*ldim_hist_col*sizeof(unsigned int));
-	for (i = 0; i < ldim_hist_row*ldim_hist_col; i++) {
-		(*(local_ldim_max_rgb+i*3)) =
-			(*(local_ldim_max+i))&0x3ff;
-		(*(local_ldim_max_rgb+i*3+1)) =
-			(*(local_ldim_max+i))>>10&0x3ff;
-		(*(local_ldim_max_rgb+i*3+2)) =
-			(*(local_ldim_max+i))>>20&0x3ff;
-	}
+	ldim_stts_read_region(ldim_hist_row, ldim_hist_col);
+
 	if (ldim_alg_en) {
 		if (ldim_fw_para.fw_alg_frm) {
 			ldim_fw_para.fw_alg_frm(&ldim_fw_para,
-				local_ldim_max_rgb, local_ldim_hist);
+						ldim_driver.max_rgb,
+						ldim_driver.hist_matrix);
 		}
 	}
-
-	kfree(local_ldim_hist);
-	kfree(local_ldim_max);
-	kfree(local_ldim_max_rgb);
 }
 
 static void ldim_on_update_brightness(struct work_struct *work)
 {
-	ldim_stts_read_region(ldim_hist_row, ldim_hist_col);
 	ldim_dev.ldim_op_func->vs_arithmetic();
 	ldim_on_vs_brightness();
 }
@@ -824,7 +769,49 @@ static void ldim_dump_histgram(void)
 			}
 			pr_info("%s\n\n", buf);
 		}
-		msleep(20);
+	}
+
+	kfree(buf);
+	kfree(p);
+}
+
+static void ldim_get_matrix_info_max_rgb(void)
+{
+	unsigned int i, j, n, len;
+	unsigned int *p = NULL;
+	char *buf;
+
+	p = kcalloc(ldim_blk_col * ldim_blk_row * 3,
+		    sizeof(unsigned int), GFP_KERNEL);
+	if (p == NULL) {
+		LDIMERR("ldim_matrix_t malloc error\n");
+		return;
+	}
+
+	len = ldim_blk_col * 30 + 20;
+	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
+	if (buf == NULL) {
+		LDIMERR("print buf malloc error\n");
+		kfree(p);
+		return;
+	}
+
+	memcpy(p, ldim_driver.max_rgb,
+	       ldim_blk_col * ldim_blk_row * 3 * sizeof(unsigned int));
+
+	pr_info("%s max_rgb:\n", __func__);
+	for (i = 0; i < ldim_blk_row; i++) {
+		len = 0;
+		for (j = 0; j < ldim_blk_col; j++) {
+			n =  i * ldim_blk_col + j;
+			len += sprintf(buf+len, "\t(R:%4d, G:%4d, B:%4d)",
+				p[n * 3],
+				p[n * 3 + 1],
+				p[n * 3 + 2]);
+			if ((j + 1) % 4 == 0)
+				len += sprintf(buf+len, "\n\n");
+		}
+		pr_info("%s\n\n", buf);
 	}
 
 	kfree(buf);
@@ -863,7 +850,6 @@ static void ldim_get_matrix_info_TF(void)
 				ldim_matrix_t[ldim_blk_col*i+j]);
 		}
 		pr_info("%s\n", buf);
-		msleep(20);
 	}
 
 	kfree(buf);
@@ -902,7 +888,6 @@ static void ldim_get_matrix_info_SF(void)
 				ldim_matrix_t[ldim_blk_col*i+j]);
 		}
 		pr_info("%s\n", buf);
-		msleep(20);
 	}
 
 	kfree(buf);
@@ -945,7 +930,6 @@ static void ldim_get_matrix_info_4(void)
 			len += sprintf(buf+len, "\n");
 		}
 		pr_info("%s\n", buf);
-		msleep(20);
 	}
 
 	kfree(buf);
@@ -984,54 +968,10 @@ static void ldim_get_matrix_info_alpha(void)
 				ldim_matrix_t[ldim_blk_col*i+j]);
 		}
 		pr_info("%s\n", buf);
-		msleep(20);
 	}
 
 	kfree(buf);
 	kfree(ldim_matrix_t);
-}
-
-static void ldim_get_matrix_info_max_rgb(void)
-{
-	unsigned int i, j, len;
-	unsigned int *p = NULL;
-	char *buf;
-
-	p = kcalloc(ldim_blk_col*ldim_blk_row,
-		sizeof(unsigned int), GFP_KERNEL);
-	if (p == NULL) {
-		LDIMERR("ldim_matrix_t malloc error\n");
-		return;
-	}
-
-	len = ldim_blk_col * 30 + 20;
-	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
-	if (buf == NULL) {
-		LDIMERR("print buf malloc error\n");
-		kfree(p);
-		return;
-	}
-
-	memcpy(p, ldim_driver.max_rgb,
-		ldim_blk_col*ldim_blk_row*sizeof(unsigned int));
-
-	pr_info("%s max_rgb:\n", __func__);
-	for (i = 0; i < ldim_blk_row; i++) {
-		len = 0;
-		for (j = 0; j < ldim_blk_col; j++) {
-			len += sprintf(buf+len, "\t(R:%4d, G:%4d, B:%4d)",
-				(*(p + j + i*ldim_blk_col))&0x3ff,
-				(*(p + j + i*ldim_blk_col)>>10)&0x3ff,
-				(*(p + j + i*ldim_blk_col)>>20)&0x3ff);
-			if ((j + 1) % 4 == 0)
-				len += sprintf(buf+len, "\n\n");
-		}
-		pr_info("%s\n\n", buf);
-		msleep(20);
-	}
-
-	kfree(buf);
-	kfree(p);
 }
 
 static void ldim_get_matrix(unsigned int *data, unsigned int reg_sel)
@@ -1273,11 +1213,11 @@ static void ldim_matrix_histgram_mute_print(void)
 
 static void ldim_matrix_max_rgb_mute_print(void)
 {
-	unsigned int i, j, len;
+	unsigned int i, j, n, len;
 	unsigned int *p = NULL;
 	char *buf;
 
-	len = ldim_blk_col * ldim_blk_row;
+	len = ldim_blk_col * ldim_blk_row * 3;
 	p = kcalloc(len, sizeof(unsigned int), GFP_KERNEL);
 	if (p == NULL)
 		return;
@@ -1290,15 +1230,16 @@ static void ldim_matrix_max_rgb_mute_print(void)
 	}
 
 	memcpy(p, ldim_driver.max_rgb,
-		ldim_blk_col*ldim_blk_row*sizeof(unsigned int));
+	       ldim_blk_col * ldim_blk_row * 3 * sizeof(unsigned int));
 
 	len = 0;
 	for (i = 0; i < ldim_blk_row; i++) {
 		for (j = 0; j < ldim_blk_col; j++) {
+			n = i * ldim_blk_col + j;
 			len += sprintf(buf+len, " %d %d %d",
-				(*(p + j + i*ldim_blk_col))&0x3ff,
-				(*(p + j + i*ldim_blk_col)>>10)&0x3ff,
-				(*(p + j + i*ldim_blk_col)>>20)&0x3ff);
+				p[n * 3],
+				p[n * 3 + 1],
+				p[n * 3 + 2]);
 		}
 	}
 	pr_info("for_tool: %d 3%s\n", (ldim_hist_row * ldim_hist_col), buf);
@@ -2850,46 +2791,49 @@ static ssize_t ldim_para_show(struct class *class,
 	return len;
 }
 
-static ssize_t ldim_mem_show(struct class *class,
-		struct class_attribute *attr, char *buf)
+static ssize_t ldim_mem_store(struct class *class,
+	struct class_attribute *attr, const char *buf, size_t count)
 {
-	int ret = 0;
-	unsigned int *wdata1 = (unsigned int *)ldim_rmem.wr_mem_vaddr1;
-	unsigned int *rdata1 = (unsigned int *)ldim_rmem.rd_mem_vaddr1;
-	int region_num;
+	int i;
+	unsigned int *data_buf, region_num;
 	struct aml_bl_drv_s *bl_drv = aml_bl_get_driver();
 
 	if (bl_drv->data->chip_type != BL_CHIP_TM2)
-		return ret;
+		return count;
 
-	region_num = nPRM.reg_LD_BLK_Vnum * nPRM.reg_LD_BLK_Hnum;
-	if (!ldim_debug_print) {
-		if (!wdata1) {
-			LDIMERR("waddr1 is null\n");
-			return ret;
+	region_num = ldim_hist_row * ldim_hist_col;
+
+	switch (buf[0]) {
+	case 'w':
+		data_buf = (unsigned int *)ldim_rmem.wr_mem_vaddr1;
+		if (!data_buf) {
+			LDIMERR("wr buffer is null\n");
+			return count;
 		}
-		for (ret = 0; ret < region_num * 20; ret++) {
-			LDIMPR("ldim read waddr1: 0x%p : %04x\n",
-			wdata1, *wdata1);
-			wdata1++;
+		pr_info("ldim wr buffer:\n");
+		for (i = 0; i < region_num * 20; i++) {
+			pr_info(" 0x%p : %04x\n", data_buf, *data_buf);
+			data_buf++;
 		}
-	} else {
-		if (!rdata1) {
-			LDIMERR("waddr1 is null\n");
-			return ret;
+		pr_info("\n");
+		break;
+	case 'r':
+		data_buf = (unsigned int *)ldim_rmem.rd_mem_vaddr1;
+		if (!data_buf) {
+			LDIMERR("rd buffer is null\n");
+			return count;
 		}
-		for (ret = 0; ret < region_num; ret++) {
-			LDIMPR("ldim read raddr1: 0x%p : %04x\n",
-			rdata1, *rdata1);
-			rdata1++;
+		pr_info("ldim rd buffer:\n");
+		for (i = 0; i < region_num; i++) {
+			pr_info(" 0x%p : %04x\n", data_buf, *data_buf);
+			data_buf++;
 		}
-		for (ret = 0; ret < region_num; ret++) {
-			LDIMPR("bl_matrix: %04x\n",
-			       nPRM.BL_matrix[ret]);
-		}
+		pr_info("\n");
+		break;
+	default:
+		pr_info("no support cmd\n");
 	}
-
-	return ret;
+	return count;
 }
 
 static ssize_t ldim_dump_show(struct class *class,
@@ -2911,7 +2855,7 @@ static struct class_attribute aml_ldim_class_attrs[] = {
 	__ATTR(func_en, 0644,
 		ldim_func_en_show, ldim_func_en_store),
 	__ATTR(para, 0644, ldim_para_show, NULL),
-	__ATTR(mem, 0644, ldim_mem_show, NULL),
+	__ATTR(mem, 0644, NULL, ldim_mem_store),
 	__ATTR(dump, 0644, ldim_dump_show, NULL),
 	__ATTR_NULL,
 };
@@ -3118,6 +3062,8 @@ static int ldim_rmem_tm2(void)
 	memset(ldim_rmem.rd_mem_vaddr1, 0, ldim_rmem.rd_mem_size);
 	memset(ldim_rmem.rd_mem_vaddr2, 0, ldim_rmem.rd_mem_size);
 
+	ldim_driver.rmem = &ldim_rmem;
+
 	return 0;
 
 ldim_rmem_err3:
@@ -3140,7 +3086,7 @@ static int aml_ldim_malloc(unsigned int blk_row, unsigned int blk_col)
 		LDIMERR("ldim_driver hist_matrix malloc error\n");
 		goto ldim_malloc_err0;
 	}
-	ldim_driver.max_rgb = kcalloc((blk_row * blk_col),
+	ldim_driver.max_rgb = kcalloc((blk_row * blk_col * 3),
 		sizeof(unsigned int), GFP_KERNEL);
 	if (ldim_driver.max_rgb == NULL) {
 		LDIMERR("ldim_driver max_rgb malloc error\n");
@@ -3225,31 +3171,6 @@ ldim_malloc_err1:
 	kfree(ldim_driver.hist_matrix);
 ldim_malloc_err0:
 	return -1;
-}
-
-void ldim_remap_update_tm2(struct LDReg_s *nPRM, unsigned int avg_update_en,
-			   unsigned int matrix_update_en)
-{
-	int data;
-
-	if (avg_update_en) {
-		/* LD_BKLIT_PARAM */
-		data = LDIM_RD_32Bits(REG_LD_BKLIT_PARAM);
-		data = (data & (~0xfff)) | (nPRM->reg_BL_matrix_AVG & 0xfff);
-		LDIM_WR_32Bits(REG_LD_BKLIT_PARAM, data);
-
-		/* compensate */
-		data = LDIM_RD_32Bits(REG_LD_LIT_GAIN_COMP);
-		data = (data & (~0xfff)) |
-			(nPRM->reg_BL_matrix_Compensate & 0xfff);
-		LDIM_WR_32Bits(REG_LD_LIT_GAIN_COMP, data);
-	}
-
-	if (matrix_update_en) {
-		data = nPRM->reg_LD_BLK_Vnum * nPRM->reg_LD_BLK_Hnum;
-		LDIM_Update_Matrix_tm2(nPRM->BL_matrix, data,
-				       ldim_rmem.rd_mem_vaddr1);
-	}
 }
 
 static struct ldim_operate_func_s ldim_op_func_txlx = {

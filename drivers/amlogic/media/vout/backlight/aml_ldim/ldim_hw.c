@@ -56,17 +56,23 @@
 
 #define Wr(reg, val)    Wr_reg(reg, val)
 #define Rd(reg)         Rd_reg(reg)
-void LDIM_Update_Matrix_tm2(int NewBlMatrix[], int BlMatrixNum,
-			    void *bl_matrix_mem_baddr)
+
+static void LDIM_Update_Matrix_tm2(int NewBlMatrix[], int BlMatrixNum)
 {
+	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 	unsigned int *ptr;
 	int i;
 
-	ptr = (unsigned int *)bl_matrix_mem_baddr;
+	if (!ldim_drv->rmem)
+		return;
+	if (!ldim_drv->rmem->rd_mem_vaddr1)
+		return;
+
+	ptr = (unsigned int *)ldim_drv->rmem->rd_mem_vaddr1;
 	for (i = 0; i < (BlMatrixNum + 1) / 2; i++) {
-		*(unsigned int *) (ptr) =
-			(unsigned int)(((NewBlMatrix[2 * i + 1] & 0xfff) << 16)
-			| (NewBlMatrix[2 * i] & 0xfff));
+		*(unsigned int *) (ptr) = (unsigned int)
+			(((NewBlMatrix[2 * i + 1] & 0xfff) << 16) |
+			 (NewBlMatrix[2 * i] & 0xfff));
 		ptr++;
 	}
 	Wr_reg_bits(VPU_DMA_RDMIF_CTRL3, (BlMatrixNum + 7) / 8, 0, 13);
@@ -1242,10 +1248,13 @@ void ldim_stts_initial_tm2(unsigned int pic_h, unsigned int pic_v,
 	switch_vpu_mem_pd_vmod(VPU_DMA, VPU_MEM_POWER_ON);
 
 	ldim_stts_en_tm2(resolution, 0, 0, 0, 1, 1, (blk_vnum * blk_hnum));
-	ldim_set_matrix_ycbcr2rgb();
+	ldim_set_matrix_rgb2ycbcr(0);// vpp out format : RGB
 
 	/*0:di  1:vdin  2:null  3:postblend  4:vpp out  5:vd1  6:vd2  7:osd1*/
 	Wr_reg_bits(LDIM_STTS_CTRL0, 4, 3, 3);
+
+	/* bit21:20  3: input is RGB   0:input is YUV */
+	Wr_reg_bits(LDIM_STTS_CTRL0, 3, 20, 2);
 
 	//ldim_stts_set_region_tm2(0, pic_v, pic_h, blk_height, blk_width,
 	ldim_stts_set_region_tm2(0, pic_v, pic_h,
@@ -1260,7 +1269,7 @@ static unsigned int invalid_val_cnt;
 void ldim_stts_read_region(unsigned int nrow, unsigned int ncol)
 {
 	unsigned int i, j, k;
-	unsigned int data32;
+	unsigned int n, data32;
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 
 	if (invalid_val_cnt > 0xfffffff)
@@ -1273,15 +1282,19 @@ void ldim_stts_read_region(unsigned int nrow, unsigned int ncol)
 	for (i = 0; i < nrow; i++) {
 		for (j = 0; j < ncol; j++) {
 			data32 = Rd(LDIM_STTS_HIST_START_RD_REGION);
+			n = i * ncol + j;
 			for (k = 0; k < 17; k++) {
+				data32 = Rd(LDIM_STTS_HIST_READ_REGION);
 				if (k == 16) {
-					data32 = Rd(LDIM_STTS_HIST_READ_REGION);
-					ldim_drv->max_rgb[i * ncol + j]
-						= data32;
+					ldim_drv->max_rgb[n * 3] =
+						data32 & 0x3ff;
+					ldim_drv->max_rgb[n * 3 + 1] =
+						(data32 >> 10) & 0x3ff;
+					ldim_drv->max_rgb[n * 3 + 2] =
+						(data32 >> 20) & 0x3ff;
 				} else {
-					data32 = Rd(LDIM_STTS_HIST_READ_REGION);
-					ldim_drv->hist_matrix[i * ncol * 16 +
-						j * 16 + k] = data32;
+					ldim_drv->hist_matrix[n * 16 + k] =
+						data32;
 				}
 				if (!(data32 & 0x40000000))
 					invalid_val_cnt++;
@@ -1354,5 +1367,29 @@ void ldim_remap_update_txlx(struct LDReg_s *nPRM,
 	if (matrix_update_en) {
 		data = nPRM->reg_LD_BLK_Vnum * nPRM->reg_LD_BLK_Hnum;
 		LDIM_Update_Matrix_txlx(nPRM->BL_matrix, data);
+	}
+}
+
+void ldim_remap_update_tm2(struct LDReg_s *nPRM, unsigned int avg_update_en,
+			   unsigned int matrix_update_en)
+{
+	int data;
+
+	if (avg_update_en) {
+		/* LD_BKLIT_PARAM */
+		data = LDIM_RD_32Bits(REG_LD_BKLIT_PARAM);
+		data = (data & (~0xfff)) | (nPRM->reg_BL_matrix_AVG & 0xfff);
+		LDIM_WR_32Bits(REG_LD_BKLIT_PARAM, data);
+
+		/* compensate */
+		data = LDIM_RD_32Bits(REG_LD_LIT_GAIN_COMP);
+		data = (data & (~0xfff)) |
+			(nPRM->reg_BL_matrix_Compensate & 0xfff);
+		LDIM_WR_32Bits(REG_LD_LIT_GAIN_COMP, data);
+	}
+
+	if (matrix_update_en) {
+		data = nPRM->reg_LD_BLK_Vnum * nPRM->reg_LD_BLK_Hnum;
+		LDIM_Update_Matrix_tm2(nPRM->BL_matrix, data);
 	}
 }

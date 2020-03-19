@@ -43,20 +43,6 @@ extern int LD_remap_lut[16][32];
 #define AML_LDIM_CLASS_NAME  "aml_ldim"
 
 /*========================================*/
-struct ldim_rmem_s {
-	void *wr_mem_vaddr1;
-	phys_addr_t wr_mem_paddr1;
-	void *wr_mem_vaddr2;
-	phys_addr_t wr_mem_paddr2;
-	void *rd_mem_vaddr1;
-	phys_addr_t rd_mem_paddr1;
-	void *rd_mem_vaddr2;
-	phys_addr_t rd_mem_paddr2;
-	unsigned int wr_mem_size;
-	unsigned int rd_mem_size;
-};
-
-/*========================================*/
 struct ldim_operate_func_s {
 	unsigned short h_region_max;
 	unsigned short v_region_max;
@@ -101,7 +87,5 @@ extern void ldim_remap_update_txlx(struct LDReg_s *nPRM,
 		unsigned int avg_update_en, unsigned int matrix_update_en);
 void ldim_remap_update_tm2(struct LDReg_s *nPRM, unsigned int avg_update_en,
 			   unsigned int matrix_update_en);
-void LDIM_Update_Matrix_tm2(int NewBlMatrix[], int BlMatrixNum,
-			    void *bl_matrix_mem_baddr);
 
 #endif
