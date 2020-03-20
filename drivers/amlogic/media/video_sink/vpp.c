@@ -3420,7 +3420,7 @@ void vpp_super_scaler_support(void)
 		|| is_meson_tm2_cpu()) {
 		if (is_meson_tm2_revb()) {
 			sr->sr_reg_offt = 0x1e00;
-			sr->sr_reg_offt2 = 0x2000;
+			sr->sr_reg_offt2 = 0x1f80;
 		} else {
 			sr->sr_reg_offt = 0xc00;
 			sr->sr_reg_offt2 = 0xc80;

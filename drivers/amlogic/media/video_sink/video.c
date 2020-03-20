@@ -9536,6 +9536,8 @@ static int amvideom_probe(struct platform_device *pdev)
 			return -ENODEV;
 		}
 	}
+
+	video_early_init();
 	video_hw_init();
 
 	safe_switch_videolayer(0, false, false);
@@ -9609,8 +9611,6 @@ static int __init video_init(void)
 		(1 << 0));	/* DDR clk / 2 */
 	}
 #endif
-
-	video_early_init();
 
 	if (platform_driver_register(&amvideom_driver)) {
 		pr_info("failed to amvideom driver!\n");
