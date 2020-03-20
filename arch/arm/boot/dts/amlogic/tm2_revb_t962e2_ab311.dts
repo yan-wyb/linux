@@ -18,7 +18,7 @@
 /dts-v1/;
 
 #include "mesontm2_revb.dtsi"
-#include "partition_mbox_normal.dtsi"
+#include "partition_mbox_normal_P_32.dtsi"
 
 / {
 	model = "Amlogic TM2 REVB T962E2 AB311";
@@ -509,7 +509,7 @@
 		wb_en = <1>;/*1:enabel ;0:disable*/
 		cm_en = <0>;/*1:enabel ;0:disable*/
 		wb_sel = <0>;/*1:mtx ;0:gainoff*/
-		vlock_en = <1>;/*1:enable;0:disable*/
+		vlock_en = <0>;/*1:enable;0:disable*/
 		vlock_mode = <0x4>;
 		/* vlock work mode:
 		 *bit0:auto ENC
