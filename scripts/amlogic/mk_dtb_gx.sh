@@ -51,3 +51,13 @@ make ARCH=arm64 tm2_revb_pxp.dtb || echo "Compile dtb Fail!!"
 make ARCH=arm64 tm2_t962e2_ab311.dtb || echo "Compile dtb Fail!!"
 
 make ARCH=arm64 tm2_t962e2_ab319.dtb || echo "Compile dtb Fail!!"
+
+make ARCH=arm64 tm2_revb_t962e2_ab311.dtb || echo "Compile dtb Fail !!"
+
+make ARCH=arm64 tm2_revb_t962e2_ab319.dtb || echo "Compile dtb Fail !!"
+
+make ARCH=arm64 tm2_revb_t962x3_ab301.dtb || echo "Compile dtb Fail !!"
+
+make ARCH=arm64 tm2_revb_t962x3_ab309.dtb || echo "Compile dtb Fail !!"
+
+make ARCH=arm64 tm2_revb_t962x3_t312.dtb || echo "Compile dtb Fail !!"
