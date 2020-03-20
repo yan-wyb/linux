@@ -74,6 +74,9 @@ struct audioresample {
 	int capture_sample_rate;
 
 	bool enable;
+
+	struct timer_list timer;
+	bool timer_running;
 };
 
 struct audioresample *s_resample_a;
@@ -255,6 +258,27 @@ static int resample_get_enum(
 	return 0;
 }
 
+static void new_resample_timer_callback(unsigned long data)
+{
+	struct audioresample *p_resample = (struct audioresample *)data;
+	int ADJ_diff = (int)new_resample_read(p_resample->id,
+					      AUDIO_RSAMP_RO_ADJ_DIFF_BAK);
+
+	if (ADJ_diff > 100 || ADJ_diff < -100) {
+		pr_debug("reset resample ADJ: [%d]\n", ADJ_diff);
+		new_resample_update_bits(p_resample->id,
+					 AUDIO_RSAMP_ADJ_CTRL0, 0x1, 0);
+		new_resample_update_bits(p_resample->id,
+					 AUDIO_RSAMP_CTRL0, 0x1 << 2, 0x1 << 2);
+		new_resample_update_bits(p_resample->id,
+					 AUDIO_RSAMP_CTRL0, 0x1 << 2, 0x0 << 2);
+		new_resample_update_bits(p_resample->id,
+					 AUDIO_RSAMP_ADJ_CTRL0, 0x1, 1);
+	}
+
+	mod_timer(&p_resample->timer, jiffies + msecs_to_jiffies(500));
+}
+
 /* force set to new rate index whatever the resampler holds */
 int resample_set(enum resample_idx id, enum samplerate_index index)
 {
@@ -284,14 +308,27 @@ int resample_set(enum resample_idx id, enum samplerate_index index)
 		return ret;
 
 	if (index == RATE_OFF) {
-		if (p_resample->chipinfo->resample_version == 1)
+		if (p_resample->chipinfo->resample_version == 1) {
 			new_resample_enable(p_resample->id, false);
-		else if (p_resample->chipinfo->resample_version == 0)
+			del_timer_sync(&p_resample->timer);
+			p_resample->timer_running = false;
+		} else if (p_resample->chipinfo->resample_version == 0) {
 			resample_enable(p_resample->id, false);
+		}
 	} else {
 		if (p_resample->chipinfo->resample_version == 1) {
 			new_resample_set_ratio(id, resample_rate,
 					       DEFAULT_SPK_SAMPLERATE);
+
+			/* start a timer to check resample RO status */
+			if (!p_resample->timer_running) {
+				setup_timer(&p_resample->timer,
+					    new_resample_timer_callback,
+					    (unsigned long)p_resample);
+				mod_timer(&p_resample->timer,
+					  jiffies + msecs_to_jiffies(500));
+				p_resample->timer_running = true;
+			}
 		} else if (p_resample->chipinfo->resample_version == 0) {
 			resample_init(p_resample->id, resample_rate);
 			resample_set_hw_param(p_resample->id, index);
@@ -545,6 +582,8 @@ static int new_resample_init(struct audioresample *p_resample)
 		new_resampleB_set_format(p_resample->id,
 					 p_resample->capture_sample_rate);
 	}
+
+	init_timer(&p_resample->timer);
 
 	return 0;
 }
