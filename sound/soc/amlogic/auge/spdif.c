@@ -36,10 +36,10 @@
 
 #include "ddr_mngr.h"
 #include "spdif_hw.h"
-#include "spdif_match_table.c"
 #include "resample.h"
 #include "resample_hw.h"
 #include "spdif.h"
+#include "spdif_match_table.c"
 
 #define DRV_NAME "snd_spdif"
 
@@ -163,6 +163,16 @@ static const char *const spdifin_samplerate[] = {
 	"176400",
 	"192000"
 };
+
+int spdifout_get_lane_mask_version(int id)
+{
+	int ret = SPDIFOUT_LANE_MASK_V1;
+
+	if (spdif_priv[id] && spdif_priv[id]->chipinfo)
+		ret = spdif_priv[id]->chipinfo->spdifout_lane_mask;
+
+	return ret;
+}
 
 static int spdifin_samplerate_get_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)

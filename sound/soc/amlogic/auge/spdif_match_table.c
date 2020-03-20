@@ -45,6 +45,7 @@ struct spdif_chipinfo {
 	/* from tm2_revb */
 	bool separate_tohdmitx_en;
 	bool sample_mode_filter_en;
+	unsigned int spdifout_lane_mask;
 };
 
 struct spdif_chipinfo axg_spdif_chipinfo = {
@@ -52,6 +53,7 @@ struct spdif_chipinfo axg_spdif_chipinfo = {
 	.irq_no_papb      = true,
 	.clr_irq_all_bits = true,
 	.pcpd_separated   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo g12a_spdif_a_chipinfo = {
@@ -60,6 +62,7 @@ struct spdif_chipinfo g12a_spdif_a_chipinfo = {
 	.hold_start     = true,
 	.eq_drc_en      = true,
 	.pcpd_separated = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo g12a_spdif_b_chipinfo = {
@@ -68,6 +71,7 @@ struct spdif_chipinfo g12a_spdif_b_chipinfo = {
 	.hold_start     = true,
 	.eq_drc_en      = true,
 	.pcpd_separated = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo tl1_spdif_a_chipinfo = {
@@ -76,6 +80,7 @@ struct spdif_chipinfo tl1_spdif_a_chipinfo = {
 	.hold_start   = true,
 	.eq_drc_en    = true,
 	.async_fifo   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo tl1_spdif_b_chipinfo = {
@@ -84,6 +89,7 @@ struct spdif_chipinfo tl1_spdif_b_chipinfo = {
 	.hold_start   = true,
 	.eq_drc_en    = true,
 	.async_fifo   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo sm1_spdif_a_chipinfo = {
@@ -92,6 +98,7 @@ struct spdif_chipinfo sm1_spdif_a_chipinfo = {
 	.hold_start   = true,
 	.eq_drc_en    = true,
 	.async_fifo   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo sm1_spdif_b_chipinfo = {
@@ -100,6 +107,7 @@ struct spdif_chipinfo sm1_spdif_b_chipinfo = {
 	.hold_start   = true,
 	.eq_drc_en    = true,
 	.async_fifo   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo tm2_spdif_a_chipinfo = {
@@ -108,6 +116,7 @@ struct spdif_chipinfo tm2_spdif_a_chipinfo = {
 	.hold_start   = true,
 	.eq_drc_en    = true,
 	.async_fifo   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo tm2_spdif_b_chipinfo = {
@@ -116,6 +125,7 @@ struct spdif_chipinfo tm2_spdif_b_chipinfo = {
 	.hold_start   = true,
 	.eq_drc_en    = true,
 	.async_fifo   = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V1,
 };
 
 struct spdif_chipinfo tm2_revb_spdif_a_chipinfo = {
@@ -126,6 +136,7 @@ struct spdif_chipinfo tm2_revb_spdif_a_chipinfo = {
 	.async_fifo   = true,
 	.separate_tohdmitx_en = true,
 	.sample_mode_filter_en = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V2,
 };
 
 struct spdif_chipinfo tm2_revb_spdif_b_chipinfo = {
@@ -135,6 +146,7 @@ struct spdif_chipinfo tm2_revb_spdif_b_chipinfo = {
 	.eq_drc_en    = true,
 	.async_fifo   = true,
 	.separate_tohdmitx_en = true,
+	.spdifout_lane_mask = SPDIFOUT_LANE_MASK_V2,
 };
 
 static const struct of_device_id aml_spdif_device_id[] = {
