@@ -7651,6 +7651,9 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	else
 		hdr_flag = (1 << 0) | (1 << 1) | (0 << 2) | (0 << 3) | (1 << 4);
 
+	if (is_meson_rev_b() && is_meson_tm2_cpu())
+		pq_load_en = 0;
+
 	hdr_init(&amvecm_dev.hdr_d);
 	aml_vecm_dt_parse(pdev);
 
