@@ -1636,9 +1636,9 @@
 		/* HPD, 57 + 32 = 89; CEC, 151 + 32 = 183*/
 		/* 0:M8B   1:GXBB 2:GXTVBB 3:GXL  4:GXM
 		 * 5:TXL   6:TXLX 7:AXG    8:GXLX 9:TXHD
-		 * 10:G12A 11:G12B 12:SM1  13:TM2
+		 * 10:G12A 11:G12B 12:SM1  13:TM2 14:TM2B
 		 */
-		ic_type = <13>;
+		ic_type = <14>;
 		vend_data: vend_data{ /* Should modified by Customer */
 			vendor_name = "Amlogic"; /* Max Chars: 8 */
 			product_desc = "MBox Meson Ref"; /* Max Chars: 16 */

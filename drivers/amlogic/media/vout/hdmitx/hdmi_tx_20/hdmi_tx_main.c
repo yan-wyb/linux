@@ -85,7 +85,6 @@ static void clear_rx_vinfo(struct hdmitx_dev *hdev);
 static void edidinfo_attach_to_vinfo(struct hdmitx_dev *hdev);
 static void edidinfo_detach_to_vinfo(struct hdmitx_dev *hdev);
 
-
 static DEFINE_MUTEX(setclk_mutex);
 static DEFINE_MUTEX(getedid_mutex);
 
@@ -5147,14 +5146,16 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	struct hdmitx_dev *hdev = container_of((struct delayed_work *)work,
 		struct hdmitx_dev, work_hpd_plugin);
 
+	mutex_lock(&setclk_mutex);
 	hdev->already_used = 1;
-	if (!(hdev->hdmitx_event & (HDMI_TX_HPD_PLUGIN)))
+	if (!(hdev->hdmitx_event & (HDMI_TX_HPD_PLUGIN))) {
+		mutex_unlock(&setclk_mutex);
 		return;
+	}
 	if (hdev->rxsense_policy) {
 		cancel_delayed_work(&hdev->work_rxsense);
 		queue_delayed_work(hdev->rxsense_wq, &hdev->work_rxsense, 0);
 	}
-	mutex_lock(&setclk_mutex);
 	pr_info(SYS "plugin\n");
 	if (hdev->chip_type >= MESON_CPU_ID_G12A)
 		hdev->hwop.cntlmisc(hdev, MISC_I2C_RESET, 0);
@@ -5216,13 +5217,15 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	struct hdmitx_dev *hdev = container_of((struct delayed_work *)work,
 		struct hdmitx_dev, work_hpd_plugout);
 
-	if (!(hdev->hdmitx_event & (HDMI_TX_HPD_PLUGOUT)))
+	mutex_lock(&setclk_mutex);
+	if (!(hdev->hdmitx_event & (HDMI_TX_HPD_PLUGOUT))) {
+		mutex_unlock(&setclk_mutex);
 		return;
+	}
 	hdev->hdcp_mode = 0;
 	hdev->hdcp_bcaps_repeater = 0;
 	hdev->hwop.cntlddc(hdev, DDC_HDCP_MUX_INIT, 1);
 	hdev->hwop.cntlddc(hdev, DDC_HDCP_OP, HDCP14_OFF);
-	mutex_lock(&setclk_mutex);
 	if (hdev->cedst_policy)
 		cancel_delayed_work(&hdev->work_cedst);
 	edidinfo_detach_to_vinfo(hdev);

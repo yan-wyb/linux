@@ -44,6 +44,7 @@
 #define MESON_CPU_ID_G12B		11
 #define MESON_CPU_ID_SM1		12
 #define MESON_CPU_ID_TM2		13
+#define MESON_CPU_ID_TM2B		14
 
 
 /*****************************
@@ -704,6 +705,9 @@ int hdmitx_construct_vsif(struct hdmitx_dev *hdev, enum vsif_type type, int on,
 
 /* if vic is 93 ~ 95, or 98 (HDMI14 4K), return 1 */
 bool is_hdmi14_4k(enum hdmi_vic vic);
+
+/* if 4k is Y420, return 1 */
+bool is_hdmi4k_420(enum hdmi_vic vic);
 
 /* set vic to AVI.VIC */
 void hdmitx_set_avi_vic(enum hdmi_vic vic);
