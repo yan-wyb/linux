@@ -59,6 +59,7 @@
 #define REG_LOG		0x40
 #define ERR_LOG		0x80
 #define EDID_LOG	0x100
+#define PHY_LOG		0x200
 #define VSI_LOG		0x800
 
 /* 50ms timer for hdmirx main loop (HDMI_STATE_CHECK_FREQ is 20) */

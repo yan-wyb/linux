@@ -213,6 +213,35 @@ static bool term_flag = 1;
  */
 bool vpp_mute_enable;
 
+/* aml tm2 phy debug */
+uint32_t terminal;
+uint32_t vga_gain;
+uint32_t ch0_eq_boost, ch1_eq_boost, ch2_eq_boost;
+uint32_t dfe0_tap0, dfe1_tap0, dfe2_tap0;
+uint32_t dfe0_tap1, dfe1_tap1, dfe2_tap1;
+uint32_t dfe0_tap2, dfe1_tap2, dfe2_tap2;
+uint32_t dfe0_tap3, dfe1_tap3, dfe2_tap3;
+uint32_t dfe0_tap4, dfe1_tap4, dfe2_tap4;
+uint32_t dfe0_tap5, dfe1_tap5, dfe2_tap5;
+uint32_t dfe0_tap6, dfe1_tap6, dfe2_tap6;
+uint32_t dfe0_tap7, dfe1_tap7, dfe2_tap7;
+uint32_t dfe0_tap8, dfe1_tap8, dfe2_tap8;
+
+uint32_t cdr0_code, cdr0_lock, cdr1_code;
+uint32_t cdr1_lock, cdr2_code, cdr2_lock;
+
+bool pll_lock;
+
+bool squelch;
+
+uint32_t sli0_ofst0, sli1_ofst0, sli2_ofst0;
+uint32_t sli0_ofst1, sli1_ofst1, sli2_ofst1;
+uint32_t sli0_ofst2, sli1_ofst2, sli2_ofst2;
+uint32_t sli0_ofst3, sli1_ofst3, sli2_ofst3;
+uint32_t sli0_ofst4, sli1_ofst4, sli2_ofst4;
+uint32_t sli0_ofst5, sli1_ofst5, sli2_ofst5;
+/* end define */
+
 void hdmirx_init_params(void)
 {
 	if (rx.chip_id >= CHIP_ID_TL1) {
@@ -1813,6 +1842,22 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(edid_select, index);
 	if (set_pr_var(tmpbuf, vpp_mute_enable, value, &index, ret))
 		return pr_var(vpp_mute_enable, index);
+	if (set_pr_var(tmpbuf, os_rate, value, &index, ret))
+		return pr_var(os_rate, index);
+	if (set_pr_var(tmpbuf, sqrst_en, value, &index, ret))
+		return pr_var(sqrst_en, index);
+	if (set_pr_var(tmpbuf, vga_dbg, value, &index, ret))
+		return pr_var(vga_dbg, index);
+	if (set_pr_var(tmpbuf, stop1, value, &index, ret))
+		return pr_var(stop1, index);
+	if (set_pr_var(tmpbuf, stop2, value, &index, ret))
+		return pr_var(stop2, index);
+	if (set_pr_var(tmpbuf, stop3, value, &index, ret))
+		return pr_var(stop3, index);
+	if (set_pr_var(tmpbuf, dfe_en, value, &index, ret))
+		return pr_var(dfe_en, index);
+	if (set_pr_var(tmpbuf, slicer_en, value, &index, ret))
+		return pr_var(slicer_en, index);
 	return 0;
 }
 
@@ -1929,6 +1974,14 @@ void rx_get_global_variable(const char *buf)
 	pr_var(eq_dbg_lvl, i++);
 	pr_var(edid_select, i++);
 	pr_var(vpp_mute_enable, i++);
+	pr_var(os_rate, i++);
+	pr_var(sqrst_en, i++);
+	pr_var(vga_dbg, i++);
+	pr_var(stop1, i++);
+	pr_var(stop2, i++);
+	pr_var(stop3, i++);
+	pr_var(dfe_en, i++);
+	pr_var(slicer_en, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -2693,7 +2746,8 @@ unsigned int hdmirx_show_info(unsigned char *buf, int size)
 	return pos;
 }
 
-static void dump_phy_status(void)
+static void dump_aml_phy_sts_pre(void)
+
 {
 	uint32_t val0, val1, val2, data32;
 
@@ -2761,6 +2815,245 @@ static void dump_phy_status(void)
 				rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT));
 		}
 	}
+}
+
+/*
+ * rx phy v2 debug
+ */
+int count_one_bits(uint32_t value)
+
+{
+	int count = 0;
+
+	for (; value != 0; value >>= 1) {
+		if (value & 1)
+			count++;
+	}
+	return count;
+}
+
+
+void get_val(char *temp, unsigned int val, int len)
+{
+	if ((val >> (len - 1)) == 0)
+		sprintf(temp, "+%d", val & (~(1 << (len - 1))));
+	else
+		sprintf(temp, "-%d", val & (~(1 << (len - 1))));
+}
+
+void comb_val(char *type, unsigned int val_0, unsigned int val_1,
+	unsigned int val_2, int len)
+{
+	char out[32], v0_buf[16], v1_buf[16], v2_buf[16];
+	int pos = 0;
+
+	get_val(v0_buf, val_0, len);
+	get_val(v1_buf, val_1, len);
+	get_val(v2_buf, val_2, len);
+	pos += snprintf(out+pos, 32-pos,  "%s[", type);
+	pos += snprintf(out+pos, 32-pos, " %s,", v0_buf);
+	pos += snprintf(out+pos, 32-pos, " %s,", v1_buf);
+	pos += snprintf(out+pos, 32-pos, " %s]\n", v2_buf);
+	rx_pr("\n%s\n", out);
+}
+void dump_aml_phy_sts(void)
+{
+	uint32_t data32;
+
+	/* status-1 */
+	data32 = (rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1) >> 12) & 0x3ff;
+	terminal = count_one_bits(data32);
+	usleep_range(1000, 1100);
+
+	/* status-2 */
+	data32 = (rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0) & 0x7fff);
+	vga_gain = count_one_bits(data32);
+	usleep_range(1000, 1100);
+
+	/* status-3 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x3);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	ch0_eq_boost = data32 & 0xff;
+	ch1_eq_boost = (data32 >> 8)  & 0xff;
+	ch2_eq_boost = (data32 >> 16)  & 0xff;
+
+	/* status-4 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x0);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap0 = data32 & 0xff;
+	dfe1_tap0 = (data32 >> 8) & 0xff;
+	dfe2_tap0 = (data32 >> 16) & 0xff;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x1);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap1 = data32 & 0xff;
+	dfe1_tap1 = (data32 >> 8) & 0xff;
+	dfe2_tap1 = (data32 >> 16) & 0xff;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x2);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap2 = data32 & 0x1f;
+	dfe1_tap2 = (data32 >> 8) & 0x1f;
+	dfe2_tap2 = (data32 >> 16) & 0x1f;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x3);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap3 = data32 & 0xff;
+	dfe1_tap3 = (data32 >> 8) & 0xff;
+	dfe2_tap3 = (data32 >> 16) & 0xff;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x4);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap4 = data32 & 0xf;
+	dfe1_tap4 = (data32 >> 8) & 0xf;
+	dfe2_tap4 = (data32 >> 16) & 0xf;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x5);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap5 = data32 & 0xf;
+	dfe1_tap5 = (data32 >> 8) & 0xf;
+	dfe2_tap5 = (data32 >> 16) & 0xf;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x6);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap6 = data32 & 0xf;
+	dfe1_tap6 = (data32 >> 8) & 0xf;
+	dfe2_tap6 = (data32 >> 16) & 0xf;
+
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x7);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	dfe0_tap7 = data32 & 0xf;
+	dfe0_tap8 = (data32 >> 4) & 0xf;
+	dfe1_tap7 = (data32 >> 8) & 0xf;
+	dfe1_tap8 = (data32 >> 12) & 0xf;
+	dfe2_tap7 = (data32 >> 16) & 0xf;
+	dfe2_tap8 = (data32 >> 20) & 0xf;
+	/* status-5: CDR status */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x2);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	cdr0_code = data32 & 0x3f;
+	cdr0_lock = (data32 >> 7) & 0x1;
+	cdr1_code = (data32 >> 8) & 0x3f;
+	cdr1_lock = (data32 >> 15) & 0x1;
+	cdr2_code = (data32 >> 16) & 0x3f;
+	cdr2_lock = (data32 >> 23) & 0x1;
+
+	/* status-6: pll lock */
+	pll_lock = rd_reg_hhi(HHI_HDMIRX_APLL_CNTL0) >> 31;
+	/* status-7: squelch */
+	//squelch = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_STAT) >> 31;//0320
+	squelch = hdmirx_rd_top(TOP_MISC_STAT0) & 0x1;
+	/* status-8:slicer offset status */
+	/* status-8.0 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x1);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x0);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	sli0_ofst0 = data32 & 0x1f;
+	sli1_ofst0 = (data32 >> 8) & 0x1f;
+	sli2_ofst0 = (data32 >> 16) & 0x1f;
+
+	/* status-8.1 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x1);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x1);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	sli0_ofst1 = data32 & 0x1f;
+	sli1_ofst1 = (data32 >> 8) & 0x1f;
+	sli2_ofst1 = (data32 >> 16) & 0x1f;
+
+	/* status-8.2 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x1);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x2);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	sli0_ofst2 = data32 & 0x1f;
+	sli1_ofst2 = (data32 >> 8) & 0x1f;
+	sli2_ofst2 = (data32 >> 16) & 0x1f;
+
+	/* status-8.3 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x1);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x3);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	sli0_ofst3 = data32 & 0x1f;
+	sli1_ofst3 = (data32 >> 8) & 0x1f;
+	sli2_ofst3 = (data32 >> 16) & 0x1f;
+
+	/* status-8.4 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x1);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x4);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	sli0_ofst4 = data32 & 0x1f;
+	sli1_ofst4 = (data32 >> 8) & 0x1f;
+	sli2_ofst4 = (data32 >> 16) & 0x1f;
+
+	/* status-8.5 */
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x1);
+	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x5);
+	usleep_range(1000, 1100);
+	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+	sli0_ofst5 = data32 & 0x1f;
+	sli1_ofst5 = (data32 >> 8) & 0x1f;
+	sli2_ofst5 = (data32 >> 16) & 0x1f;
+
+	rx_pr("\nhdmirx phy status:\n");
+	rx_pr("terminal=%d, vga_gain=%d, ", terminal, vga_gain);
+	rx_pr("pll_lock=%d, squelch=%d\n", pll_lock, squelch);
+	rx_pr("eq_boost=[%d,%d,%d]\n",
+		ch0_eq_boost, ch1_eq_boost, ch2_eq_boost);
+
+	comb_val("dfe_tap0", dfe0_tap0, dfe1_tap0, dfe2_tap0, 8);
+	comb_val("dfe_tap1", dfe0_tap1, dfe1_tap1, dfe2_tap1, 8);
+	comb_val("dfe_tap2", dfe0_tap2, dfe1_tap2, dfe2_tap2, 5);
+	comb_val("dfe_tap3", dfe0_tap3, dfe1_tap3, dfe2_tap3, 4);
+	comb_val("dfe_tap4", dfe0_tap4, dfe1_tap4, dfe2_tap4, 4);
+	comb_val("dfe_tap5", dfe0_tap5, dfe1_tap5, dfe2_tap5, 4);
+	comb_val("dfe_tap6", dfe0_tap6, dfe1_tap6, dfe2_tap6, 4);
+	comb_val("dfe_tap7", dfe0_tap7, dfe1_tap7, dfe2_tap7, 4);
+	comb_val("dfe_tap8", dfe0_tap8, dfe1_tap8, dfe2_tap8, 4);
+
+	comb_val("slicer_ofst0", sli0_ofst0, sli1_ofst0, sli2_ofst0, 5);
+	comb_val("slicer_ofst1", sli0_ofst1, sli1_ofst1, sli2_ofst1, 5);
+	comb_val("slicer_ofst2", sli0_ofst2, sli1_ofst2, sli2_ofst2, 5);
+	comb_val("slicer_ofst3", sli0_ofst3, sli1_ofst3, sli2_ofst3, 5);
+	comb_val("slicer_ofst4", sli0_ofst4, sli1_ofst4, sli2_ofst4, 5);
+	comb_val("slicer_ofst5", sli0_ofst5, sli1_ofst5, sli2_ofst5, 5);
+
+	rx_pr("cdr_code=[%d,%d,%d]\n",
+		cdr0_code, cdr1_code, cdr2_code);
+	rx_pr("cdr_lock=[%d,%d,%d]\n",
+		cdr0_lock, cdr1_lock, cdr2_lock);
+}
+/*
+ * end
+ */
+
+static void dump_phy_status(void)
+{
+	if (rx.chip_id >= CHIP_ID_TM2)
+		dump_aml_phy_sts();
+	else
+		dump_aml_phy_sts_pre();
 }
 
 static void dump_clk_status(void)
@@ -3223,7 +3516,7 @@ int hdmirx_debug(const char *buf, int size)
 	} else if (strncmp(tmpbuf, "load22key", 9) == 0) {
 		rx_debug_load22key();
 	} else if (strncmp(tmpbuf, "esm0", 4) == 0) {
-		/* switch_set_state(&rx.hpd_sdev, 0x0); */
+		/*switch_set_state(&rx.hpd_sdev, 0x00);*/
 		extcon_set_state_sync(rx.rx_excton_rx22, EXTCON_DISP_HDMI, 0);
 	} else if (strncmp(tmpbuf, "esm1", 4) == 0) {
 		/*switch_set_state(&rx.hpd_sdev, 0x01);*/
@@ -3260,7 +3553,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
-		rx_pr("Hdmirx version2: %s\n", "ver.2019/12/26");
+		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/20");
 		rx_pr("------------------\n");
 	} else if (strncmp(input[0], "port0", 5) == 0) {
 		hdmirx_open_port(TVIN_PORT_HDMI0);
@@ -3298,7 +3591,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("set pkt cnt:0x%x\n", value);
 		rx.empbuff.tmdspktcnt = value;
 	} else if (strncmp(input[0], "phyinit", 7) == 0) {
-		aml_phy_bw_switch();
+		hdmirx_phy_init();
 	} else if (strncmp(input[0], "phyeq", 5) == 0) {
 		//aml_eq_setting();
 		find_best_eq = 0x1111;

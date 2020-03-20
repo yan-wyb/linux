@@ -1070,10 +1070,15 @@
 #define HHI_HDMIRX_PHY_DCHA_CNTL0		(0xe2<<2)/*0x045*/
 #define HHI_HDMIRX_PHY_DCHA_CNTL1		(0xe3<<2)/*0x046*/
 #define HHI_HDMIRX_PHY_DCHA_CNTL2		(0xe4<<2)/*0x047*/
+#define HHI_HDMIRX_PHY_DCHA_CNTL3		(0xc5<<2)/*tm2 revB new*/
 #define HHI_HDMIRX_PHY_DCHD_CNTL0		(0xe5<<2)/*0x048*/
 #define HHI_HDMIRX_PHY_DCHD_CNTL1		(0xe6<<2)/*0x049*/
 #define HHI_HDMIRX_PHY_DCHD_CNTL2		(0xe7<<2)/*0x04A*/
-#define HHI_HDMIRX_PHY_MISC_STAT		(0xee << 2)//0x044
+#define HHI_HDMIRX_PHY_DCHD_CNTL3		(0xc6<<2)/*tm2 revB new*/
+#define HHI_HDMIRX_PHY_ARC_CNTL			(0xe8<<2)
+#define HHI_HDMIRX_EARCTX_CNTL0			(0x69<<2)
+#define HHI_HDMIRX_EARCTX_CNTL1			(0x6a<<2)
+#define HHI_HDMIRX_PHY_MISC_STAT		(0xee<<2)//0x044
 #define HHI_HDMIRX_PHY_DCHD_STAT		(0xef<<2)/*0x04B*/
 
 #define TMDS_CLK_MIN			(24000UL)
@@ -1126,6 +1131,14 @@ extern int eq_dbg_lvl;
 extern int phy_term_lel;
 extern bool phy_tdr_en;
 extern int hdcp_tee_path;
+extern int os_rate;
+extern bool sqrst_en;
+extern int vga_dbg;
+extern bool stop1;
+extern bool stop2;
+extern bool stop3;
+extern int dfe_en;
+extern int slicer_en;
 extern char emp_buf[1024];
 extern void rx_get_best_eq_setting(void);
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
@@ -1258,22 +1271,22 @@ enum measure_clk_src_e {
 #define PHY_DEFAULT_FRQ	((100)*MHz)
 
 enum phy_frq_band {
-	phy_frq_band_0 = 0,	/*45Mhz*/
-	phy_frq_band_1,		/*77Mhz*/
-	phy_frq_band_2,		/*155Mhz*/
-	phy_frq_band_3,		/*340Mhz*/
-	phy_frq_band_4,		/*525Mhz*/
-	phy_frq_band_5,		/*600Mhz*/
-	phy_frq_null = 0xf,
+	PHY_BW_0 = 0,	/*45Mhz*/
+	PHY_BW_1,		/*77Mhz*/
+	PHY_BW_2,		/*155Mhz*/
+	PHY_BW_3,		/*340Mhz*/
+	PHY_BW_4,		/*525Mhz*/
+	PHY_BW_5,		/*600Mhz*/
+	PHY_BW_NULL = 0xf,
 };
 
 enum pll_frq_band {
-	pll_frq_band_0 = 0,	/*35Mhz*/
-	pll_frq_band_1,		/*77Mhz*/
-	pll_frq_band_2,		/*155Mhz*/
-	pll_frq_band_3,		/*300Mhz*/
-	pll_frq_band_4,		/*600Mhz*/
-	pll_frq_null = 0xf,
+	PLL_BW_0 = 0,	/*35Mhz*/
+	PLL_BW_1,		/*77Mhz*/
+	PLL_BW_2,		/*155Mhz*/
+	PLL_BW_3,		/*300Mhz*/
+	PLL_BW_4,		/*600Mhz*/
+	PLL_BW_NULL = 0xf,
 };
 
 struct apll_param {
@@ -1291,7 +1304,7 @@ extern int rx_get_clock(enum measure_clk_top_e clk_src);
 extern unsigned int clk_util_clk_msr(unsigned int clk_mux);
 extern unsigned int rx_measure_clock(enum measure_clk_src_e clksrc);
 extern void aml_phy_init(void);
-extern void aml_phy_pw_onoff(uint32_t onoff);
+/*extern void aml_phy_pw_onoff(uint32_t onoff);*/
 extern uint32_t aml_cable_clk_band(uint32_t cableclk,
 	uint32_t clkrate);
 extern uint32_t aml_phy_pll_band(uint32_t cableclk,
