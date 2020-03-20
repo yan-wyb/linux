@@ -15278,3 +15278,12 @@ F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962e2_ab319.dts
 F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962x3_ab301.dts
 F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962x3_ab309.dts
 F:  arch/arm64/boot/dts/amlogic/tm2_revb_t962x3_t312.dts
+
+AMLOGIC TM2_REVB PANEL DTSI
+M: Evoke Zhang <evoke.zhang@amlogic.com>
+F: arch/arm/boot/dts/amlogic/mesontm2_revb_t962x3_ab301-panel.dtsi
+F: arch/arm/boot/dts/amlogic/mesontm2_revb_t962x3_ab309-panel.dtsi
+F: arch/arm/boot/dts/amlogic/mesontm2_revb_t962x3_t312-panel.dtsi
+F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_ab301-panel.dtsi
+F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_ab309-panel.dtsi
+F: arch/arm64/boot/dts/amlogic/mesontm2_revb_t962x3_t312-panel.dtsi

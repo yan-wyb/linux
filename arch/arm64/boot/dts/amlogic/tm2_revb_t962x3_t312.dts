@@ -19,7 +19,7 @@
 
 #include "mesontm2_revb.dtsi"
 #include "partition_mbox_normal_P_32.dtsi"
-#include "mesontm2_t962x3_t312-panel.dtsi"
+#include "mesontm2_revb_t962x3_t312-panel.dtsi"
 
 / {
 	model = "Amlogic TM2 REVB T962X3 T312";
