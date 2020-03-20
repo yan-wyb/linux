@@ -241,7 +241,7 @@ enum hdr_type_e hdr_source_type = HDRTYPE_NONE;
 /*after TM2 revB*/
 #define SR0_OFFSET_V2 0x1e00
 #define SR1_OFFSET_V2 0x1f80
-#define LC_OFFSET 0x1200
+#define LC_OFFSET 0x1300
 
 unsigned int sr_offset[2] = {0, 0};
 unsigned int lc_offset;
@@ -4102,6 +4102,10 @@ static ssize_t amvecm_pc_mode_store(struct class *cla,
 	if ((r != 1))
 		return -EINVAL;
 
+	if (!pq_load_en) {
+		return count;
+	}
+
 	if (val == 1) {
 		pc_mode = 1;
 		pc_mode_last = 0xff;
@@ -6364,7 +6368,8 @@ static void lc_rd_reg(enum lc_reg_lut_e reg_sel, int data_type)
 	switch (reg_sel) {
 	case SATUR_LUT:
 		for (i = 0; i < 31 ; i++) {
-			tmp = READ_VPP_REG(SRSHARP1_LC_SAT_LUT_0_1 + i);
+			tmp =
+			READ_VPP_REG(SRSHARP1_LC_SAT_LUT_0_1 + i + lc_offset);
 			tmp1 = (tmp >> 16) & 0xfff;
 			tmp2 = tmp & 0xfff;
 			pr_info("reg_lc_satur_lut[%d] =%4d.\n",
@@ -6372,7 +6377,8 @@ static void lc_rd_reg(enum lc_reg_lut_e reg_sel, int data_type)
 			pr_info("reg_lc_satur_lut[%d] =%4d.\n",
 				2*i + 1, tmp2);
 		}
-		tmp = READ_VPP_REG(SRSHARP1_LC_SAT_LUT_62);
+		tmp =
+		READ_VPP_REG(SRSHARP1_LC_SAT_LUT_62 + lc_offset);
 		pr_info("reg_lc_satur_lut[62] =%4d.\n",
 				tmp & 0xfff);
 		break;
@@ -6386,16 +6392,64 @@ static void lc_rd_reg(enum lc_reg_lut_e reg_sel, int data_type)
 			pr_info("reg_yminVal_lmt[%d] =%4d.\n",
 				2*i + 1, tmp2);
 		}
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+		    !(is_meson_rev_a() && is_meson_tm2_cpu())) {
+			for (i = 0; i < 2 ; i++) {
+				tmp =
+				READ_VPP_REG(LC_CURVE_YMINVAL_LMT_12_13 + i);
+				tmp1 = (tmp >> 16) & 0x3ff;
+				tmp2 = tmp & 0x3ff;
+				pr_info("reg_yminVal_lmt[%d] =%4d.\n",
+					2*i, tmp1);
+				pr_info("reg_yminVal_lmt[%d] =%4d.\n",
+					2*i + 1, tmp2);
+			}
+		}
 		break;
 	case YPKBV_YMAXVAL_LMT:
-		for (i = 0; i < 6 ; i++) {
-			tmp = READ_VPP_REG(LC_CURVE_YPKBV_YMAXVAL_LMT_0_1 + i);
-			tmp1 = (tmp >> 16) & 0x3ff;
-			tmp2 = tmp & 0x3ff;
-			pr_info("reg_lc_ypkBV_ymaxVal_lmt[%d] =%4d.\n",
-				2*i, tmp1);
-			pr_info("reg_lc_ypkBV_ymaxVal_lmt[%d] =%4d.\n",
-				2*i + 1, tmp2);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+		    !(is_meson_rev_a() && is_meson_tm2_cpu())) {
+			for (i = 0; i < 6 ; i++) {
+				tmp =
+				READ_VPP_REG(LC_CURVE_YMAXVAL_LMT_0_1 + i);
+				tmp1 = (tmp >> 16) & 0x3ff;
+				tmp2 = tmp & 0x3ff;
+				pr_info("reg_lc_ymaxVal_lmt[%d] =%4d.\n",
+					2*i, tmp1);
+				pr_info("reg_lc_ymaxVal_lmt[%d] =%4d.\n",
+					2*i + 1, tmp2);
+			}
+			for (i = 0; i < 2 ; i++) {
+				tmp =
+				READ_VPP_REG(LC_CURVE_YMAXVAL_LMT_12_13 + i);
+				tmp1 = (tmp >> 16) & 0x3ff;
+				tmp2 = tmp & 0x3ff;
+				pr_info("reg_lc_ymaxVal_lmt[%d] =%4d.\n",
+					2*i, tmp1);
+				pr_info("reg_lc_ymaxVal_lmt[%d] =%4d.\n",
+					2*i + 1, tmp2);
+			}
+			for (i = 0; i < 8 ; i++) {
+				tmp =
+				READ_VPP_REG(LC_CURVE_YPKBV_LMT_0_1 + i);
+				tmp1 = (tmp >> 16) & 0x3ff;
+				tmp2 = tmp & 0x3ff;
+				pr_info("reg_lc_ypkBV_lmt[%d] =%4d.\n",
+					2*i, tmp1);
+				pr_info("reg_lc_ypkBV_lmt[%d] =%4d.\n",
+					2*i + 1, tmp2);
+			}
+		} else {
+			for (i = 0; i < 6 ; i++) {
+				tmp =
+				READ_VPP_REG(LC_CURVE_YMAXVAL_LMT_0_1 + i);
+				tmp1 = (tmp >> 16) & 0x3ff;
+				tmp2 = tmp & 0x3ff;
+				pr_info("reg_lc_ypkBV_ymaxVal_lmt[%d] =%4d.\n",
+					2*i, tmp1);
+				pr_info("reg_lc_ypkBV_ymaxVal_lmt[%d] =%4d.\n",
+					2*i + 1, tmp2);
+			}
 		}
 		break;
 	case YPKBV_RAT:
@@ -6439,13 +6493,15 @@ dump_as_string:
 	switch (reg_sel) {
 	case SATUR_LUT:
 		for (i = 0; i < 31 ; i++) {
-			tmp = READ_VPP_REG(SRSHARP1_LC_SAT_LUT_0_1 + i);
+			tmp =
+			READ_VPP_REG(SRSHARP1_LC_SAT_LUT_0_1 + i + lc_offset);
 			tmp1 = (tmp >> 16) & 0xfff;
 			tmp2 = tmp & 0xfff;
 			lut_data[2*i] = tmp1;
 			lut_data[2*i + 1] = tmp2;
 		}
-		tmp = READ_VPP_REG(SRSHARP1_LC_SAT_LUT_62);
+		tmp =
+		READ_VPP_REG(SRSHARP1_LC_SAT_LUT_62 + lc_offset);
 		lut_data[62] = tmp & 0xfff;
 		for (i = 0; i < 63 ; i++)
 			d_convert_str(lut_data[i],
@@ -6506,10 +6562,11 @@ static void lc_wr_reg(int *p, enum lc_reg_lut_e reg_sel)
 			tmp1 = *(p + 2*i);
 			tmp2 = *(p + 2*i + 1);
 			tmp = ((tmp1 & 0xfff)<<16) | (tmp2 & 0xfff);
-			WRITE_VPP_REG(SRSHARP1_LC_SAT_LUT_0_1 + i, tmp);
+			WRITE_VPP_REG(SRSHARP1_LC_SAT_LUT_0_1 + i + lc_offset,
+				      tmp);
 		}
 		tmp = (*(p+62)) & 0xfff;
-		WRITE_VPP_REG(SRSHARP1_LC_SAT_LUT_62, tmp);
+		WRITE_VPP_REG(SRSHARP1_LC_SAT_LUT_62 + lc_offset, tmp);
 		break;
 	case YMINVAL_LMT:
 		for (i = 0; i < 6 ; i++) {
@@ -7651,14 +7708,17 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	else
 		hdr_flag = (1 << 0) | (1 << 1) | (0 << 2) | (0 << 3) | (1 << 4);
 
-	if (is_meson_rev_b() && is_meson_tm2_cpu())
-		pq_load_en = 0;
-
 	hdr_init(&amvecm_dev.hdr_d);
 	aml_vecm_dt_parse(pdev);
 
 	init_pq_setting();
 	aml_vecm_viu2_vsync_irq_init();
+
+	if (is_meson_rev_b() && is_meson_tm2_cpu()) {
+		pq_load_en = 0;
+		pc_mode = 0;
+		pc_mode_last = 0xff;
+	}
 
 	probe_ok = 1;
 	pr_info("%s: ok\n", __func__);

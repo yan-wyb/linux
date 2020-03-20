@@ -271,7 +271,8 @@ void am_set_regmap(struct am_regs_s *p)
 						break;
 				}
 
-				if (p->am_reg[i].addr == SRSHARP1_LC_TOP_CTRL) {
+				if (p->am_reg[i].addr ==
+				    SRSHARP1_LC_TOP_CTRL + lc_offset) {
 					if (!lc_en)
 						p->am_reg[i].val =
 						p->am_reg[i].val & 0xffffffef;
