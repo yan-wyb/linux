@@ -1667,15 +1667,15 @@ static ssize_t vdin_attr_store(struct device *dev,
 		snprintf(devp->irq_name, sizeof(devp->irq_name),
 				"vdin%d-irq", devp->index);
 		pr_info("vdin work in normal mode\n");
-		ret = request_irq(devp->irq, vdin_isr, IRQF_SHARED,
-				devp->irq_name, (void *)devp);
+		/*ret = request_irq(devp->irq, vdin_isr, IRQF_SHARED,*/
+		/*		devp->irq_name, (void *)devp);*/
 
 		if (vdin_dbg_en)
 			pr_info("%s vdin.%d request_irq\n", __func__,
 				devp->index);
 
 		/*disable irq until vdin is configured completely*/
-		disable_irq_nosync(devp->irq);
+		/*disable_irq_nosync(devp->irq);*/
 
 		if (vdin_dbg_en)
 			pr_info("%s vdin.%d disable_irq_nosync\n", __func__,
@@ -1729,9 +1729,18 @@ start_chk:
 					devp->index);
 		}
 		vdin_start_dec(devp);
+		/*enable irq */
+		enable_irq(devp->irq);
+
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+		    devp->index == 0 && devp->vpu_crash_irq != 0)
+			enable_irq(devp->vpu_crash_irq);
+
+		pr_info("%s START_DEC vdin.%d enable_irq\n",
+			__func__, devp->index);
 		devp->flags |= VDIN_FLAG_DEC_STARTED;
 		pr_info("TVIN_IOC_START_DEC port %s, decode started ok\n\n",
-				tvin_port_str(devp->parm.port));
+			tvin_port_str(devp->parm.port));
 	} else if (!strcmp(parm[0], "tvstop")) {
 		vdin_stop_dec(devp);
 		vdin_close_fe(devp);
