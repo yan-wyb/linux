@@ -741,11 +741,11 @@ error:
 static struct hifi4dsp_pdata dsp_pdatas[] = {/*ARRAY_SIZE(dsp_pdatas)*/
 	{
 		.name = "hifi4dsp0",
-		.clk_freq = 400 * 1000 * 1000,
+		.clk_freq = 500 * 1000 * 1000,
 	},
 	{
 		.name = "hifi4dsp1",
-		.clk_freq = 400 * 1000 * 1000,
+		.clk_freq = 500 * 1000 * 1000,
 	},
 };
 
