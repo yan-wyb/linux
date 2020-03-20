@@ -4909,7 +4909,7 @@ static void video_vf_unreg_provider(void)
 	enable_video_discontinue_report = 1;
 	show_first_picture = false;
 	show_first_frame_nosync = false;
-
+	vframe_walk_delay = 0;
 	time_setomxpts = 0;
 	time_setomxpts_last = 0;
 
