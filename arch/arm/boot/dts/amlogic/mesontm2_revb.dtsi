@@ -1669,7 +1669,7 @@
 
 	ionvideo {
 		compatible = "amlogic, ionvideo";
-		status = "disabled";
+		status = "okay";
 	};
 
 	amlvideo {

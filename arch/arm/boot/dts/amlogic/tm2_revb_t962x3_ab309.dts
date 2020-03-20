@@ -204,13 +204,13 @@
 		compatible = "amlogic, picdec";
 		memory-region = <&picdec_cma_reserved>;
 		dev_name = "picdec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	ppmgr {
 		compatible = "amlogic, ppmgr";
 		memory-region = <&ppmgr_reserved>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	deinterlace {
@@ -530,7 +530,7 @@
 	amdolby_vision {
 		compatible = "amlogic, dolby_vision_tm2";
 		dev_name = "aml_amdolby_vision_driver";
-		status = "disabled";
+		status = "okay";
 		tv_mode = <1>;/*1:enabel ;0:disable*/
 	};
 
