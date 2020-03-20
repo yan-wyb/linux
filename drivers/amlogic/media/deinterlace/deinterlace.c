@@ -137,7 +137,7 @@ static struct class *di_clsp;
 static const char version_s[] = "2019-06-20a: afbc switch from vpp";
 
 static int bypass_state = 1;
-static int bypass_all;
+static int bypass_all = 1;
 /*1:enable bypass pre,ei only;
  * 2:debug force bypass pre,ei for post
  */
