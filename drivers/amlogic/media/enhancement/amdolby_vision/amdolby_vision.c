@@ -2746,6 +2746,11 @@ static int tv_dolby_core1_set(
 	/* input 12 or 10 bit */
 	VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7, 12, 0, 4);
 
+	if (is_meson_rev_b() && is_meson_tm2()) {
+		/* comp on, mempd on */
+		VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7, 0, 14, 4);
+	}
+
 	if (el_enable && (dolby_vision_mask & 1))
 		VSYNC_WR_DV_REG_BITS(
 			VIU_MISC_CTRL1,
