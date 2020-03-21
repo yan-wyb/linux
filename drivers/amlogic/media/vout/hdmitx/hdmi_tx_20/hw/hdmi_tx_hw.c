@@ -490,6 +490,7 @@ static void hdmi_hwp_init(struct hdmitx_dev *hdev)
 	/* assign phy_clk_en = control[1]; */
 	/* Bring HDMITX MEM output of power down */
 	hd_set_reg_bits(P_HHI_MEM_PD_REG0, 0, 8, 8);
+	hd_set_reg_bits(P_HHI_MEM_PD_REG4, 0, 12, 2);
 	/* enable CLK_TO_DIG */
 	hd_set_reg_bits(P_HHI_HDMI_PHY_CNTL3, 0x3, 0, 2);
 	if (hdmitx_uboot_already_display()) {
@@ -953,8 +954,17 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	unsigned long de_v_begin_even = 0, de_v_end_even = 0;
 	unsigned long hs_begin = 0, hs_end = 0;
 	unsigned long vs_adjust = 0;
+	unsigned long vs_adjust_420 = 0;
 	unsigned long vs_bline_evn = 0, vs_eline_evn  = 0;
 	unsigned long vso_begin_evn = 0;
+	struct hdmitx_dev *hdev = get_hdmitx_device();
+
+/* Due to 444->420 line buffer latency, the active line output from
+ * 444->420 conversion will be delayed by 1 line. So for 420 mode,
+ * we need to delay Vsync by 1 line as well, to meet the timing
+ */
+	if (is_hdmi4k_420(param->VIC))
+		vs_adjust_420 = 1;
 
 	switch (param->VIC) {
 	case HDMI_4k2k_30:
@@ -1092,22 +1102,23 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 	/* Program Hsync timing */
 	if (de_h_end + front_porch_venc >= total_pixels_venc) {
 		hs_begin = de_h_end + front_porch_venc - total_pixels_venc;
-		vs_adjust  = 1;
+		vs_adjust = 1;
 	} else {
 		hs_begin = de_h_end + front_porch_venc;
-		vs_adjust  = 1;
+		vs_adjust = 1;
 	}
 	hs_end = modulo(hs_begin + hsync_pixels_venc, total_pixels_venc);
-	hd_write_reg(P_ENCP_DVI_HSO_BEGIN,  hs_begin);
+	hd_write_reg(P_ENCP_DVI_HSO_BEGIN, hs_begin);
 	hd_write_reg(P_ENCP_DVI_HSO_END, hs_end);
 
 	/* Program Vsync timing for even field */
-	if (de_v_begin_even >= SOF_LINES + VSYNC_LINES + (1-vs_adjust))
-		vs_bline_evn = de_v_begin_even - SOF_LINES - VSYNC_LINES
-			- (1-vs_adjust);
+	if (de_v_begin_even + vs_adjust_420 >=
+	    SOF_LINES + VSYNC_LINES + (1 - vs_adjust))
+		vs_bline_evn = de_v_begin_even + vs_adjust_420 - SOF_LINES -
+			VSYNC_LINES - (1 - vs_adjust);
 	else
-		vs_bline_evn = TOTAL_LINES + de_v_begin_even - SOF_LINES
-			- VSYNC_LINES - (1-vs_adjust);
+		vs_bline_evn = TOTAL_LINES + de_v_begin_even + vs_adjust_420 -
+			SOF_LINES - VSYNC_LINES - (1 - vs_adjust);
 	vs_eline_evn = modulo(vs_bline_evn + VSYNC_LINES, TOTAL_LINES);
 	hd_write_reg(P_ENCP_DVI_VSO_BLINE_EVN, vs_bline_evn);
 	hd_write_reg(P_ENCP_DVI_VSO_ELINE_EVN, vs_eline_evn);
@@ -1123,6 +1134,11 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 			(0 << 8) |
 			(0 << 12)
 	);
+	if ((is_hdmi4k_420(param->VIC)) &&
+	    hdev->chip_type == MESON_CPU_ID_TM2B) {
+		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 8, 1);
+		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 20, 1);
+	}
 	hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 1, 1);
 }
 
@@ -2205,6 +2221,9 @@ void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
 		hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 2, 0, 2);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 4, 4);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 8, 1);
+		if ((is_hdmi4k_420(hdev->cur_VIC)) &&
+		    hdev->chip_type == MESON_CPU_ID_TM2B)
+			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 8, 1);
 	}
 
 	if (hdev->para->cs == COLORSPACE_YUV422) {
@@ -5764,8 +5783,6 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	/* wire	fifo_enable = control[2]; */
 	/* assign phy_clk_en = control[1]; */
 	/* Enable tmds_clk */
-	/* Bring HDMITX MEM output of power down */
-	hd_set_reg_bits(P_HHI_MEM_PD_REG0, 0, 8, 8);
 
 	/* Bring out of reset */
 	hdmitx_wr_reg(HDMITX_TOP_SW_RESET,  0);
