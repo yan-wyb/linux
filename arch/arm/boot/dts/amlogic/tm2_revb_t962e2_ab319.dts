@@ -261,7 +261,7 @@
 	aml_dtv_demod {
 		compatible = "amlogic, ddemod-tm2";
 		dev_name = "aml_dtv_demod";
-		status = "disabled";
+		status = "okay";
 
 		//pinctrl-names="dtvdemod_agc";
 		//pinctrl-0=<&dtvdemod_agc>;
@@ -460,7 +460,7 @@
 
 	dvb {
 		compatible = "amlogic, dvb";
-		status = "disabled";
+		status = "okay";
 		fe0_mode = "internal";
 		fe0_tuner = <&tuner>;
 
