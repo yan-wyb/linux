@@ -563,6 +563,7 @@ static bool aml_toddr_check_status_flag(struct toddr *to)
 	unsigned int reg_base = to->reg_base;
 	unsigned int reg, status;
 	int i;
+	bool ret = false;
 
 	/*
 	 * reg_stop_ddr; if set from 0 to 1, will:
@@ -583,7 +584,8 @@ static bool aml_toddr_check_status_flag(struct toddr *to)
 		status = (aml_audiobus_read(actrl, reg) & 0x800000) >> 23;
 		if (status) {
 			pr_debug("%s(), fifo_stop success\n", __func__);
-			return true;
+			ret = true;
+			break;
 		}
 
 		udelay(1);
@@ -592,8 +594,14 @@ static bool aml_toddr_check_status_flag(struct toddr *to)
 				 i, status);
 	}
 
-	pr_err("Error: 200us time out, TODDR_STATUS1 bit 23: %u\n", status);
-	return false;
+	if (!ret)
+		pr_err("Error: 200us time out, TODDR_STATUS1 bit 23: %u\n",
+			status);
+
+	reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL2, reg_base);
+	aml_audiobus_update_bits(actrl,	reg, 1 << 30, 0 << 30);
+
+	return ret;
 }
 
 static bool aml_toddr_check_fifo_count(struct toddr *to)
@@ -1289,6 +1297,7 @@ static bool aml_frddr_burst_finished(struct frddr *fr)
 	unsigned int reg_base = fr->reg_base;
 	unsigned int reg, status;
 	int i;
+	bool ret = false;
 
 	/*
 	 * reg_stop_ddr; if set from 0 to 1, will:
@@ -1309,7 +1318,8 @@ static bool aml_frddr_burst_finished(struct frddr *fr)
 		status = (aml_audiobus_read(actrl, reg) & 0x20000) >> 17;
 		if (status) {
 			pr_debug("%s(), fifo_stop success\n", __func__);
-			return true;
+			ret = true;
+			break;
 		}
 
 		udelay(1);
@@ -1318,8 +1328,14 @@ static bool aml_frddr_burst_finished(struct frddr *fr)
 				i, status);
 	}
 
-	pr_err("Error: 200us time out, FRDDR_STATUS1 bit 17: %u\n", status);
-	return false;
+	if (!ret)
+		pr_err("Error: 200us time out, FRDDR_STATUS1 bit 17: %u\n",
+		       status);
+
+	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL2, reg_base);
+	aml_audiobus_update_bits(actrl,	reg, 1 << 21, 0 << 21);
+
+	return ret;
 }
 
 void aml_frddr_enable(struct frddr *fr, bool enable)
