@@ -1679,7 +1679,7 @@
 
 	vdac {
 		compatible = "amlogic, vdac-tm2";
-		status = "disabled";
+		status = "okay";
 	};
 
 	ddr_bandwidth {
