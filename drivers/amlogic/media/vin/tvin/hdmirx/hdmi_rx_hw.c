@@ -122,16 +122,18 @@ int os_rate;
 bool sqrst_en;
 /*0:disable 1:enable 2:exit loop*/
 int vga_dbg;
+int vga_dbg_delay = 5;
+
 /* emp buffer */
 char emp_buf[1024];
-/* pause aml_phy_cfg_v2 */
-bool stop1;
-/* aml_pll_bw_cfg_v2 */
-bool stop2;
-/* aml_eq_cfg_v2 */
-bool stop3;
-int dfe_en;
-int slicer_en;
+int dfe_en = 1;
+int ofst_en = 1;
+int cdr_mode;
+int pre_int = 1;
+int pre_int_en;
+int phy_bw = 1;
+int alirst_en;
+
 /*------------------------variable define end------------------------------*/
 
 static int check_regmap_flag(unsigned int addr)
@@ -1568,11 +1570,11 @@ bool rx_clr_tmds_valid(void)
 {
 	u32 addr = HHI_HDMIRX_PHY_MISC_CNTL0;
 
-	if (rx.chip_id < CHIP_ID_TL1)
+	if (rx.chip_id != CHIP_ID_TL1)
 		return false;
 
 	wr_reg_hhi_bits(addr, MSK(3, 7), 0);
-
+	rx_pr("\n\n###rx_clr_tmds_valid###\n\n");
 	return true;
 }
 
@@ -3259,6 +3261,33 @@ void dump_reg(void)
 	/* print_reg(0x3200, 0x32e4); */
 }
 
+void dump_reg_phy(void)
+{
+	rx_pr("PHY Register:\n");
+	rx_pr("0xd2=0x%x\n", rd_reg_hhi(HHI_HDMIRX_APLL_CNTL0));
+	rx_pr("0xd3=0x%x\n", rd_reg_hhi(HHI_HDMIRX_APLL_CNTL1));
+	rx_pr("0xd4=0x%x\n", rd_reg_hhi(HHI_HDMIRX_APLL_CNTL2));
+	rx_pr("0xd5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_APLL_CNTL3));
+	rx_pr("0xd6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_APLL_CNTL4));
+
+
+	rx_pr("0xd7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0));
+	rx_pr("0xd8=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1));
+	rx_pr("0xe0=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2));
+	rx_pr("0xe1=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3));
+	rx_pr("0xe2=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0));
+	rx_pr("0xe3=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1));
+	rx_pr("0xe4=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2));
+	rx_pr("0xc5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3));
+	rx_pr("0xe5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0));
+	rx_pr("0xe6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1));
+	rx_pr("0xe7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2));
+	rx_pr("0xc6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL3));
+	rx_pr("0xe8=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_ARC_CNTL));
+	rx_pr("0xee=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_STAT));
+	rx_pr("0xef=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT));
+}
+
 void dump_edid_reg(void)
 {
 	int i = 0;
@@ -3606,10 +3635,10 @@ static const uint32_t phy_misci_b[][4] = {
 		0x3003f7ff, 0x0041f080, 0x0, 0x00000817,
 	},
 	{	/* 77~155M */
-		0x3003f7ff, 0x0040f080, 0x0, 0x00000817,
+		0x3003f7ff, 0x0041f080, 0x0, 0x00000817,
 	},
 	{	/* 155~340M */
-		0x3003f7ff, 0x0040f080, 0x0, 0x00000817,
+		0x3003f7ff, 0x0041f080, 0x0, 0x00000817,
 	},
 	{	/* 340~525M */
 		0x3003f7ff, 0x0041f080, 0x0, 0x00000817,
@@ -3622,44 +3651,44 @@ static const uint32_t phy_misci_b[][4] = {
 static const uint32_t phy_dcha_b[][4] = {
 		/*	0xe2		0xe3		0xe4      0xc5*/
 	{	/* 24~45M */
-		0x012000ff, 0x74005959, 0x01cf14c9, 0x422,
+		0x012000ff, 0x74015959, 0x01cf14d4, 0x817,
 	},
 	{	/* 45~74.5M */
-		0x012000ff, 0x74005959, 0x01cf14c9, 0x422
+		0x012000ff, 0x74015959, 0x01cf14d4, 0x817
 	},
 	{	/* 77~155M */
-		0x012000ff, 0x74005959, 0x01cf14c9, 0x630,
+		0x012000ff, 0x74015959, 0x01cf14c9, 0x630,
 	},
 	{	/* 155~340M */
-		0x012000ff, 0x74005959, 0x01cf14c9, 0x630,
+		0x012000ff, 0x74015959, 0x01cf14c9, 0x630,
 	},
 	{	/* 340~525M */
-		0x012000ff, 0x45ff5959, 0x01ff1621, 0x1080,
+		0x012000ff, 0x45ff5959, 0x01ff1e21, 0x1080,
 	},
 	{	/* 525~600M */
-		0x012000ff, 0x45ff5959, 0x01ff1621, 0x1080,
+		0x012000ff, 0x45ff5959, 0x01ff1e21, 0x1080,
 	},
 };
 
 static const uint32_t phy_dchd_b[][4] = {
 		/*	0xe5		0xe6		0xe7       0xc6*/
 	{	/* 24~45M */
-		0xf3374913, 0x405c0000, 0x05644444, 0x0,//0xf3274913
+		0xf3374913, 0x405cf000, 0x05422222, 0x0,//0xf3274913
 	},
 	{	/* 45~74.5M */
-		0xf3374913, 0x405c0000, 0x05644444, 0x0,
+		0xf3374913, 0x405cf000, 0x05422222, 0x0,
 	},
 	{	/* 77~155M */
-		0xf3374913, 0x405c0000, 0x05644444, 0x0,
+		0xf3374913, 0x405cf000, 0x05422222, 0x0,
 	},
 	{	/* 155~340M */
-		0xf3374913, 0x405c0000, 0x05644444, 0x0,
+		0xf3374913, 0x405cf000, 0x05422222, 0x0,
 	},
 	{	/* 340~525M */
-		0xf3374913, 0x405c0000, 0x0d644444, 0x0,
+		0xf3374913, 0x405cf000, 0x0d422222, 0x0,
 	},
 	{	/* 525~600M */
-		0xf3374913, 0x405c0000, 0x0d644444, 0x0,
+		0xf3374913, 0x405cf000, 0x0d422222, 0x0,
 	},
 };
 
@@ -3704,9 +3733,11 @@ void aml_phy_switch_port(void)
 {
 	   uint32_t data32;
 	   /* reset and select data port */
-	   data32 = 0x00000010;
+	   data32 = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3);
+	   data32 &= (~(0x7 << 6));
 	   data32 |= ((1 << rx.port) << 6);
 	   wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, data32);
+	   data32 &= (~(1 << 11));
 	   /* release reset */
 	   data32 |= (1 << 11);
 	   wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, data32);
@@ -3922,74 +3953,80 @@ void aml_phy_cfg_v2(void)//sw flow sequence
 	u32 data32;
 	uint32_t term_value =
 		hdmirx_rd_top(TOP_HPD_PWR5V) & 0x7;
+	if (pre_int) {
+		rx_pr("\nstep2:\n");
+		data32 = phy_misci_b[idx][0];
+		//data32 = (data32 & (~0x7));
+		//data32 |= term_value;
+		//data32 &= ~(disable_port_num & 0x07);
+		/* step2-0xd7 */
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, data32);
+		//rx_pr("\n0xd7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0));
+		//udelay(2);
+		/* step4:data channel[7:9]/res cali block[10] reset */
+		//data32 |= 0xf << 7;
+		//udelay(5); //useless
+		//wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, data32);
+		//rx_pr("\n0xd7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0));
+		udelay(5);
 
-	rx_pr("\nstep2:\n");
-	data32 = phy_misci_b[idx][0];
-	//data32 = (data32 & (~0x7));
-	//data32 |= term_value;
-	//data32 &= ~(disable_port_num & 0x07);
-	/* step2-0xd7 */
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, data32);
-	//rx_pr("\n0xd7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0));
-	//udelay(2);
-	/* step4:data channel[7:9]/res cali block[10] reset */
-	//data32 |= 0xf << 7;
-	//udelay(5); //useless
-	//wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, data32);
-	//rx_pr("\n0xd7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0));
-	udelay(5);
-
-	data32 = phy_misci_b[idx][1];
-	if ((idx < PHY_BW_5) && phy_tdr_en) {
-		if (term_cal_en) {
-			data32 = (((data32 & (~(0x3ff << 12))) |
-				(term_cal_val << 12)) | (1 << 22));
-		} else {
-			data32 = phy_trim_val;
+		data32 = phy_misci_b[idx][1];
+		if ((idx < PHY_BW_5) && phy_tdr_en) {
+			if (term_cal_en) {
+				data32 = (((data32 & (~(0x3ff << 12))) |
+					(term_cal_val << 12)) | (1 << 22));
+			} else {
+				data32 = phy_trim_val;
+			}
 		}
+		/* step2-0xd8 */
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, data32);
+		//rx_pr("\n0xd8=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1));
+		/*step2-0xe0*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2, phy_misci_b[idx][2]);
+		//rx_pr("\n0xe0=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2));
+		/*step2-0xe1*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, phy_misci_b[idx][3]);
+		//rx_pr("\n0xe1=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3));
+		/*step2-0xe2*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0,
+			   phy_dcha_b[idx][0]);
+		//rx_pr("\n0xe2=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0));
+		/*step2-0xe3*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1,
+			   phy_dcha_b[idx][1]);
+		//rx_pr("\n0xe3=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1));
+		/*step2-0xe4*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2,
+			   phy_dcha_b[idx][2]);
+		//rx_pr("\n0xe4=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2));
+		/*step2-0xe5*/
+		if (cdr_mode)
+			data32 = 0x73374940;
+		else
+			data32 = phy_dchd_b[idx][0];
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0,
+			data32);
+		//rx_pr("\n0xe5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0));
+		/*step2-0xe6*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1,
+			phy_dchd_b[idx][1]);
+		//rx_pr("\n0xe6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1));
+		/*step2-0xe7*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2,
+			phy_dchd_b[idx][2]);
+		//rx_pr("\n0xe7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2));
+		/*step2-0xc5*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3,
+			phy_dcha_b[idx][3]);
+		//rx_pr("\n0xc5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3));
+		/*step2-0xc6*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL3,
+			phy_dchd_b[idx][3]);
+		//rx_pr("\n0xc6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL3));
+		if (!pre_int_en)
+			pre_int = 0;
 	}
-	/* step2-0xd8 */
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, data32);
-	//rx_pr("\n0xd8=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1));
-	/*step2-0xe0*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2, phy_misci_b[idx][2]);
-	//rx_pr("\n0xe0=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2));
-	/*step2-0xe1*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, phy_misci_b[idx][3]);
-	//rx_pr("\n0xe1=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3));
-	/*step2-0xe2*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0,
-		   phy_dcha_b[idx][0]);
-	//rx_pr("\n0xe2=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0));
-	/*step2-0xe3*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1,
-		   phy_dcha_b[idx][1]);
-	//rx_pr("\n0xe3=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1));
-	/*step2-0xe4*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2,
-		   phy_dcha_b[idx][2]);
-	//rx_pr("\n0xe4=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2));
-	/*step2-0xe5*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0,
-		phy_dchd_b[idx][0]);
-	//rx_pr("\n0xe5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0));
-	/*step2-0xe6*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1,
-		phy_dchd_b[idx][1]);
-	//rx_pr("\n0xe6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1));
-	/*step2-0xe7*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2,
-		phy_dchd_b[idx][2]);
-	//rx_pr("\n0xe7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2));
-	/*step2-0xc5*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3,
-		phy_dcha_b[idx][3]);
-	//rx_pr("\n0xc5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3));
-	/*step2-0xc6*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL3,
-		phy_dchd_b[idx][3]);
-	//rx_pr("\n0xc6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL3));
-
 	/*step3 sel port 0xe1[8:6]*/
 	/*step4 sq_rst 0xe1[11]=0*/
 
@@ -4070,15 +4107,21 @@ void aml_eq_cfg_v2(void)
 	uint32_t vga_val, vga_ch0, vga_ch1, vga_ch2;
 	int vga_cnt = 0;
 
-	if (slicer_en) {
+	if (ofst_en) {
 		//step8
 		//dfe_ofstcal_start(0xe3[27])
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL1, _BIT(27), 1);
 		//ofst_cal_start(0xe6[31])
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL1, _BIT(31), 1);
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL2, _BIT(21), 1);
 		//rx_pr("\n0xe6=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1));
 		udelay(5);
-		//cdr_rstb(0xe5[25]), eq_rstb(0xe5[24])
+		/* 0xe7(26),disable dfe */
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, _BIT(26), 0);
+		//cdr_rstb(0xe5[25]), eq_rstb(0xe5[24])-0
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, MSK(2, 24), 0);
+		udelay(5);
+		//cdr_rstb(0xe5[25]), eq_rstb(0xe5[24])-1
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, MSK(2, 24), 3);
 		//rx_pr("\n0xe5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0));
 		//udelay(5);
@@ -4086,8 +4129,9 @@ void aml_eq_cfg_v2(void)
 
 		//step9
 		//dfe_ofstcal_start(0xe3[27]), ofst_cal_start(0xe6[31])д0
-		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL1, _BIT(27), 0);
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL1, _BIT(31), 0);
+		udelay(5);
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL1, _BIT(27), 0);
 		rx_pr("\nsli done\n");
 		//rx_pr("\n0xe3=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1));
 	}
@@ -4106,21 +4150,22 @@ void aml_eq_cfg_v2(void)
 	//rx_pr("\n0xe5=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0));
 	mdelay(5);
 
-	//step11 tmds det
-	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, _BIT(28), 1);
-
-	if ((rx.phy.phy_bw == PHY_BW_4) || (rx.phy.phy_bw == PHY_BW_5)) {
+	//if ((rx.phy.phy_bw == PHY_BW_4) || (rx.phy.phy_bw == PHY_BW_5)) {
+	if (rx.phy.phy_bw == PHY_BW_5) {
 		//step12
 		if (dfe_en) {
-			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0,
-				MSK(2, 8), 0);
+			//wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0,
+				//MSK(2, 8), 0);
 			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
 				_BIT(26), 1);
 			rx_pr("dfe\n");
 		}
+		udelay(100);
+		//step11 tmds det
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, _BIT(28), 1);
 		//step13
 			while (vga_dbg) {
-				udelay(100);
+				mdelay(vga_dbg_delay);//udelay(100);
 				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
 					MSK(3, 28), 0);
 				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3,
@@ -4132,19 +4177,13 @@ void aml_eq_cfg_v2(void)
 				vga_ch2 = (data32 >> 16) & 0xff;
 				/* get the average val of ch0/1/2*/
 				vga_val = (vga_ch0 + vga_ch1 + vga_ch2)/3;
-				if (log_level & PHY_LOG) {
-					rx_pr("\nvga:ch0=0x%x", vga_ch0);
-					rx_pr(",ch1=0x%x", vga_ch1);
-					rx_pr(",ch2=0x%x\n", vga_ch2);
-					rx_pr("Average=0x%x\n", vga_val);
-				}
 				/*vga_gain*/
 				data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0);
-				if (vga_val < 45)
+				if (vga_val < 50)
 					wr_reg_hhi_bits(
 					HHI_HDMIRX_PHY_DCHA_CNTL0,
 					MSK(15, 0), ((data32 << 1) | 0x1));
-				else if (vga_val > 55)
+				else if (vga_val > 60)
 					wr_reg_hhi_bits(
 					HHI_HDMIRX_PHY_DCHA_CNTL0,
 					MSK(15, 0), (data32 >> 1));
@@ -4154,6 +4193,11 @@ void aml_eq_cfg_v2(void)
 					break;
 				}
 			}
+		} else {
+			// vdac off
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL2, _BIT(21), 0);
+			//step11 tmds det
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, _BIT(28), 1);
 		}
 }
 
@@ -4375,7 +4419,7 @@ void aml_pll_bw_cfg_v2(void)
 		od -= 1;
 	else if (os_rate == 2)
 		od -= 2;
-	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, MSK(2, 6), os_rate);
+	//wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, MSK(2, 6), os_rate);
 	rx.phy.aud_div = apll_tab[bw].aud_div;
 	vco_clk = (cableclk * M) / N; /*KHz*/
 	if ((vco_clk < (2970 * KHz)) || (vco_clk > (6000 * KHz))) {
@@ -4433,18 +4477,23 @@ void aml_pll_bw_cfg_v2(void)
 						is_clk_stable() &&
 						(!aml_phy_pll_lock()));
 	rx_pr("pll init done\n");
-	//phy config based on BW
-	/*0xd8???????*/
-	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1);
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, data32);
-	/*0xc5*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3, phy_dcha_b[idx][3]);
-	/*0xe3*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, phy_dcha_b[idx][1]);
-	/*0xe4*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2, phy_dcha_b[idx][2]);
-	/*0xe7*/
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2, phy_dchd_b[idx][2]);
+	if (phy_bw) {
+		//phy config based on BW
+		/*0xd8???????*/
+		data32 = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, data32);
+		/*0xc5*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3, phy_dcha_b[idx][3]);
+		/*0xe3*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, phy_dcha_b[idx][1]);
+		/*0xe4*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2, phy_dcha_b[idx][2]);
+		/*0xe7*/
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2, phy_dchd_b[idx][2]);
+		/* 0xe3 */
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0, phy_dcha_b[idx][0]);
+		rx_pr("phy_bw\n");
+	}
 }
 
 #if 0
@@ -4488,14 +4537,17 @@ void aml_phy_init_v1(void)
 //For TM2 and later chips
 void aml_phy_init_v2(void)
 {
-	if (!stop1)
-		aml_phy_cfg_v2();
+	aml_phy_cfg_v2();
 	udelay(10);//band_gap stable 50us
-	if (!stop2)
-		aml_pll_bw_cfg_v2();
+	aml_pll_bw_cfg_v2();
 	udelay(10);//
-	if (!stop2)
-		aml_eq_cfg_v2();
+	aml_eq_cfg_v2();
+	mdelay(5);
+	if (alirst_en) {
+		hdmirx_wr_top(TOP_SW_RESET, 0x280);
+		udelay(1);
+		hdmirx_wr_top(TOP_SW_RESET, 0);
+	}
 }
 
 /*

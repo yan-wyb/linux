@@ -1848,16 +1848,22 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(sqrst_en, index);
 	if (set_pr_var(tmpbuf, vga_dbg, value, &index, ret))
 		return pr_var(vga_dbg, index);
-	if (set_pr_var(tmpbuf, stop1, value, &index, ret))
-		return pr_var(stop1, index);
-	if (set_pr_var(tmpbuf, stop2, value, &index, ret))
-		return pr_var(stop2, index);
-	if (set_pr_var(tmpbuf, stop3, value, &index, ret))
-		return pr_var(stop3, index);
 	if (set_pr_var(tmpbuf, dfe_en, value, &index, ret))
 		return pr_var(dfe_en, index);
-	if (set_pr_var(tmpbuf, slicer_en, value, &index, ret))
-		return pr_var(slicer_en, index);
+	if (set_pr_var(tmpbuf, ofst_en, value, &index, ret))
+		return pr_var(ofst_en, index);
+	if (set_pr_var(tmpbuf, cdr_mode, value, &index, ret))
+		return pr_var(cdr_mode, index);
+	if (set_pr_var(tmpbuf, pre_int_en, value, &index, ret))
+		return pr_var(pre_int_en, index);
+	if (set_pr_var(tmpbuf, pre_int, value, &index, ret))
+		return pr_var(pre_int, index);
+	if (set_pr_var(tmpbuf, phy_bw, value, &index, ret))
+		return pr_var(phy_bw, index);
+	if (set_pr_var(tmpbuf, vga_dbg_delay, value, &index, ret))
+		return pr_var(vga_dbg_delay, index);
+	if (set_pr_var(tmpbuf, alirst_en, value, &index, ret))
+		return pr_var(alirst_en, index);
 	return 0;
 }
 
@@ -1977,11 +1983,14 @@ void rx_get_global_variable(const char *buf)
 	pr_var(os_rate, i++);
 	pr_var(sqrst_en, i++);
 	pr_var(vga_dbg, i++);
-	pr_var(stop1, i++);
-	pr_var(stop2, i++);
-	pr_var(stop3, i++);
 	pr_var(dfe_en, i++);
-	pr_var(slicer_en, i++);
+	pr_var(ofst_en, i++);
+	pr_var(cdr_mode, i++);
+	pr_var(pre_int_en, i++);
+	pr_var(pre_int, i++);
+	pr_var(phy_bw, i++);
+	pr_var(vga_dbg_delay, i++);
+	pr_var(alirst_en, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -2046,6 +2055,7 @@ void hdmirx_open_port(enum tvin_port_e port)
 			wait_ddc_idle();
 			hdmi_rx_top_edid_update();
 		}
+		pre_int = 1;
 		hdmirx_hw_config();
 	} else {
 		if (rx.state >= FSM_SIG_STABLE)
@@ -2383,7 +2393,7 @@ void rx_main_state_machine(void)
 		break;
 	case FSM_SIG_UNSTABLE:
 		if (is_tmds_valid()) {
-			pll_unlock_cnt = 0;
+			/* pll_unlock_cnt = 0; */
 			if (++pll_lock_cnt < pll_lock_max)
 				break;
 			rx_dwc_reset();
@@ -3506,7 +3516,10 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("%s\n", value ? "pause" : "enable");
 		sm_pause = value;
 	} else if (strncmp(tmpbuf, "reg", 3) == 0) {
-		dump_reg();
+		if (tmpbuf[3] == '1')
+			dump_reg_phy();
+		else
+			dump_reg();
 	}  else if (strncmp(tmpbuf, "duk", 3) == 0) {
 		rx_pr("hdcp22=%d\n", rx_sec_set_duk(hdmirx_repeat_support()));
 	} else if (strncmp(tmpbuf, "edid", 4) == 0) {
@@ -3553,7 +3566,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
-		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/20");
+		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/22");
 		rx_pr("------------------\n");
 	} else if (strncmp(input[0], "port0", 5) == 0) {
 		hdmirx_open_port(TVIN_PORT_HDMI0);

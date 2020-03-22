@@ -1134,11 +1134,15 @@ extern int hdcp_tee_path;
 extern int os_rate;
 extern bool sqrst_en;
 extern int vga_dbg;
-extern bool stop1;
-extern bool stop2;
-extern bool stop3;
 extern int dfe_en;
-extern int slicer_en;
+extern int ofst_en;
+extern int cdr_mode;
+extern int pre_int;
+extern int pre_int_en;
+extern int phy_bw;
+extern int vga_dbg_delay;
+extern int alirst_en;
+
 extern char emp_buf[1024];
 extern void rx_get_best_eq_setting(void);
 extern void wr_reg_hhi(unsigned int offset, unsigned int val);
@@ -1247,6 +1251,7 @@ void rx_audio_bandgap_en(void);
 void rx_aml_eq_debug(int eq_lvl);
 extern void rx_phy_rxsense_pulse(unsigned int t1, unsigned int t2, bool en);
 extern void rx_phy_power_on(unsigned int onoff);
+extern void dump_reg_phy(void);
 
 enum measure_clk_top_e {
 	TOP_HDMI_TMDSCLK = 0,
