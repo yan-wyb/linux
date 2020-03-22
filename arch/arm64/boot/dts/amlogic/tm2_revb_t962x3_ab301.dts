@@ -1210,7 +1210,7 @@
 
 	tuner: tuner {
 		compatible = "amlogic, tuner";
-		status = "disabled";
+		status = "okay";
 		tuner_cur = <0>; /* default use tuner */
 		tuner_num = <1>; /* tuner number, multi tuner support */
 		tuner_name_0 = "mxl661_tuner";
@@ -1226,7 +1226,7 @@
 
 	atv-demod {
 		compatible = "amlogic, atv-demod";
-		status = "disabled";
+		status = "okay";
 		tuner = <&tuner>;
 		btsc_sap_mode = <1>;
 		interrupts = <0 236 1>;
