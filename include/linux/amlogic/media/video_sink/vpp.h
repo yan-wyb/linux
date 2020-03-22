@@ -198,6 +198,8 @@ struct disp_info_s {
 	bool pps_support;
 
 	bool need_no_compress;
+	bool fgrain_support;
+	bool fgrain_start;
 };
 
 enum select_scaler_path_e {

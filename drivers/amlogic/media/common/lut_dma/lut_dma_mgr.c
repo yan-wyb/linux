@@ -135,6 +135,102 @@ static void set_lut_dma_rdcfg(u32 channel)
 			     trans_size, 0, 13);
 }
 
+/* use phy addr directly */
+static void set_lut_dma_phyaddr_wrcfg_manual(u32 channel,
+					     u32 index,
+					     u32 phy_addr,
+					     u32 buf_size)
+{
+	u32 base_addr, trans_size;
+	struct lut_dma_device_info *info = &lut_dma_info;
+
+	if (!info->ins[channel].baddr_set) {
+		base_addr = VPU_DMA_RDMIF0_BADR0 +
+			(channel * 4) + index;
+		/* set write phy addr */
+		lut_dma_reg_write
+			(base_addr,
+			 phy_addr);
+	}
+	/* transfer unit:128 bits data */
+	trans_size = BYTE_16_ALIGNED(buf_size) / 16;
+	base_addr = VPU_DMA_RDMIF0_CTRL + channel;
+	/* set buf size */
+	lut_dma_reg_set_bits(base_addr,
+			     trans_size, 0, 12);
+	/* set frame index */
+	lut_dma_reg_set_bits(base_addr,
+			     index, 24, 2);
+}
+
+static void set_lut_dma_phyaddr_wrcfg_auto(u32 channel,
+					   u32 index,
+					   u32 phy_addr,
+					   u32 buf_size)
+{
+	u32 base_addr, trans_size;
+	struct lut_dma_device_info *info = &lut_dma_info;
+	int i;
+
+	if (!info->ins[channel].baddr_set) {
+		for (i = 0; i < DMA_BUF_NUM; i++) {
+			base_addr = VPU_DMA_RDMIF0_BADR0 +
+				(channel * 4) + i;
+			/* set write phy addr */
+			lut_dma_reg_write(base_addr,
+					  phy_addr);
+		}
+	}
+	/* transfer unit:128 bits data */
+	trans_size = BYTE_16_ALIGNED(buf_size) / 16;
+	base_addr = VPU_DMA_RDMIF0_CTRL + channel;
+	/* set buf size */
+	lut_dma_reg_set_bits(base_addr,
+			     trans_size, 0, 12);
+}
+
+#ifdef TEST_LUT_DMA
+static void set_lut_dma_phyaddr(u32 dma_dir, u32 channel, u32 phy_addr)
+{
+	int i;
+	u32 base_addr;
+	struct lut_dma_device_info *info = &lut_dma_info;
+
+	if (dma_dir == LUT_DMA_RD) {
+		channel = LUT_DMA_RD_CHAN_NUM + channel;
+		for (i = 0; i < DMA_BUF_NUM; i++) {
+			switch (i) {
+			case 0:
+				base_addr = VPU_DMA_WRMIF_BADDR0;
+				break;
+			case 1:
+				base_addr = VPU_DMA_WRMIF_BADDR1;
+				break;
+			case 2:
+				base_addr = VPU_DMA_WRMIF_BADDR2;
+				break;
+			case 3:
+				base_addr = VPU_DMA_WRMIF_BADDR3;
+				break;
+			}
+			lut_dma_reg_write(base_addr,
+					  phy_addr);
+		}
+		info->ins[channel].baddr_set = 1;
+	} else if (dma_dir == LUT_DMA_WR) {
+		for (i = 0; i < DMA_BUF_NUM; i++) {
+			base_addr = VPU_DMA_RDMIF0_BADR0 +
+				(channel * 4) + i;
+			/* set write phy addr */
+			lut_dma_reg_write(base_addr,
+					  phy_addr);
+		}
+		info->ins[channel].baddr_set = 1;
+	}
+}
+#endif
+
+/* use internal malloc dma addr */
 static void set_lut_dma_wrcfg_manual(u32 channel, u32 index)
 {
 	u32 base_addr, buf_size, trans_size;
@@ -223,6 +319,9 @@ static void set_lut_dma_phy_addr(u32 dma_dir, u32 channel)
 	}
 }
 
+static int bit_format;
+MODULE_PARM_DESC(bit_format, "\n bit_format\n");
+module_param(bit_format, uint, 0664);
 static int lut_dma_enable(u32 dma_dir, u32 channel)
 {
 	int mode = 0;
@@ -253,6 +352,11 @@ static int lut_dma_enable(u32 dma_dir, u32 channel)
 				(VPU_DMA_RDMIF0_CTRL + channel,
 				 info->ins[channel].trigger_irq_type,
 				 16, 8);
+
+			lut_dma_reg_set_bits
+				(VPU_DMA_RDMIF0_CTRL + channel,
+				 bit_format,
+				 13, 2);
 			info->ins[channel].enable = 1;
 		}
 	}
@@ -281,6 +385,65 @@ static void lut_dma_disable(u32 dma_dir, u32 channel)
 	}
 }
 
+/* lut dma api */
+/* use phy addr directly */
+int lut_dma_write_phy_addr(u32 channel, u32 phy_addr, u32 size)
+{
+	struct lut_dma_device_info *info = &lut_dma_info;
+	u32 dma_dir = LUT_DMA_WR;
+	u32 index, mode = 0;
+	u32 pre_size = 0;
+
+	if (phy_addr && size > 0) {
+		mode = info->ins[channel].mode;
+		index = get_cur_wr_frame_index(channel);
+		pre_size = info->ins[channel].wr_size[index];
+
+		if (mode == LUT_DMA_MANUAL) {
+			if (index == DMA_BUF_NUM - 1)
+				index = 0;
+			else
+				index++;
+		}
+		pr_dbg("%s:mode=%d, index=%d\n", __func__, mode, index);
+		info->ins[channel].wr_size[index] = size;
+		if (mode == LUT_DMA_MANUAL) {
+			set_lut_dma_phyaddr_wrcfg_manual(channel,
+							 index,
+							 phy_addr,
+							 size);
+			lut_dma_enable(dma_dir, channel);
+		} else if (mode == LUT_DMA_AUTO) {
+			if (pre_size != size) {
+				/* if size changed, disable then enable */
+				lut_dma_disable(dma_dir, channel);
+				set_lut_dma_phyaddr_wrcfg_auto(channel,
+							       index,
+							       phy_addr,
+							       size);
+				lut_dma_enable(dma_dir, channel);
+				pr_dbg("size changed: pre_size=%d, size=%d\n",
+				       pre_size, size);
+			} else
+				set_lut_dma_phyaddr_wrcfg_auto(channel,
+							       index,
+							       phy_addr,
+							       size);
+		}
+	}
+	return 0;
+}
+
+void lut_dma_update_irq_source(u32 channel, u32 irq_source)
+{
+	struct lut_dma_device_info *info = &lut_dma_info;
+
+	info->ins[channel].trigger_irq_type = 1 << irq_source;
+	lut_dma_reg_set_bits(VPU_DMA_RDMIF0_CTRL + channel,
+			     info->ins[channel].trigger_irq_type,
+			     16, 8);
+}
+
 int lut_dma_read(u32 channel, void *paddr)
 {
 	struct lut_dma_device_info *info = &lut_dma_info;
@@ -301,7 +464,7 @@ int lut_dma_read(u32 channel, void *paddr)
 	return size;
 }
 
-int lut_dma_write(u32 channel, void *paddr, u32 size)
+int lut_dma_write_internal(u32 channel, void *paddr, u32 size)
 {
 	struct lut_dma_device_info *info = &lut_dma_info;
 	u32 dma_dir = LUT_DMA_WR;
@@ -352,7 +515,7 @@ int lut_dma_write(u32 channel, void *paddr, u32 size)
 	return 0;
 }
 
-int lut_dma_register(struct lut_dma_set_t *lut_dma_set)
+static int lut_dma_register_internal(struct lut_dma_set_t *lut_dma_set)
 {
 	struct lut_dma_device_info *info = &lut_dma_info;
 	dma_addr_t dma_handle;
@@ -442,9 +605,8 @@ int lut_dma_register(struct lut_dma_set_t *lut_dma_set)
 	}
 	return -1;
 }
-EXPORT_SYMBOL(lut_dma_register);
 
-void lut_dma_unregister(u32 dma_dir, u32 channel)
+void lut_dma_unregister_internal(u32 dma_dir, u32 channel)
 {
 	int i;
 	struct lut_dma_device_info *info = &lut_dma_info;
@@ -495,6 +657,106 @@ void lut_dma_unregister(u32 dma_dir, u32 channel)
 				}
 				ins->wr_table_size[i] = 0;
 			}
+			mutex_unlock(lock);
+		}
+	}
+}
+
+int lut_dma_register(struct lut_dma_set_t *lut_dma_set)
+{
+	struct lut_dma_device_info *info = &lut_dma_info;
+	u32 dma_dir, table_size, channel, mode;
+	u32 irq_source = 0;
+	struct mutex *lock = NULL;
+	int i;
+
+	dma_dir = lut_dma_set->dma_dir;
+	/* transfer unit:128 bits data */
+	table_size = lut_dma_set->table_size;
+	if (table_size > MAX_BUF_SIZE)
+		table_size = MAX_BUF_SIZE;
+	channel = lut_dma_set->channel;
+	mode = lut_dma_set->mode;
+
+	if (dma_dir == LUT_DMA_RD) {
+		/* only one channel for dimm statistic */
+		channel = LUT_DMA_RD_CHAN_NUM;
+		if (info->ins[channel].registered) {
+			pr_info("already registered, channel:%d, dma_dir:%d\n",
+				channel, dma_dir);
+			return -1;
+		}
+		lock = &info->ins[channel].lut_dma_lock;
+		mutex_lock(lock);
+
+		info->ins[channel].registered = 1;
+		info->ins[channel].trigger_irq_type = 0;
+		info->ins[channel].mode = mode;
+		info->ins[channel].enable = 0;
+		for (i = 0; i < DMA_BUF_NUM; i++)
+			info->ins[channel].rd_table_size[i] = table_size;
+
+		mutex_unlock(lock);
+		return channel;
+	} else if (dma_dir == LUT_DMA_WR) {
+		/* total 8 channel */
+		irq_source = lut_dma_set->irq_source;
+		if (channel < LUT_DMA_WR_CHANNEL) {
+			if (info->ins[channel].registered) {
+				pr_dbg("already registered, channel:%d, dma_dir:%d\n",
+				       channel, dma_dir);
+				return -1;
+			}
+			lock = &info->ins[channel].lut_dma_lock;
+			mutex_lock(lock);
+			info->ins[channel].registered = 1;
+			info->ins[channel].trigger_irq_type = (1 << irq_source);
+			info->ins[channel].mode = mode;
+			info->ins[channel].enable = 0;
+			for (i = 0; i < DMA_BUF_NUM; i++) {
+				info->ins[channel].wr_table_size[i] =
+					table_size;
+				info->ins[channel].wr_size[i] = 0;
+			}
+
+			mutex_unlock(lock);
+			return channel;
+		}
+	}
+	return -1;
+}
+EXPORT_SYMBOL(lut_dma_register);
+
+void lut_dma_unregister(u32 dma_dir, u32 channel)
+{
+	int i;
+	struct lut_dma_device_info *info = &lut_dma_info;
+	struct mutex *lock = NULL;
+
+	pr_dbg("%s dma_dir:%d, channel:%d\n",
+	       __func__, dma_dir, channel);
+	if (dma_dir == LUT_DMA_RD) {
+		/* only one channel for dimm statistic */
+		channel = LUT_DMA_RD_CHAN_NUM;
+		if (!info->ins[channel].registered)
+			return;
+		lock = &info->ins[channel].lut_dma_lock;
+		mutex_lock(lock);
+		info->ins[channel].registered = 0;
+		for (i = 0; i < DMA_BUF_NUM; i++)
+			info->ins[channel].rd_table_size[i] = 0;
+		mutex_unlock(lock);
+	} else if (dma_dir == LUT_DMA_WR) {
+		if (channel < LUT_DMA_WR_CHANNEL &&
+		    info->ins[channel].registered) {
+			struct lut_dma_ins *ins;
+
+			lock = &info->ins[channel].lut_dma_lock;
+			mutex_lock(lock);
+			ins = &info->ins[channel];
+			ins->registered = 0;
+			for (i = 0; i < DMA_BUF_NUM; i++)
+				ins->wr_table_size[i] = 0;
 			mutex_unlock(lock);
 		}
 	}
@@ -590,9 +852,9 @@ static ssize_t lut_dma_test_stroe(struct class *cla,
 	case 1:
 	case 2:
 		/* do read test */
-		lut_dma_write(lut_dma_test_channel,
-			      table_data,
-			      table_size);
+		lut_dma_write_internal(lut_dma_test_channel,
+				       table_data,
+				       table_size);
 		break;
 	case 3:
 		/* do read test */
@@ -637,7 +899,7 @@ static ssize_t lut_dma_register_stroe(struct class *cla,
 		lut_dma_set.irq_source = VIU1_VSYNC;
 		lut_dma_set.mode = LUT_DMA_MANUAL;
 		lut_dma_set.table_size = table_size;
-		ret = lut_dma_register(&lut_dma_set);
+		ret = lut_dma_register_internal(&lut_dma_set);
 		if (ret < 0 &&
 		    (info->ins[lut_dma_set.channel].mode !=
 		     LUT_DMA_MANUAL)) {
@@ -653,7 +915,7 @@ static ssize_t lut_dma_register_stroe(struct class *cla,
 		lut_dma_set.irq_source = VIU1_VSYNC;
 		lut_dma_set.mode = LUT_DMA_AUTO;
 		lut_dma_set.table_size = table_size;
-		ret = lut_dma_register(&lut_dma_set);
+		ret = lut_dma_register_internal(&lut_dma_set);
 		if (ret < 0 &&
 		    (info->ins[lut_dma_set.channel].mode !=
 		     LUT_DMA_AUTO)) {
@@ -667,7 +929,7 @@ static ssize_t lut_dma_register_stroe(struct class *cla,
 		lut_dma_set.channel = lut_dma_test_channel;
 		lut_dma_set.dma_dir = LUT_DMA_RD;
 		lut_dma_set.table_size = table_size;
-		ret = lut_dma_register(&lut_dma_set);
+		ret = lut_dma_register_internal(&lut_dma_set);
 		if (ret >= 0)
 			set_lut_dma_phy_addr(LUT_DMA_RD,
 					     lut_dma_set.channel);
@@ -698,12 +960,12 @@ static ssize_t lut_dma_unregister_stroe(struct class *cla,
 	switch (lut_dma_test_mode) {
 	case 1:
 	case 2:
-		lut_dma_unregister(LUT_DMA_WR,
-				   lut_dma_test_channel);
+		lut_dma_unregister_internal(LUT_DMA_WR,
+					    lut_dma_test_channel);
 		break;
 	case 3:
-		lut_dma_unregister(LUT_DMA_WR,
-				   lut_dma_test_channel);
+		lut_dma_unregister_internal(LUT_DMA_WR,
+					    lut_dma_test_channel);
 		break;
 	}
 	return count;

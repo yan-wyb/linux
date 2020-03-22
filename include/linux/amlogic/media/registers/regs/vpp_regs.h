@@ -263,5 +263,12 @@
 /* vpp crc */
 #define VPP_RO_CRCSUM           0x1db2
 #define VPP_CRC_CHK             0x1db3
+
+#define FGRAIN_CTRL                  0x4800
+#define FGRAIN_WIN_H                 0x4801
+#define FGRAIN_WIN_V                 0x4802
+#define VD2_FGRAIN_CTRL              0x4810
+#define VD2_FGRAIN_WIN_H             0x4811
+#define VD2_FGRAIN_WIN_V             0x4812
 #endif
 

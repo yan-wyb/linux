@@ -190,6 +190,23 @@ struct blend_setting_s {
 	struct vpp_frame_par_s *frame_par;
 };
 
+struct fgrain_setting_s {
+	u32 id;
+	u32 start_x;
+	u32 end_x;
+	u32 start_y;
+	u32 end_y;
+	u32 fmt_mode; /* only support 420 */
+	u32 bitdepth; /* 8 bit or 10 bit */
+	u32 reverse;
+	u32 afbc; /* afbc or not */
+	u32 last_in_mode; /* related with afbc */
+	u32 used;
+	/* lut dma */
+	u32 fgs_table_adr;
+	u32 table_size;
+};
+
 enum mode_3d_e {
 	mode_3d_disable = 0,
 	mode_3d_enable,
@@ -231,7 +248,7 @@ struct video_layer_s {
 	struct mif_pos_s mif_setting;
 	struct scaler_setting_s sc_setting;
 	struct blend_setting_s bld_setting;
-
+	struct fgrain_setting_s fgrain_setting;
 	u32 new_vframe_count;
 
 	u32 start_x_lines;
@@ -415,9 +432,19 @@ struct device *get_video_device(void);
 int ext_frame_capture_poll(int endflags);
 #endif
 bool is_meson_tm2_revb(void);
-#endif
 
 #ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 void di_trig_free_mirror_mem(void);
+#endif
+void fgrain_config(u8 layer_id,
+		   struct vpp_frame_par_s *frame_par,
+		   struct mif_pos_s *mif_setting,
+		   struct fgrain_setting_s *setting,
+		   struct vframe_s *vf);
+void fgrain_setting(u8 layer_id,
+		    struct fgrain_setting_s *setting,
+		    struct vframe_s *vf);
+void fgrain_update_table(u8 layer_id,
+			 struct vframe_s *vf);
 #endif
 /*VIDEO_PRIV_HEADER_HH*/
