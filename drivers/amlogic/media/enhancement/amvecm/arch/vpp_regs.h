@@ -394,6 +394,7 @@
 
 /*sr0 sr1 dejaggy/direction/dering*/
 #define SRSHARP0_DEJ_CTRL				0x3264/*bit 0*/
+#define SRSHARP0_DEJ_ALPHA				0x3265
 #define SRSHARP0_SR3_DRTLPF_EN			0x3266/*bit 0-2*/
 #define SRSHARP0_SR3_DERING_CTRL		0x326b/*bit 28-30*/
 
