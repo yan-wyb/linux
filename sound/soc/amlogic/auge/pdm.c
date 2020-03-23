@@ -67,17 +67,6 @@ static struct snd_pcm_hardware aml_pdm_hardware = {
 	.fifo_size		=	0,
 };
 
-static unsigned int period_sizes[] = {
-	64, 128, 256, 512, 1024, 2048, 4096,
-	8192, 16384, 32768, 65536, 65536 * 2, 65536 * 4
-};
-
-static struct snd_pcm_hw_constraint_list hw_constraints_period_sizes = {
-	.count = ARRAY_SIZE(period_sizes),
-	.list = period_sizes,
-	.mask = 0
-};
-
 static const char *const pdm_filter_mode_texts[] = {
 	"Filter Mode 0",
 	"Filter Mode 1",
@@ -602,17 +591,6 @@ static int aml_pdm_open(struct snd_pcm_substream *substream)
 	snd_soc_set_runtime_hwparams(substream, &aml_pdm_hardware);
 
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
-
-	/* Ensure that period size is a multiple of 32bytes */
-	ret = snd_pcm_hw_constraint_list(runtime, 0,
-					   SNDRV_PCM_HW_PARAM_PERIOD_BYTES,
-					   &hw_constraints_period_sizes);
-	if (ret < 0) {
-		dev_err(substream->pcm->card->dev,
-			"%s() setting constraints failed: %d\n",
-			__func__, ret);
-		return -EINVAL;
-	}
 
 	/* Ensure that buffer size is a multiple of period size */
 	ret = snd_pcm_hw_constraint_integer(runtime,

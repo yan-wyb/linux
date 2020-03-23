@@ -1626,10 +1626,10 @@
 	};
 
 	pdmin: pdmin {
-		mux { /* GPIOZ_7, GPIOZ_8, pdm_din2_z4 */
+		mux { /* GPIOZ_7, GPIOZ_8, GPIOZ_10 */
 			groups = "pdm_dclk_z",
 				"pdm_din0_z",
-				"pdm_din2_z4";
+				"pdm_din2_z10";
 			function = "pdm";
 		};
 	};
