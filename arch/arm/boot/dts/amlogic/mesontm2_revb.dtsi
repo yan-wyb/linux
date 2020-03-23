@@ -308,7 +308,7 @@
 	};
 
 	ethmac: ethernet@ff3f0000 {
-		compatible = "amlogic, g12a-eth-dwmac","snps,dwmac";
+		compatible = "amlogic, g12a-eth-dwmac","snps,dwmac-4.00";
 		reg = <0xff3f0000 0x10000
 			0xff634540 0x8
 			0xff64c000 0xa0
