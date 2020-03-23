@@ -220,15 +220,36 @@ static void lc_mtx_set(enum lc_mtx_sel_e mtx_sel,
 		break;
 	case LC_MTX_YUV601L_RGB:
 		if (mtx_sel & (INP_MTX | OUTP_MTX)) {
-			WRITE_VPP_REG(matrix_coef00_01, 0x012a0000);
-			WRITE_VPP_REG(matrix_coef02_10, 0x198012a);
-			WRITE_VPP_REG(matrix_coef11_12, 0xf9c0f30);
-			WRITE_VPP_REG(matrix_coef20_21, 0x12a0204);
-			WRITE_VPP_REG(matrix_coef22, 0x0);
 			if (bitdepth == 10) {
+				WRITE_VPP_REG(matrix_coef00_01, 0x012a0000);
+				WRITE_VPP_REG(matrix_coef02_10, 0x198012a);
+				WRITE_VPP_REG(matrix_coef11_12, 0xf9c0f30);
+				WRITE_VPP_REG(matrix_coef20_21, 0x12a0204);
+				WRITE_VPP_REG(matrix_coef22, 0x0);
 				WRITE_VPP_REG(matrix_pre_offset0_1, 0x00400200);
 				WRITE_VPP_REG(matrix_clip, 0x3ff);
 			} else {
+				if (is_meson_rev_a() && is_meson_tm2_cpu()) {
+					WRITE_VPP_REG(matrix_coef00_01,
+						      0x012a0000);
+					WRITE_VPP_REG(matrix_coef02_10,
+						      0x198012a);
+					WRITE_VPP_REG(matrix_coef11_12,
+						      0xf9c0f30);
+					WRITE_VPP_REG(matrix_coef20_21,
+						      0x12a0204);
+					WRITE_VPP_REG(matrix_coef22, 0x0);
+				} else {
+					WRITE_VPP_REG(matrix_coef00_01,
+						      0x04A80000);
+					WRITE_VPP_REG(matrix_coef02_10,
+						      0x072C04A8);
+					WRITE_VPP_REG(matrix_coef11_12,
+						      0x1F261DDD);
+					WRITE_VPP_REG(matrix_coef20_21,
+						      0x04A80876);
+					WRITE_VPP_REG(matrix_coef22, 0x0);
+				}
 				WRITE_VPP_REG(matrix_pre_offset0_1, 0x01000800);
 				WRITE_VPP_REG(matrix_clip, 0xfff);
 			}
@@ -272,20 +293,36 @@ static void lc_mtx_set(enum lc_mtx_sel_e mtx_sel,
 		break;
 	case LC_MTX_YUV709L_RGB:
 		if (mtx_sel & (INP_MTX | OUTP_MTX)) {
-			WRITE_VPP_REG(matrix_coef00_01, 0x012a0000);
-			WRITE_VPP_REG(matrix_coef02_10, 0x01cb012a);
-			WRITE_VPP_REG(matrix_coef11_12, 0x1fc90f77);
-			WRITE_VPP_REG(matrix_coef20_21, 0x012a021d);
-			WRITE_VPP_REG(matrix_coef22, 0x0);
 			if (bitdepth == 10) {
+				WRITE_VPP_REG(matrix_coef00_01, 0x012a0000);
+				WRITE_VPP_REG(matrix_coef02_10, 0x01cb012a);
+				WRITE_VPP_REG(matrix_coef11_12, 0x1fc90f77);
+				WRITE_VPP_REG(matrix_coef20_21, 0x012a021d);
+				WRITE_VPP_REG(matrix_coef22, 0x0);
 				WRITE_VPP_REG(matrix_pre_offset0_1, 0x400200);
 				WRITE_VPP_REG(matrix_clip, 0x3ff);
 			} else {
-				/* for YUV->RGB
-				 * 12bit matrix is not supported actually
-				 * the HW use 8bit conversion by default
-				 * but the shift extra bit only 2bits
-				 */
+				if (is_meson_rev_a() && is_meson_tm2_cpu()) {
+					WRITE_VPP_REG(matrix_coef00_01,
+						      0x012a0000);
+					WRITE_VPP_REG(matrix_coef02_10,
+						      0x01cb012a);
+					WRITE_VPP_REG(matrix_coef11_12,
+						      0x1fc90f77);
+					WRITE_VPP_REG(matrix_coef20_21,
+						      0x012a021d);
+					WRITE_VPP_REG(matrix_coef22, 0x0);
+				} else {
+					WRITE_VPP_REG(matrix_coef00_01,
+						      0x04A80000);
+					WRITE_VPP_REG(matrix_coef02_10,
+						      0x072C04A8);
+					WRITE_VPP_REG(matrix_coef11_12,
+						      0x1F261DDD);
+					WRITE_VPP_REG(matrix_coef20_21,
+						      0x04A80876);
+					WRITE_VPP_REG(matrix_coef22, 0x0);
+				}
 				WRITE_VPP_REG(matrix_pre_offset0_1, 0x01000800);
 				WRITE_VPP_REG(matrix_clip, 0xfff);
 			}
@@ -329,15 +366,36 @@ static void lc_mtx_set(enum lc_mtx_sel_e mtx_sel,
 		break;
 	case LC_MTX_YUV709_RGB:
 		if (mtx_sel & (INP_MTX | OUTP_MTX)) {
-			WRITE_VPP_REG(matrix_coef00_01, 0x01000000);
-			WRITE_VPP_REG(matrix_coef02_10, 0x01930100);
-			WRITE_VPP_REG(matrix_coef11_12, 0x1fd01f88);
-			WRITE_VPP_REG(matrix_coef20_21, 0x010001db);
-			WRITE_VPP_REG(matrix_coef22, 0x0);
 			if (bitdepth == 10) {
+				WRITE_VPP_REG(matrix_coef00_01, 0x01000000);
+				WRITE_VPP_REG(matrix_coef02_10, 0x01930100);
+				WRITE_VPP_REG(matrix_coef11_12, 0x1fd01f88);
+				WRITE_VPP_REG(matrix_coef20_21, 0x010001db);
+				WRITE_VPP_REG(matrix_coef22, 0x0);
 				WRITE_VPP_REG(matrix_pre_offset0_1, 0x200);
 				WRITE_VPP_REG(matrix_clip, 0x3ff);
 			} else {
+				if (is_meson_rev_a() && is_meson_tm2_cpu()) {
+					WRITE_VPP_REG(matrix_coef00_01,
+						      0x01000000);
+					WRITE_VPP_REG(matrix_coef02_10,
+						      0x01930100);
+					WRITE_VPP_REG(matrix_coef11_12,
+						      0x1fd01f88);
+					WRITE_VPP_REG(matrix_coef20_21,
+						      0x010001db);
+					WRITE_VPP_REG(matrix_coef22, 0x0);
+				} else {
+					WRITE_VPP_REG(matrix_coef00_01,
+						      0x04000000);
+					WRITE_VPP_REG(matrix_coef02_10,
+						      0x064d0400);
+					WRITE_VPP_REG(matrix_coef11_12,
+						      0x1f411e21);
+					WRITE_VPP_REG(matrix_coef20_21,
+						      0x0400076d);
+					WRITE_VPP_REG(matrix_coef22, 0x0);
+				}
 				WRITE_VPP_REG(matrix_pre_offset0_1, 0x800);
 				WRITE_VPP_REG(matrix_clip, 0xfff);
 			}

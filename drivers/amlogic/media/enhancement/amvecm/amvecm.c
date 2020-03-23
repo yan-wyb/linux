@@ -7714,11 +7714,8 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	init_pq_setting();
 	aml_vecm_viu2_vsync_irq_init();
 
-	if (is_meson_rev_b() && is_meson_tm2_cpu()) {
+	if (is_meson_rev_b() && is_meson_tm2_cpu())
 		pq_load_en = 0;
-		pc_mode = 0;
-		pc_mode_last = 0xff;
-	}
 
 	probe_ok = 1;
 	pr_info("%s: ok\n", __func__);
