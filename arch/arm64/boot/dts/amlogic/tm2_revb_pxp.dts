@@ -2109,3 +2109,15 @@
 &lut_dma {
 	status = "okay";
 };
+
+&p_tsensor {
+	status = "disabled";
+};
+
+&d_tsensor {
+	status = "disabled";
+};
+
+&s_tsensor {
+	status = "disabled";
+};
