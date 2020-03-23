@@ -50,7 +50,7 @@
 				"high_freq_clk_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
-			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			voltage-tolerance = <0>;
 			clock-latency = <50000>;
 		};
@@ -69,7 +69,7 @@
 				"high_freq_clk_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
-			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			voltage-tolerance = <0>;
 			clock-latency = <50000>;
 		};
@@ -88,7 +88,7 @@
 				"high_freq_clk_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
-			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			voltage-tolerance = <0>;
 			clock-latency = <50000>;
 		};
@@ -107,9 +107,28 @@
 				"high_freq_clk_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
-			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			voltage-tolerance = <0>;
 			clock-latency = <50000>;
+		};
+
+		idle-states {
+			entry-method = "arm,psci";
+			CPU_SLEEP_0: cpu-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <4000>;
+				exit-latency-us = <4000>;
+				min-residency-us = <9000>;
+			};
+			SYSTEM_SLEEP_0: system-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0020000>;
+				entry-latency-us = <0x3fffffff>;
+				exit-latency-us = <0x40000000>;
+				min-residency-us = <0xffffffff>;
+			};
 		};
 	};
 
