@@ -23,7 +23,7 @@
 
 / {
 	model = "Amlogic TM2 REVB T962X3 AB301";
-	amlogic-dt-id = "tm2_revb_t962x3_ab301";
+	amlogic-dt-id = "tm2-revb_t962x3_ab301";
 	compatible = "amlogic, tm2_revb_t962x3_ab301";
 
 	aliases {
