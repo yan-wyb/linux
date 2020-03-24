@@ -51,7 +51,8 @@
 /* 2019/12/31 --- V2.17 --- Fix atv vif setting and offset error. */
 /* 2020/01/06 --- V2.18 --- Optimize MTS(Multi-channel sound) control flow. */
 /* 2020/01/08 --- V2.19 --- Fix afc frequency offset. */
-#define AMLATVDEMOD_VER "V2.19"
+/* 2020/03/24 --- V2.20 --- Fix ntsc(443)-bg/dk/i no audio output. */
+#define AMLATVDEMOD_VER "V2.20"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
