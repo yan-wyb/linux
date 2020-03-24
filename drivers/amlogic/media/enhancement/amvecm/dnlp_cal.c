@@ -262,7 +262,7 @@ void dnlp_alg_param_init(void)
 	dnlp_alg_param.dnlp_lowrange = 18;
 	dnlp_alg_param.dnlp_hghrange = 18;
 	dnlp_alg_param.dnlp_satur_rat = 30;
-	dnlp_alg_param.dnlp_satur_max = 40;
+	dnlp_alg_param.dnlp_satur_max = 0;
 	dnlp_alg_param.dnlp_set_saturtn = 0;
 	dnlp_alg_param.dnlp_sbgnbnd = 4;
 	dnlp_alg_param.dnlp_sendbnd = 4;

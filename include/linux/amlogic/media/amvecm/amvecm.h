@@ -220,10 +220,8 @@ enum pc_mode_e {
 #define AMVECM_IOC_G_PIC_MODE _IOR(_VE_CM, 0x59, struct am_vdj_mode_s)
 #define AMVECM_IOC_S_PIC_MODE _IOW(_VE_CM, 0x60, struct am_vdj_mode_s)
 
-
 /*HDR TYPE command list*/
 #define AMVECM_IOC_G_HDR_TYPE _IOR(_VE_CM, 0x61, enum hdr_type_e)
-
 
 /*Local contrast command list*/
 #define AMVECM_IOC_S_LC_CURVE _IOW(_VE_CM, 0x62, struct ve_lc_curve_parm_s)
@@ -239,6 +237,16 @@ struct hdr_tone_mapping_s {
 
 #define AMVECM_IOC_S_PQ_CTRL  _IOW(_VE_CM, 0x65, struct vpp_pq_ctrl_s)
 #define AMVECM_IOC_G_PQ_CTRL  _IOR(_VE_CM, 0x66, struct vpp_pq_ctrl_s)
+
+enum meson_cpu_ver_e {
+	VER_NULL = 0,
+	VER_A,
+	VER_B,
+	VER_C,
+	VER_MAX
+};
+/*cpu ver ioc*/
+#define AMVECM_IOC_S_MESON_CPU_VER _IOW(_VE_CM, 0x67, enum meson_cpu_ver_e)
 
 struct am_vdj_mode_s {
 	int flag;

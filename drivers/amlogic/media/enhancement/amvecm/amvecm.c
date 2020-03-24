@@ -1399,6 +1399,7 @@ static long amvecm_ioctl(struct file *file,
 	struct hdr_tone_mapping_s hdr_tone_mapping;
 	unsigned int *hdr_tm = NULL;
 	struct vpp_pq_ctrl_s pq_ctrl;
+	enum meson_cpu_ver_e cpu_ver;
 
 	if (debug_amvecm & 2)
 		pr_info("[amvecm..] %s: cmd_nr = 0x%x\n",
@@ -1798,6 +1799,23 @@ static long amvecm_ioctl(struct file *file,
 			pr_info("pq control cp to user fail\n");
 		} else {
 			pr_info("pq control cp to user success\n");
+		}
+		break;
+	case AMVECM_IOC_S_MESON_CPU_VER:
+		if (!is_meson_tm2_cpu())
+			break;
+		if (copy_from_user(
+			&cpu_ver,
+			(void __user *)arg,
+			sizeof(enum meson_cpu_ver_e))) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("copy cpu version fail\n");
+		} else {
+			if ((is_meson_rev_a() && (cpu_ver == VER_A)) ||
+			    (is_meson_rev_b() && (cpu_ver == VER_B)))
+				break;
+			ret = -EINVAL;
+			pr_amvecm_dbg("cpu version doesn't match\n");
 		}
 		break;
 	default:
@@ -5142,6 +5160,46 @@ static ssize_t amvecm_clamp_color_bottom_store(struct class *cla,
 	return count;
 }
 
+static ssize_t amvecm_cpu_ver_show(struct class *cla,
+			struct class_attribute *attr, char *buf)
+{
+	pr_info("echo r cpu_ver > /sys/class/amvecm/cpu_ver");
+	return 0;
+}
+static ssize_t amvecm_cpu_ver_store(struct class *cla,
+			struct class_attribute *attr,
+			const char *buf, size_t count)
+{
+	char *buf_orig, *parm[8] = {NULL};
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return -ENOMEM;
+	parse_param_amvecm(buf_orig, (char **)&parm);
+
+	if (!strncmp(parm[0], "r", 1)) {
+		if (!strncmp(parm[1], "cpu_ver", 7)) {
+			if (!is_meson_tm2_cpu()) {
+				pr_info("VER_NULL\n");
+				return count;
+			}
+			if (is_meson_rev_a())
+				pr_info("VER_A\n");
+			else if (is_meson_rev_b())
+				pr_info("VER_B\n");
+			else
+				pr_info("no ver\n");
+		} else {
+			pr_info("error cmd\n");
+		}
+	} else
+		pr_info("error cmd\n");
+
+	return count;
+}
+
 static ssize_t amvecm_cm2_hue_show(struct class *cla,
 		struct class_attribute *attr, char *buf)
 {
@@ -5456,6 +5514,8 @@ static void get_cm_hist(enum cm_hist_e hist_sel)
 
 static void cm_init_config(int bitdepth)
 {
+	int i, j, reg;
+
 	if (bitdepth == 10) {
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_YSCP_REG);
 		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
@@ -5483,6 +5543,14 @@ static void cm_init_config(int bitdepth)
 		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
 		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, LUMA_ADJ0_REG);
 		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x40400);
+	}
+
+	for (i = 0; i < 32; i++) {
+		for (j = 0; j < 5; j++) {
+			reg = CM2_ENH_COEF0_H00 + i * 8 + j;
+			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, reg);
+			WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x0);
+		}
 	}
 }
 
@@ -7203,6 +7271,9 @@ static struct class_attribute amvecm_class_attrs[] = {
 	__ATTR(color_bottom, 0644,
 		amvecm_clamp_color_bottom_show,
 		amvecm_clamp_color_bottom_store),
+	__ATTR(cpu_ver, 0644,
+		amvecm_cpu_ver_show,
+		amvecm_cpu_ver_store),
 	__ATTR_NULL
 };
 
@@ -7543,9 +7614,6 @@ static int aml_vecm_probe(struct platform_device *pdev)
 
 	init_pq_setting();
 	aml_vecm_viu2_vsync_irq_init();
-
-	if (is_meson_rev_b() && is_meson_tm2_cpu())
-		pq_load_en = 0;
 
 	probe_ok = 1;
 	pr_info("%s: ok\n", __func__);
