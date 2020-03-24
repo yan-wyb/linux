@@ -2123,3 +2123,7 @@
 &s_tsensor {
 	status = "disabled";
 };
+
+&meson_cooldev {
+	status = "disabled";
+};

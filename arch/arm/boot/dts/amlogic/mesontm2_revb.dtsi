@@ -1849,7 +1849,7 @@
 	};
 
 	meson_cooldev: meson-cooldev@0 {
-		status = "disabled";
+		status = "okay";
 		compatible = "amlogic, meson-cooldev";
 		cooling_devices {
 			cpufreq_cool_cluster0 {
