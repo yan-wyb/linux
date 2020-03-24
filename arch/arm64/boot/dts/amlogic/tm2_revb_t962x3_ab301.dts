@@ -191,9 +191,7 @@
 			alloc-ranges = <0x0 0x30000000 0x0 0x01000000>;
 		};
 	}; /* end of reserved-memory */
-	galcore {
-		status = "disabled";
-	};
+
 	codec_mm {
 		compatible = "amlogic, codec, mm";
 		status = "okay";
