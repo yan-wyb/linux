@@ -57,6 +57,9 @@ static void dwmac4_core_init(struct mac_device_info *hw, int mtu)
 		value |= GMAC_PCS_IRQ_DEFAULT;
 
 	writel(value, ioaddr + GMAC_INT_EN);
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	writel(0x2, ioaddr + GMAC_RXQ_CTRL0);
+#endif
 }
 
 static void dwmac4_dump_regs(struct mac_device_info *hw)
@@ -185,8 +188,6 @@ static void dwmac4_set_filter(struct mac_device_info *hw,
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
 	/*patch to support 5.1a*/
 	writel(value | 0x80000000, ioaddr + GMAC_PACKET_FILTER);
-	writel(0x2, ioaddr + GMAC_RxQ_Ctrl0);
-	writel(0x70008, ioaddr + MTL_CHAN_BASE_ADDR);
 #else
 	writel(value, ioaddr + GMAC_PACKET_FILTER);
 #endif
