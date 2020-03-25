@@ -223,7 +223,8 @@ void am_set_regmap(struct am_regs_s *p)
 						p->am_reg[i].val);
 			break;
 		case REG_TYPE_VCBUS:
-			if (p->am_reg[i].addr == SHARP0_DEJ_ALPHA) {
+			if (p->am_reg[i].addr ==
+			    SRSHARP0_DEJ_ALPHA + sr_offset[0]) {
 				sr0_dej_setting[DEJAGGY_LEVEL - 1].val =
 					p->am_reg[i].val & 0xff;
 				if (pd_detect_en)
