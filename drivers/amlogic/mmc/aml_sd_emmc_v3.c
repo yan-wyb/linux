@@ -887,6 +887,7 @@ RETRY:
 	/*****test start*************/
 	udelay(5);
 	host->is_tunning = 1;
+	host->cmd_retune = 0;
 	if (line_x < 9)
 		aml_sd_emmc_cali_v3(mmc,
 			MMC_READ_MULTIPLE_BLOCK,
@@ -894,6 +895,7 @@ RETRY:
 	else
 		aml_sd_emmc_cmd_v3(mmc);
 	host->is_tunning = 0;
+	host->cmd_retune = 1;
 	udelay(1);
 	eyetest_log = readl(host->base + SD_EMMC_EYETEST_LOG);
 
@@ -1415,10 +1417,22 @@ static void aml_emmc_hs400_general(struct mmc_host *mmc)
 
 static void aml_emmc_hs400_tl1(struct mmc_host *mmc)
 {
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	u32 intf3 = readl(host->base + SD_EMMC_INTF3);
+
+	if (host->data->chip_type == MMC_CHIP_TM2_B) {
+		intf3 = readl(host->base + SD_EMMC_INTF3);
+		intf3 |= (1<<22);
+		writel(intf3, (host->base + SD_EMMC_INTF3));
+		pdata->intf3 = intf3;
+	}
+
 	set_emmc_cmd_delay(mmc, 1);
 	tl1_emmc_line_timing(mmc);
 	emmc_ds_manual_sht(mmc);
 	set_emmc_cmd_delay(mmc, 0);
+	return;
 }
 
 static int emmc_data_alignment(struct mmc_host *mmc, int best_size)
@@ -1903,7 +1917,8 @@ tunning:
 	} else if ((best_win_size < clk_div)
 			&& (clk_div <= AML_FIXED_ADJ_MAX)
 			&& (clk_div >= AML_FIXED_ADJ_MIN)
-			&& !all_flag) {
+			&& !all_flag
+			&& (host->data->chip_type != MMC_CHIP_TM2_B)) {
 		adj_delay_find = _find_fixed_adj_valid_win(pdata,
 				tuning_data, opcode, fixed_adj_map, clk_div);
 	} else if (best_win_size == clk_div) {
@@ -2361,6 +2376,8 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 		err = _aml_sd_emmc_execute_tuning(mmc, opcode,
 					&tuning_data, adj_win_start);
 	} else {
+		if (host->data->chip_type == MMC_CHIP_TM2_B)
+			return 0;
 		intf3 = readl(host->base + SD_EMMC_INTF3);
 		intf3 |= (1<<22);
 		writel(intf3, (host->base + SD_EMMC_INTF3));
