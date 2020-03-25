@@ -88,6 +88,9 @@ enum vpu_mod_e {
 	VPU_AFBCE,            /* reg4[5:4], TL1 */
 	VPU_VDIN_WR_MIF2,     /* reg4[7:6], TM2 */
 	VPU_DMA,              /* reg4[11:8], TM2 */
+	VPU_HDMI,             /* reg4[13:12], TM2B */
+	VPU_FGRAIN0,          /* reg4[15:14], TM2B */
+	VPU_FGRAIN1,          /* reg4[17:16], TM2B */
 
 	VPU_MOD_MAX,
 
