@@ -612,6 +612,8 @@ static void vd1_set_dcu(
 
 	pr_debug("%s for vd%d %p, type:0x%x\n",
 		 __func__, layer->layer_id, vf, type);
+	/* disable vpp detunnel default */
+	set_video_ipt(layer->layer_id, 0);
 
 	if (frame_par->nocomp)
 		type &= ~VIDTYPE_COMPRESS;
@@ -1065,6 +1067,8 @@ static void vd2_set_dcu(
 		is_mvc = true;
 	pr_debug("%s for vd%d %p, type:0x%x\n",
 		 __func__, layer->layer_id, vf, type);
+	/* disable vpp detunnel default */
+	set_video_ipt(layer->layer_id, 0);
 
 	if (frame_par->nocomp)
 		type &= ~VIDTYPE_COMPRESS;
@@ -2617,12 +2621,15 @@ static void vd1_set_ipt(u32 enable)
 {
 	u32 data;
 
-	data = 3 << 27 |
-		2 << 24 |
-		0 << 21 |
-		5 << 18 |
-		4 << 15 |
-		1 << 12 |
+	if (!is_meson_tm2_revb())
+		return;
+
+	data = 5 << 27 |
+		4 << 24 |
+		1 << 21 |
+		3 << 18 |
+		2 << 15 |
+		0 << 12 |
 		1 << 2 |
 		0 << 1;
 	if (enable)
@@ -2637,12 +2644,15 @@ static void vd2_set_ipt(u32 enable)
 {
 	u32 data;
 
-	data = 3 << 27 |
-		2 << 24 |
-		0 << 21 |
-		5 << 18 |
-		4 << 15 |
-		1 << 12 |
+	if (!is_meson_tm2_revb())
+		return;
+
+	data = 5 << 27 |
+		4 << 24 |
+		1 << 21 |
+		3 << 18 |
+		2 << 15 |
+		0 << 12 |
 		1 << 2 |
 		0 << 1;
 	if (enable)
