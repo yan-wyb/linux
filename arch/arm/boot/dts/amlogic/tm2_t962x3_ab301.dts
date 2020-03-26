@@ -210,6 +210,12 @@
 		status = "okay";
 	};
 
+	vdetect {
+		compatible = "amlogic, vdetect";
+		dev_name = "vdetect";
+		status = "okay";
+	};
+
 	ppmgr {
 		compatible = "amlogic, ppmgr";
 		memory-region = <&ppmgr_reserved>;

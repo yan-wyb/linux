@@ -200,6 +200,12 @@
 		memory-region = <&codec_mm_cma &codec_mm_reserved>;
 	};
 
+	vdetect {
+			compatible = "amlogic, vdetect";
+			dev_name = "vdetect";
+			status = "okay";
+	};
+
 	picdec {
 		compatible = "amlogic, picdec";
 		memory-region = <&picdec_cma_reserved>;

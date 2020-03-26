@@ -15332,3 +15332,8 @@ MLOGIC TM2_REVB BUILDROOT DTS
 M: Bing Jiang <bing.jiang@amlogic.com>
 F:arch/arm/boot/dts/amlogic/tm2_revb_t962e2_ab311_sbr.dts
 F:arch/arm/boot/dts/amlogic/tm2_revb_t962e2_ab311_gva_sbr.dts
+
+AMLOGIC VDETECT DRIVER
+M:	Renjiang Han <renjiang.han@amlogic.com>
+F:  drivers/amlogic/media/video_processor/vdetect/vdetect.c
+F:  include/linux/amlogic/media/vdetect/vdetect.h
