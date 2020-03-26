@@ -7260,11 +7260,11 @@ static const struct vecm_match_data_s vecm_dt_sm1 = {
 };
 
 static const struct vecm_match_data_s vecm_dt_tm2 = {
-	.vlk_support = false,
+	.vlk_support = true,
 	.vlk_new_fsm = 1,
 	.vlk_hwver = vlock_hw_ver2,
-	.vlk_phlock_en = false,
-	.vlk_pll_sel = vlock_pll_sel_hdmi,
+	.vlk_phlock_en = true,
+	.vlk_pll_sel = vlock_pll_sel_tcon,
 };
 
 static const struct vecm_match_data_s vecm_dt_tm2_verb = {
