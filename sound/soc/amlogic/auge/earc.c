@@ -36,11 +36,13 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 #include <linux/workqueue.h>
+#include <linux/amlogic/iomap.h>
 
 #include <linux/amlogic/media/sound/hdmi_earc.h>
 #include <linux/amlogic/media/sound/mixer.h>
 #include "ddr_mngr.h"
 #include "earc_hw.h"
+#include "audio_utils.h"
 
 #define DRV_NAME "EARC"
 
@@ -1419,6 +1421,9 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 	earctx_cmdc_set_timeout(p_earc->tx_cmdc_map, 1);
 	/* Default: arc arc_initiated */
 	earctx_cmdc_int_mask(p_earc->tx_top_map);
+
+	/* select hdmirx arc source from earctx spdif */
+	tm2_arc_source_select(EARCTX_SPDIF_TO_HDMIRX);
 
 	return ret;
 }

@@ -633,7 +633,9 @@ struct register_table {
 /*
  *	HIU, ARC
  */
-#define HHI_HDMIRX_ARC_CNTL                0xe8
+#define HHI_HDMIRX_ARC_CNTL                0x0e8
+#define HHI_HDMIRX_EARCTX_CNTL0            0x069
+#define HHI_HDMIRX_EARCTX_CNTL1            0x06a
 
 /*
  *	AUDIO MUX CONTROLS

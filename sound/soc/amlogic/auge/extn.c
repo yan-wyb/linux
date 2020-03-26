@@ -55,17 +55,19 @@ enum {
 	HDMIRX_MODE_PAO = 1,
 };
 
-struct extn_chipinfo {
-	/* try to check papb before fetch pcpd
-	 * no nonpcm2pcm irq for tl1
-	 */
-	bool no_nonpcm2pcm_clr;
+/*
+ * TXLX: hdmirx arc from spdif
+ * TL1: hdmirx arc from spdifA/spdifB
+ * TM2: hdmirx arc from spdifA/spdifB/earctx_spdif
+ */
+enum {
+	TXLX = 0,
+	TL1 = 1,
+	TM2 = 2,
+};
 
-	/* eARC-ARC or CEC-ARC
-	 * CEC-ARC: tl1
-	 * eARC-ARC: sm1/tm2, etc
-	 */
-	bool cec_arc;
+struct extn_chipinfo {
+	int arc_version;
 };
 
 struct extn {
@@ -445,8 +447,11 @@ static int extn_dai_probe(struct snd_soc_dai *cpu_dai)
 
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
-	if (p_extn->chipinfo && p_extn->chipinfo->cec_arc)
+	if (p_extn->chipinfo && p_extn->chipinfo->arc_version == TL1)
 		extn_create_controls(card, p_extn);
+
+	if (p_extn->chipinfo && p_extn->chipinfo->arc_version == TM2)
+		tm2_arc_source_select(SPDIFA_TO_HDMIRX);
 
 	return 0;
 }
@@ -974,8 +979,11 @@ static const struct snd_soc_component_driver extn_component = {
 };
 
 struct extn_chipinfo tl1_extn_chipinfo = {
-	.no_nonpcm2pcm_clr = true,
-	.cec_arc           = true,
+	.arc_version	= TL1,
+};
+
+struct extn_chipinfo tm2_extn_chipinfo = {
+	.arc_version	= TM2,
 };
 
 static const struct of_device_id extn_device_id[] = {
@@ -986,7 +994,10 @@ static const struct of_device_id extn_device_id[] = {
 		.compatible = "amlogic, tl1-snd-extn",
 		.data       = &tl1_extn_chipinfo,
 	},
-	{},
+	{
+		.compatible = "amlogic, tm2-snd-extn",
+		.data       = &tm2_extn_chipinfo,
+	},
 };
 
 MODULE_DEVICE_TABLE(of, extn_device_id);
