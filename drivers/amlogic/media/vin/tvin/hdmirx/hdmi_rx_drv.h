@@ -94,6 +94,7 @@ enum chip_id_e {
 enum phy_ver_e {
 	PHY_VER_ORG,
 	PHY_VER_TL1,
+	PHY_VER_TM2,
 };
 
 struct meson_hdmirx_data {

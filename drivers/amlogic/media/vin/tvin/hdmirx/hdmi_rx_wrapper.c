@@ -1864,6 +1864,10 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(vga_dbg_delay, index);
 	if (set_pr_var(tmpbuf, alirst_en, value, &index, ret))
 		return pr_var(alirst_en, index);
+	if (set_pr_var(tmpbuf, dfe_dbg, value, &index, ret))
+		return pr_var(dfe_dbg, index);
+	if (set_pr_var(tmpbuf, tap1_byp, value, &index, ret))
+		return pr_var(tap1_byp, index);
 	return 0;
 }
 
@@ -1991,6 +1995,8 @@ void rx_get_global_variable(const char *buf)
 	pr_var(phy_bw, i++);
 	pr_var(vga_dbg_delay, i++);
 	pr_var(alirst_en, i++);
+	pr_var(dfe_dbg, i++);
+	pr_var(tap1_byp, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -2055,7 +2061,6 @@ void hdmirx_open_port(enum tvin_port_e port)
 			wait_ddc_idle();
 			hdmi_rx_top_edid_update();
 		}
-		pre_int = 1;
 		hdmirx_hw_config();
 	} else {
 		if (rx.state >= FSM_SIG_STABLE)
@@ -2067,6 +2072,7 @@ void hdmirx_open_port(enum tvin_port_e port)
 	rx_pkt_initial();
 	rx.fsm_ext_state = FSM_NULL;
 	sm_pause = fsmst;
+	pre_int = 1;
 	extcon_set_state_sync(rx.rx_excton_open, EXTCON_DISP_HDMI, 1);
 	rx_pr("%s:%d\n", __func__, rx.port);
 }
@@ -2901,9 +2907,9 @@ void dump_aml_phy_sts(void)
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x1);
 	usleep_range(1000, 1100);
 	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
-	dfe0_tap1 = data32 & 0xff;
-	dfe1_tap1 = (data32 >> 8) & 0xff;
-	dfe2_tap1 = (data32 >> 16) & 0xff;
+	dfe0_tap1 = data32 & 0x3f;
+	dfe1_tap1 = (data32 >> 8) & 0x3f;
+	dfe2_tap1 = (data32 >> 16) & 0x3f;
 
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x2);
@@ -2917,9 +2923,9 @@ void dump_aml_phy_sts(void)
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x3);
 	usleep_range(1000, 1100);
 	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
-	dfe0_tap3 = data32 & 0xff;
-	dfe1_tap3 = (data32 >> 8) & 0xff;
-	dfe2_tap3 = (data32 >> 16) & 0xff;
+	dfe0_tap3 = data32 & 0xf;
+	dfe1_tap3 = (data32 >> 8) & 0xf;
+	dfe2_tap3 = (data32 >> 16) & 0xf;
 
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x0);
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2, MSK(3, 28), 0x4);
@@ -2959,11 +2965,11 @@ void dump_aml_phy_sts(void)
 	wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3, MSK(2, 30), 0x2);
 	usleep_range(1000, 1100);
 	data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
-	cdr0_code = data32 & 0x3f;
+	cdr0_code = data32 & 0x7f;
 	cdr0_lock = (data32 >> 7) & 0x1;
-	cdr1_code = (data32 >> 8) & 0x3f;
+	cdr1_code = (data32 >> 8) & 0x7f;
 	cdr1_lock = (data32 >> 15) & 0x1;
-	cdr2_code = (data32 >> 16) & 0x3f;
+	cdr2_code = (data32 >> 16) & 0x7f;
 	cdr2_lock = (data32 >> 23) & 0x1;
 
 	/* status-6: pll lock */
@@ -3033,7 +3039,7 @@ void dump_aml_phy_sts(void)
 		ch0_eq_boost, ch1_eq_boost, ch2_eq_boost);
 
 	comb_val("dfe_tap0", dfe0_tap0, dfe1_tap0, dfe2_tap0, 8);
-	comb_val("dfe_tap1", dfe0_tap1, dfe1_tap1, dfe2_tap1, 8);
+	comb_val("dfe_tap1", dfe0_tap1, dfe1_tap1, dfe2_tap1, 6);
 	comb_val("dfe_tap2", dfe0_tap2, dfe1_tap2, dfe2_tap2, 5);
 	comb_val("dfe_tap3", dfe0_tap3, dfe1_tap3, dfe2_tap3, 4);
 	comb_val("dfe_tap4", dfe0_tap4, dfe1_tap4, dfe2_tap4, 4);
@@ -3566,7 +3572,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
-		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/22");
+		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/26");
 		rx_pr("------------------\n");
 	} else if (strncmp(input[0], "port0", 5) == 0) {
 		hdmirx_open_port(TVIN_PORT_HDMI0);

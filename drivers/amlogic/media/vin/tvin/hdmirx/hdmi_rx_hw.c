@@ -133,7 +133,8 @@ int pre_int = 1;
 int pre_int_en;
 int phy_bw = 1;
 int alirst_en;
-
+int dfe_dbg;
+int tap1_byp = 1;
 /*------------------------variable define end------------------------------*/
 
 static int check_regmap_flag(unsigned int addr)
@@ -3651,19 +3652,19 @@ static const uint32_t phy_misci_b[][4] = {
 static const uint32_t phy_dcha_b[][4] = {
 		/*	0xe2		0xe3		0xe4      0xc5*/
 	{	/* 24~45M */
-		0x012000ff, 0x74015959, 0x01cf14d4, 0x817,
+		0x012300ff, 0x45ff5959, 0x01ff1cd4, 0x817,
 	},
 	{	/* 45~74.5M */
-		0x012000ff, 0x74015959, 0x01cf14d4, 0x817
+		0x012300ff, 0x45ff5959, 0x01ff1cd4, 0x817
 	},
 	{	/* 77~155M */
-		0x012000ff, 0x74015959, 0x01cf14c9, 0x630,
+		0x012300ff, 0x45ff5959, 0x01ff1cc9, 0x630,
 	},
 	{	/* 155~340M */
-		0x012000ff, 0x74015959, 0x01cf14c9, 0x630,
+		0x012300ff, 0x45ff5959, 0x01ff1cc9, 0x630,
 	},
 	{	/* 340~525M */
-		0x012000ff, 0x45ff5959, 0x01ff1e21, 0x1080,
+		0x012100ff, 0x45ff5959, 0x01ff1e21, 0x1080,
 	},
 	{	/* 525~600M */
 		0x012000ff, 0x45ff5959, 0x01ff1e21, 0x1080,
@@ -3673,22 +3674,22 @@ static const uint32_t phy_dcha_b[][4] = {
 static const uint32_t phy_dchd_b[][4] = {
 		/*	0xe5		0xe6		0xe7       0xc6*/
 	{	/* 24~45M */
-		0xf3374913, 0x405cf000, 0x05422222, 0x0,//0xf3274913
+		0xf3371113, 0x405c0000, 0x0d422222, 0x14000000,
 	},
 	{	/* 45~74.5M */
-		0xf3374913, 0x405cf000, 0x05422222, 0x0,
+		0xf3371113, 0x405c0000, 0x0d422222, 0x14000000,
 	},
 	{	/* 77~155M */
-		0xf3374913, 0x405cf000, 0x05422222, 0x0,
+		0xf3371913, 0x405c0000, 0x0d422222, 0x14000000,
 	},
 	{	/* 155~340M */
-		0xf3374913, 0x405cf000, 0x05422222, 0x0,
+		0xf3371913, 0x405c0000, 0x0d422222, 0x14000000,
 	},
 	{	/* 340~525M */
-		0xf3374913, 0x405cf000, 0x0d422222, 0x0,
+		0xf3371913, 0x405cf000, 0x0d422222, 0x14000000,
 	},
 	{	/* 525~600M */
-		0xf3374913, 0x405cf000, 0x0d422222, 0x0,
+		0xf3374913, 0x405cf000, 0x0d422222, 0x14000000,
 	},
 };
 
@@ -4015,6 +4016,7 @@ void aml_phy_cfg_v2(void)//sw flow sequence
 		/*step2-0xe7*/
 		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2,
 			phy_dchd_b[idx][2]);
+		rx_pr("e7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2));
 		//rx_pr("\n0xe7=0x%x\n", rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2));
 		/*step2-0xc5*/
 		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3,
@@ -4106,7 +4108,7 @@ void aml_eq_cfg_v2(void)
 	//uint32_t idx = rx.phy.phy_bw;
 	uint32_t vga_val, vga_ch0, vga_ch1, vga_ch2;
 	int vga_cnt = 0;
-
+	int tap1_tst, tap1_tst1, tap1_tst2;
 	if (ofst_en) {
 		//step8
 		//dfe_ofstcal_start(0xe3[27])
@@ -4151,16 +4153,54 @@ void aml_eq_cfg_v2(void)
 	mdelay(5);
 
 	//if ((rx.phy.phy_bw == PHY_BW_4) || (rx.phy.phy_bw == PHY_BW_5)) {
-	if (rx.phy.phy_bw == PHY_BW_5) {
+	if ((rx.phy.phy_bw == PHY_BW_5) || dfe_dbg) {
 		//step12
 		if (dfe_en) {
-			//wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0,
-				//MSK(2, 8), 0);
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+				_BIT(27), 1);
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0,
+				MSK(2, 8), 0);
 			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
 				_BIT(26), 1);
+			mdelay(1);
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+				_BIT(27), 0);
+			data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0);
+			wr_reg_hhi_bits(
+				HHI_HDMIRX_PHY_DCHA_CNTL0,
+				MSK(15, 0), (data32 >> 2));
 			rx_pr("dfe\n");
 		}
 		udelay(100);
+
+		if (tap1_byp) {
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL3,
+				MSK(2, 30), 0x0);
+			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+				MSK(3, 28), 0x1);
+			udelay(100);
+			data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHD_STAT);
+			tap1_tst = (data32 >> 4) & 0x3;
+			tap1_tst1 = (data32 >> 12) & 0x3;
+			tap1_tst2 = (data32 >> 20) & 0x3;
+			if ((tap1_tst == 0x3) || (tap1_tst1 == 0x3) ||
+				(tap1_tst2 == 0x3)) {
+				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+					_BIT(19), 1);
+				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+					_BIT(27), 1);
+				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+					_BIT(26), 0);
+				udelay(100);
+				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+					_BIT(26), 1);
+				mdelay(1);
+				wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL2,
+					_BIT(27), 0);
+				rx_pr("tap1_byp done-0x%x\n", data32);
+			}
+		}
+
 		//step11 tmds det
 		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, _BIT(28), 1);
 		//step13
@@ -4179,7 +4219,7 @@ void aml_eq_cfg_v2(void)
 				vga_val = (vga_ch0 + vga_ch1 + vga_ch2)/3;
 				/*vga_gain*/
 				data32 = rd_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0);
-				if (vga_val < 50)
+				if (vga_val < 35)
 					wr_reg_hhi_bits(
 					HHI_HDMIRX_PHY_DCHA_CNTL0,
 					MSK(15, 0), ((data32 << 1) | 0x1));
@@ -4195,7 +4235,8 @@ void aml_eq_cfg_v2(void)
 			}
 		} else {
 			// vdac off
-			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL2, _BIT(21), 0);
+			//wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL2,
+				//_BIT(21), 0);
 			//step11 tmds det
 			wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, _BIT(28), 1);
 		}
@@ -4402,7 +4443,7 @@ void aml_pll_bw_cfg_v2(void)
 	uint32_t od2, od2_div;
 	uint32_t bw = rx.phy.pll_bw;
 	uint32_t vco_clk;
-	uint32_t data, data2, data32;
+	uint32_t data, data2;//data32;
 	uint32_t cableclk = rx.phy.cable_clk / KHz;
 	int pll_rst_cnt = 0;
 
@@ -4480,18 +4521,26 @@ void aml_pll_bw_cfg_v2(void)
 	if (phy_bw) {
 		//phy config based on BW
 		/*0xd8???????*/
-		data32 = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1);
-		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, data32);
+		//data32 = rd_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1);
+		//wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, data32);
 		/*0xc5*/
 		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3, phy_dcha_b[idx][3]);
 		/*0xe3*/
-		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, phy_dcha_b[idx][1]);
+		//wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, phy_dcha_b[idx][1]);
 		/*0xe4*/
-		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2, phy_dcha_b[idx][2]);
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL2, MSK(12, 0),
+			phy_dcha_b[idx][2] & 0xfff);
 		/*0xe7*/
-		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2, phy_dchd_b[idx][2]);
-		/* 0xe3 */
-		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0, phy_dcha_b[idx][0]);
+		//wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2, phy_dchd_b[idx][2]);
+		/* 0xe2 */
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHA_CNTL0, MSK(18, 0),
+			phy_dcha_b[idx][0] & 0x3ffff);
+		/* 0xe6 */
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL1, MSK(5, 12),
+			(phy_dchd_b[idx][1] >> 12) & 0x1f);
+		/* 0xe5 */
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_DCHD_CNTL0, MSK(5, 10),
+			(phy_dchd_b[idx][0] >> 10) & 0x1f);
 		rx_pr("phy_bw\n");
 	}
 }
