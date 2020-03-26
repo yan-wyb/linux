@@ -454,6 +454,17 @@ struct di_mm_s {
 	struct page	*ppage;
 	unsigned long	addr;
 };
+
+enum cpu_type_e {
+	MESON_CPU_MAJOR_ID_DEINTERLACE = 0x1,
+	MESON_CPU_MAJOR_ID_TM2_REVB,
+	MESON_CPU_MAJOR_ID_UNKNOWN,
+};
+
+struct di_device_data_s {
+	enum cpu_type_e cpu_type;
+};
+
 extern bool di_mm_alloc(int cma_mode, size_t count, struct di_mm_s *o);
 extern bool di_mm_release(int cma_mode,
 			struct page *pages,
@@ -462,6 +473,7 @@ extern bool di_mm_release(int cma_mode,
 
 
 unsigned char is_bypass(vframe_t *vf_in);
+bool is_meson_tm2b(void);
 
 /*---get di state parameter---*/
 struct di_dev_s *get_di_de_devp(void);
@@ -484,7 +496,7 @@ u32 di_requeset_afbc(u32 onoff);
 /***********************/
 extern bool di_wr_cue_int(void);
 extern int reg_cue_int_show(struct seq_file *seq, void *v);
-
+int di_get_disp_cnt_demo(void);
 bool dil_attach_ext_api(const struct di_ext_ops *di_api);
 /*---------------------*/
 

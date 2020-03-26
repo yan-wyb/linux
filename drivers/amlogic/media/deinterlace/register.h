@@ -4418,4 +4418,10 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define NR3_SUREMOT_YGAIN				0x2ff5
 #define NR3_SUREMOT_CGAIN				0x2ff6
 
+/* for tm2-b */
+
+#define DI_RO_PRE_FIELD_CNT0				((0x17A3))
+#define DI_RO_PRE_FIELD_CNT1				((0x17A4))
+#define DI_RO_POS_FRAME_CNT0				((0x17A5))
+#define DI_RO_POS_FRAME_CNT1				((0x17A6))
 #endif

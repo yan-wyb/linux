@@ -44,6 +44,7 @@
 #include <linux/dma-contiguous.h>
 #include <linux/ctype.h>
 #include <linux/string.h>
+#include <linux/of_device.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/amlogic/cpu_version.h>
@@ -68,19 +69,8 @@
 #include "di_pps.h"
 #include "di_pqa.h"
 
-#define CREATE_TRACE_POINTS
-#include "deinterlace_trace.h"
-
-/*2018-07-18 add debugfs*/
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
-/*2018-07-18 -----------*/
-
-#undef TRACE_INCLUDE_PATH
-#undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_PATH .
-#define TRACE_INCLUDE_FILE deinterlace_trace
-#include <trace/define_trace.h>
 
 #ifdef DET3D
 #include "detect3d.h"
@@ -261,6 +251,7 @@ static unsigned int recovery_log_reason;
 static unsigned int recovery_log_queue_idx;
 static struct di_buf_s *recovery_log_di_buf;
 
+static struct di_device_data_s di_meson_dev;
 
 static long same_field_top_count;
 static long same_field_bot_count;
@@ -285,6 +276,11 @@ static const
 struct vframe_receiver_op_s di_vf_receiver = {
 	.event_cb	= di_receiver_event_fun
 };
+
+int di_get_disp_cnt_demo(void)
+{
+	return disp_frame_count;
+}
 
 static struct vframe_receiver_s di_vf_recv;
 
@@ -3689,6 +3685,7 @@ static void pre_de_process(void)
 	di_pre_stru.irq_time[0] = cur_to_msecs();
 	di_pre_stru.irq_time[1] = cur_to_msecs();
 	ddbg_mod_save(eDI_DBG_MOD_PRE_SETE, 0, di_pre_stru.in_seq);/*dbg*/
+	di_tr_ops.pre_set(di_pre_stru.di_wr_buf->vframe->omx_index);
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (di_pre_rdma_enable & 0x2)
 		rdma_config(de_devp->rdma_handle, RDMA_TRIGGER_MANUAL);
@@ -3763,6 +3760,10 @@ static void pre_de_done_buf_config(void)
 
 	ddbg_mod_save(eDI_DBG_MOD_PRE_DONEB, 0, di_pre_stru.in_seq);/*dbg*/
 	if (di_pre_stru.di_wr_buf) {
+		di_tr_ops.pre_cnt0(di_pre_stru.di_wr_buf->vframe->omx_index);
+		di_tr_ops.pre_cnt1(di_pre_stru.di_wr_buf->vframe->omx_index);
+		di_tr_ops.pre_ready(di_pre_stru.di_wr_buf->vframe->omx_index);
+
 		if (di_pre_stru.pre_throw_flag > 0) {
 			di_pre_stru.di_wr_buf->throw_flag = 1;
 			di_pre_stru.pre_throw_flag--;
@@ -4221,7 +4222,7 @@ static unsigned char pre_de_buf_config(void)
 
 		if (vframe == NULL)
 			return 0;
-
+		di_tr_ops.pre_get(vframe->omx_index);
 		/*for support compress from dec*/
 		if (IS_COMP_MODE(vframe->type) &&
 			!is_bypass(vframe) &&
@@ -5194,9 +5195,8 @@ static irqreturn_t de_irq(int irq, void *dev_instance)
 	if (flag) {
 		di_pre_stru.irq_time[0] =
 			(cur_to_msecs() - di_pre_stru.irq_time[0]);
-		trace_di_pre("PRE-IRQ-0",
-			di_pre_stru.field_count_for_cont,
-			di_pre_stru.irq_time[0]);
+		di_tr_ops.pre(di_pre_stru.field_count_for_cont,
+				di_pre_stru.irq_time[0]);
 		/*add from valsi wang.feng*/
 		di_arb_sw(false);
 		di_arb_sw(true);
@@ -5242,8 +5242,7 @@ static irqreturn_t post_irq(int irq, void *dev_instance)
 		di_post_stru.post_de_busy = 0;
 		di_post_stru.irq_time =
 			(cur_to_msecs() - di_post_stru.irq_time);
-		trace_di_post("POST-IRQ-1",
-				di_post_stru.post_wr_cnt,
+		di_tr_ops.post(di_post_stru.post_wr_cnt,
 				di_post_stru.irq_time);
 		DI_Wr(DI_INTR_CTRL, (data32&0xffff0004)|(intr_mode<<30));
 		/* disable wr back avoid pps sreay in g12a */
@@ -5543,6 +5542,10 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		return 0;
 	}
 
+	if (di_buf->vframe)
+		di_tr_ops.post_set(di_buf->vframe->omx_index);
+	else
+		return 0;
 	if (di_post_stru.toggle_flag && di_buf->di_buf_dup_p[1])
 		top_bot_config(di_buf->di_buf_dup_p[1]);
 
@@ -6250,8 +6253,10 @@ void drop_frame(int check_drop, int throw_flag, struct di_buf_s *di_buf)
 	} else {
 		if (post_wr_en && post_wr_support)
 			queue_in(di_buf, QUEUE_POST_DOING);
-		else
+		else {
 			queue_in(di_buf, QUEUE_POST_READY);
+			di_tr_ops.post_ready(di_buf->vframe->omx_index);
+		}
 		di_print("DI:%dth %s[%d] => post ready %u ms.\n",
 		frame_count, vframe_type_name[di_buf->type], di_buf->index,
 		jiffies_to_msecs(jiffies_64 - di_buf->vframe->ready_jiffies64));
@@ -7134,6 +7139,7 @@ static void di_reg_process_irq(void)
 		} else {
 			di_pre_stru.bypass_flag = false;
 		}
+		di_tr_ops.pre_get(vframe->omx_index);
 		/* patch for vdin progressive input */
 		if ((is_from_vdin(vframe) &&
 		    is_progressive(vframe))
@@ -7909,6 +7915,7 @@ static int di_receiver_event_fun(int type, void *data, void *arg)
 		}
 		ddbg_mod_save(eDI_DBG_MOD_REGE, 0, 0);
 		mutex_unlock(&di_event_mutex);
+		pr_info("vpu_clkb = %ld.\n", clk_get_rate(de_devp->vpu_clkb));
 		pr_info("DI: reg f\n");
 	}
 #ifdef DET3D
@@ -7992,15 +7999,26 @@ static vframe_t *di_vf_peek(void *arg)
 	struct di_buf_s *di_buf = NULL;
 
 	video_peek_cnt++;
-	if (di_pre_stru.bypass_flag)
+	if (di_pre_stru.bypass_flag) {
+		di_tr_ops.post_peek(0);
 		return vf_peek(VFM_NAME);
+	}
 	if ((init_flag == 0) || recovery_flag ||
-		di_blocking || di_pre_stru.unreg_req_flag || dump_state_flag)
+		di_blocking || di_pre_stru.unreg_req_flag || dump_state_flag) {
+		di_tr_ops.post_peek(1);
 		return NULL;
+	}
 	if ((run_flag == DI_RUN_FLAG_PAUSE) ||
-	    (run_flag == DI_RUN_FLAG_STEP_DONE))
+	    (run_flag == DI_RUN_FLAG_STEP_DONE)) {
+		di_tr_ops.post_peek(2);
 		return NULL;
-
+	}
+	/**************************/
+	if (list_count(QUEUE_DISPLAY) > 4) {
+		di_tr_ops.post_peek(3);
+		return NULL;
+	}
+	/**************************/
 	log_buffer_state("pek");
 
 	/*fast_process();*/
@@ -8028,6 +8046,10 @@ static vframe_t *di_vf_peek(void *arg)
 			vframe_type_name[di_buf->type],
 			di_buf->index, vframe_ret);
 #endif
+	if (vframe_ret)
+		di_tr_ops.post_peek(9);
+	else
+		di_tr_ops.post_peek(4);
 
 	return vframe_ret;
 }
@@ -8071,12 +8093,16 @@ static vframe_t *di_vf_get(void *arg)
 		return vf_get(VFM_NAME);
 
 	if ((init_flag == 0) || recovery_flag ||
-		di_blocking || di_pre_stru.unreg_req_flag || dump_state_flag)
+		di_blocking || di_pre_stru.unreg_req_flag || dump_state_flag) {
+		di_tr_ops.post_get2(1);
 		return NULL;
+	}
 
 	if ((run_flag == DI_RUN_FLAG_PAUSE) ||
-	    (run_flag == DI_RUN_FLAG_STEP_DONE))
+	    (run_flag == DI_RUN_FLAG_STEP_DONE)) {
+		di_tr_ops.post_get2(2);
 		return NULL;
+	}
 
 #ifdef SUPPORT_START_FRAME_HOLD
 	if ((disp_frame_count == 0) && (is_bypass(NULL) == 0)) {
@@ -8156,6 +8182,11 @@ get_vframe:
 			 di_buf->index, vframe_ret,
 			 jiffies_to_msecs
 			 (jiffies_64 - vframe_ret->ready_jiffies64));
+		di_tr_ops.post_get(vframe_ret->omx_index);
+		di_tr_ops.pos_cnt0(vframe_ret->omx_index);
+		di_tr_ops.pos_cnt1(vframe_ret->omx_index);
+	} else {
+		di_tr_ops.post_get2(3);
 	}
 
 	if (!post_wr_en && di_post_stru.run_early_proc_fun_flag && vframe_ret) {
@@ -8674,10 +8705,42 @@ static void di_get_vpu_clkb(struct device *dev, struct di_dev_s *pdev)
 	#endif
 }
 
+static struct di_device_data_s deinterlace = {
+	.cpu_type = MESON_CPU_MAJOR_ID_DEINTERLACE,
+};
+
+static struct di_device_data_s deinterlace_tm2_revb = {
+	.cpu_type = MESON_CPU_MAJOR_ID_TM2_REVB,
+};
+
+static const struct of_device_id amlogic_deinterlace_dt_match[] = {
+	{
+		.compatible = "amlogic, deinterlace",
+		.data = &deinterlace,
+	},
+	{
+		.compatible = "amlogic, deinterlace_di_tm2b",
+		.data = &deinterlace_tm2_revb,
+	},
+	{}
+};
+
+bool is_meson_tm2b(void)
+{
+	if (di_meson_dev.cpu_type ==
+		MESON_CPU_MAJOR_ID_TM2_REVB)
+		return true;
+	else
+		return false;
+}
+
 static int di_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct di_dev_s *di_devp = NULL;
+
+	const struct of_device_id *match;
+	struct di_device_data_s *di_meson;
 
 	di_pr_info("%s:\n", __func__);
 
@@ -8721,6 +8784,23 @@ static int di_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(di_devp->dev, di_devp);
 	platform_set_drvdata(pdev, di_devp);
+
+	match = of_match_device(amlogic_deinterlace_dt_match,
+				&pdev->dev);
+	if (!match) {
+		pr_error("%s,no matched table\n", __func__);
+		goto fail_cdev_add;
+	} else {
+		di_meson = (struct di_device_data_s *)match->data;
+			if (di_meson)
+				memcpy(&di_meson_dev, di_meson,
+				       sizeof(struct di_device_data_s));
+			else {
+				pr_error("%s data NOT match\n", __func__);
+				ret = -EEXIST;
+				return ret;
+			}
+	}
 	ret = of_reserved_mem_device_init(&pdev->dev);
 	if (ret != 0)
 		pr_info("DI no reserved mem.\n");
@@ -9101,10 +9181,12 @@ static const struct dev_pm_ops di_pm_ops = {
 #endif
 
 /* #ifdef CONFIG_USE_OF */
+#ifdef MARK_HIS
 static const struct of_device_id amlogic_deinterlace_dt_match[] = {
 	{ .compatible = "amlogic, deinterlace", },
 	{},
 };
+#endif
 /* #else */
 /* #define amlogic_deinterlace_dt_match NULL */
 /* #endif */

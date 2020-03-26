@@ -38,4 +38,30 @@ void debug_device_files_add(struct device *dev);
 void debug_device_files_del(struct device *dev);
 extern void di_debugfs_init(void);
 extern void di_debugfs_exit(void);
+
+/********************************
+ *trace:
+ *******************************/
+struct di_tr_ops_s {
+	void (*pre)(unsigned int index, unsigned long ctime);
+	void (*post)(unsigned int index, unsigned long ctime);
+
+	void (*pre_cnt0)(unsigned int index);
+	void (*pre_cnt1)(unsigned int index);
+	void (*pos_cnt0)(unsigned int index);
+	void (*pos_cnt1)(unsigned int index);
+
+	void (*pre_get)(unsigned int index);
+	void (*pre_set)(unsigned int index);
+	void (*pre_ready)(unsigned int index);
+	void (*post_ready)(unsigned int index);
+	void (*post_get)(unsigned int index);
+	void (*post_get2)(unsigned int index);
+	void (*post_set)(unsigned int index);
+	void (*post_ir)(unsigned int index);
+	void (*post_do)(unsigned int index);
+	void (*post_peek)(unsigned int index);
+};
+
+extern const struct di_tr_ops_s di_tr_ops;
 #endif

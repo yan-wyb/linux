@@ -38,7 +38,18 @@
 #include "di_pps.h"
 #include "nr_downscale.h"
 #include <linux/amlogic/media/vfm/vframe_provider.h>
+/********************************
+ *trace:
+ *******************************/
+#define CREATE_TRACE_POINTS
+#include "deinterlace_trace.h"
 
+#undef TRACE_INCLUDE_PATH
+#undef TRACE_INCLUDE_FILE
+#define TRACE_INCLUDE_PATH .
+#define TRACE_INCLUDE_FILE deinterlace_trace
+#include <trace/define_trace.h>
+/**********************/
 
 /*2018-07-18 add debugfs*/
 #include <linux/seq_file.h>
@@ -1334,4 +1345,209 @@ void di_debugfs_exit(void)
 		debugfs_remove_recursive(de_devp->dbg_root);
 }
 /*-----------------------*/
+
+/********************************
+ *trace:
+ *******************************/
+
+u64 dicur_to_usecs(void)/*2019*/
+{
+	u64 cur = sched_clock();
+
+	do_div(cur, NSEC_PER_USEC);
+	return cur;
+}
+
+#define DI_TRACE_LIMIT_DEMO		10000
+
+static void trace_pre_cnt0(unsigned int index)
+{
+	u64 data = 0;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	if (is_meson_tm2_cpu() && is_meson_tm2b())
+		data = RDMA_RD(DI_RO_PRE_FIELD_CNT0);
+
+	trace_di_pre_cnt0("PRE-GET-CNT0", index, data);
+}
+
+static void trace_pre_cnt1(unsigned int index)
+{
+	u64 data = 0;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	if (is_meson_tm2_cpu() && is_meson_tm2b())
+		data = RDMA_RD(DI_RO_PRE_FIELD_CNT1);
+	trace_di_pre_cnt1("PRE-GET-CNT1", index, data);
+}
+
+static void trace_pos_cnt0(unsigned int index)
+{
+	u64 data = 0;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	if (is_meson_tm2_cpu() && is_meson_tm2b())
+		data = RDMA_RD(DI_RO_POS_FRAME_CNT0);
+	trace_di_pos_cnt0("POS-GET-CNT0", index, data);
+}
+
+static void trace_pos_cnt1(unsigned int index)
+{
+	u64 data = 0;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	if (is_meson_tm2_cpu() && is_meson_tm2b())
+		data = RDMA_RD(DI_RO_POS_FRAME_CNT1);
+	trace_di_pos_cnt1("POS-GET-CNT1", index, data);
+}
+
+static void di_trace_pre(unsigned int index, unsigned long ctime)
+{
+	trace_di_pre("PRE-IRQ-0", index, ctime);
+}
+
+static void di_trace_post(unsigned int index, unsigned long ctime)
+{
+	trace_di_post("POST-IRQ-1", index, ctime);
+}
+
+static void di_pre_get(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pre_getxx("PRE-GET-01", index, ustime);
+}
+
+static void di_pre_set(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pre_setxx("PRE-SET-01", index, ustime);
+}
+
+static void di_pre_ready(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pre_ready("PRE-READY2", index, ustime);
+}
+
+static void di_post_ready(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_ready("PST-READY3", index, ustime);
+}
+
+static void di_post_get(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_getxx("PST-GET-04", index, ustime);
+}
+
+static void di_post_get2(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_get2x("PST-GET-0a", index, ustime);
+}
+
+static void di_post_set(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_setxx("PST-SET-05", index, ustime);
+}
+
+static void di_post_irq(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_irxxx("PST-IRQ-06", index, ustime);
+}
+
+static void di_post_doing(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_doing("PST-DOI-07", index, ustime);
+}
+
+static void di_post_peek(unsigned int index)
+{
+	u64 ustime;
+
+	if (di_get_disp_cnt_demo() > DI_TRACE_LIMIT_DEMO)
+		return;
+
+	ustime = dicur_to_usecs();
+	trace_di_pst_peekx("PST-PEEK-8", index, ustime);
+}
+
+const struct di_tr_ops_s di_tr_ops = {
+	.pre = di_trace_pre,
+	.post = di_trace_post,
+
+	.pre_cnt0 = trace_pre_cnt0,
+	.pre_cnt1 = trace_pre_cnt1,
+	.pos_cnt0 = trace_pos_cnt0,
+	.pos_cnt1 = trace_pos_cnt1,
+
+	.pre_get = di_pre_get,
+	.pre_set = di_pre_set,
+	.pre_ready = di_pre_ready,
+	.post_ready = di_post_ready,
+	.post_get = di_post_get,
+	.post_get2 = di_post_get2,
+
+	.post_set = di_post_set,
+	.post_ir = di_post_irq,
+	.post_do = di_post_doing,
+	.post_peek = di_post_peek,
+};
 
