@@ -533,6 +533,15 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		return;
 	}
 
+	/* refuse start dec during suspend period,
+	 * otherwise system will not go to suspend due to vdin clk on
+	 */
+	if (devp->flags & VDIN_FLAG_SUSPEND) {
+		pr_info("err:[vdin.%d]%s when suspend.\n",
+			devp->index, __func__);
+		return;
+	}
+
 	if (devp->frontend && devp->frontend->sm_ops) {
 		sm_ops = devp->frontend->sm_ops;
 		sm_ops->get_sig_property(devp->frontend, &devp->prop);
@@ -911,13 +920,6 @@ int start_tvin_service(int no, struct vdin_parm_s  *para)
 			return -EBUSY;
 		}
 	}
-
-	vdin_clk_onoff(devp, true);
-	/*config the vdin use default value*/
-	vdin_set_default_regmap(devp);
-	/*only for vdin0*/
-	if (devp->urgent_en && (devp->index == 0))
-		vdin_urgent_patch_resume(devp->addr_offset);
 
 	devp->parm.port = para->port;
 	devp->parm.info.fmt = para->fmt;

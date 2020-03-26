@@ -267,9 +267,27 @@
 /* Bit 11:6        //default == 0, up_th  up threshold */
 /* Bit 5:0         //default == 0, dn_th  dn threshold */
 #define VDIN_LFIFO_URG_CTRL        ((0x121e))/* + 0xd0100000) */
-/* Bit 8, 1: discard data before line fifo, 0: normal mode */
-/* Bit 7:0 Write chroma canvas address */
+
 #define VDIN_WR_CTRL2    ((0x121f))/* + 0xd0100000) */
+/*1: enable WR 10 bit mode, 0: disable WR 10 bit mode*/
+#define VDIN_WR_10BIT_MODE_BIT		19
+#define VDIN_WR_10BIT_MODE_WID		1
+/* data_ext_en 1:send out data if req was interrupt by soft reset */
+/* 0:normal mode */
+#define VDIN_WR_DATA_EXT_EN_BIT		18
+#define VDIN_WR_DATA_EXT_EN_WID		1
+/*0: 1 word in 1burst, 1: 2 words in 1burst;
+ *10: 4 words in 1burst; 11: reserved
+ */
+#define VDIN_WR_BURST_MODE_BIT		12
+#define VDIN_WR_BURST_MODE_WID		4
+/* 1: discard data before line fifo, 0: normal mode */
+#define DISCARD_BEF_LINE_FIFO_BIT		8
+#define DISCARD_BEF_LINE_FIFO_WID       1
+/* Write chroma canvas address */
+#define WRITE_CHROMA_CANVAS_ADDR_BIT	0
+#define WRITE_CHROMA_CANVAS_ADDR_WID   8
+
 /* Bit 31:30 hconv_mode, Applicable only to bit[13:12]=0 or 2.
  * 0: Output every even pixels' CbCr;
  */
@@ -1260,26 +1278,6 @@
 #define VDIN_LFIFO_URG_DN_TH_BIT        0
 #define VDIN_LFIFO_URG_DN_TH_WID        6
 
-
-/* #define VDIN_WR_CTRL2                           0x121f */
-/*1: enable WR 10 bit mode, 0: disable WR 10 bit mode*/
-#define VDIN_WR_10BIT_MODE_BIT		19
-#define VDIN_WR_10BIT_MODE_WID		1
-/* data_ext_en 1:send out data if req was interrupt by soft reset */
-/* 0:normal mode */
-#define VDIN_WR_DATA_EXT_EN_BIT		18
-#define VDIN_WR_DATA_EXT_EN_WID		1
-/*0: 1 word in 1burst, 1: 2 words in 1burst;
- *10: 4 words in 1burst; 11: reserved
- */
-#define VDIN_WR_BURST_MODE_BIT		12
-#define VDIN_WR_BURST_MODE_WID		4
-/* 1: discard data before line fifo, 0: normal mode */
-#define DISCARD_BEF_LINE_FIFO_BIT		8
-#define DISCARD_BEF_LINE_FIFO_WID       1
-/* Write chroma canvas address */
-#define WRITE_CHROMA_CANVAS_ADDR_BIT	0
-#define WRITE_CHROMA_CANVAS_ADDR_WID   8
 
 /* #define VDIN_WR_H_START_END                        0x1221 */
 

@@ -4092,6 +4092,8 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 		    vdin_cfg_444_to_422_wmif_en) {
 			/*devp->source_bitdepth = VDIN_COLOR_DEEPS_12BIT;*/
 			devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
+			wr_bits(offset, VDIN_WR_CTRL2, MIF_10BIT,
+				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
 			vdin_dolby_de_tunnel_to_12bit(devp, true);
 		}
 		break;
@@ -4787,7 +4789,7 @@ void vdin_dolby_de_tunnel_to_12bit(struct vdin_dev_s *devp,
 	u32 data32;
 	unsigned int offset = devp->addr_offset;
 
-	data32 = (3 << 19 |
+	data32 = (3 << 18 |
 		  2 << 15 |
 		  0 << 12 |
 		  5 << 9 |
