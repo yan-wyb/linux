@@ -5183,6 +5183,7 @@ static ssize_t amvecm_cpu_ver_store(struct class *cla,
 		if (!strncmp(parm[1], "cpu_ver", 7)) {
 			if (!is_meson_tm2_cpu()) {
 				pr_info("VER_NULL\n");
+				kfree(buf_orig);
 				return count;
 			}
 			if (is_meson_rev_a())
@@ -5197,6 +5198,7 @@ static ssize_t amvecm_cpu_ver_store(struct class *cla,
 	} else
 		pr_info("error cmd\n");
 
+	kfree(buf_orig);
 	return count;
 }
 
