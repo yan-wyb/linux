@@ -18,7 +18,8 @@
 /dts-v1/;
 
 #include "mesontm2_revb.dtsi"
-#include "partition_mbox_normal_P_32.dtsi"
+#include "partition_mbox_normal.dtsi"
+#include "mesontm2_t962x3_ab309-panel.dtsi"
 
 / {
 	model = "Amlogic TM2 REVB T962X3 AB309";
@@ -43,7 +44,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x0 0x0 0x0 0x40000000>;
+		linux,usable-memory = <0x0 0x0 0x0 0x80000000>;
 	};
 
 	reserved-memory {
@@ -72,14 +73,22 @@
 			reusable;
 			size = <0x0 0x800000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
+			alloc-ranges = <0x0 0x7f800000 0x0 0x800000>;
+		};
+
+		lcd_tcon_reserved:linux,lcd_tcon {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x0>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x7ec00000 0x0 0xc00000>;
 		};
 
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0xd000000>;
+			size = <0x0 0x13400000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
@@ -95,8 +104,8 @@
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x2000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x0  0x8000000>;
+			alignment = <0x0  0x400000>;
 		};
 
 		/*  vdin0 CMA pool */
@@ -316,8 +325,7 @@
 			};
 			tdmacodec: codec {
 				//sound-dai = <&dummy_codec>;
-				prefix-names = "AMP", "AMP1";
-				sound-dai = <&ad82584f &ad82584f1 &tl1_codec>;
+				sound-dai = </*&ad82584f*/ &tl1_codec>;
 			};
 		};
 
@@ -504,7 +512,7 @@
 		gamma_en = <1>;/*1:enabel ;0:disable*/
 		wb_en = <1>;/*1:enabel ;0:disable*/
 		cm_en = <0>;/*1:enabel ;0:disable*/
-		wb_sel = <0>;/*1:mtx ;0:gainoff*/
+		wb_sel = <1>;/*1:mtx ;0:gainoff*/
 		vlock_en = <1>;/*1:enable;0:disable*/
 		vlock_mode = <0x4>;
 		/* vlock work mode:
@@ -523,7 +531,7 @@
 		compatible = "amlogic, dolby_vision_tm2";
 		dev_name = "aml_amdolby_vision_driver";
 		status = "disabled";
-		tv_mode = <0>;/*1:enabel ;0:disable*/
+		tv_mode = <1>;/*1:enabel ;0:disable*/
 	};
 
 	vdin@0 {
@@ -615,9 +623,6 @@
 		>;
 		clocks = <&clkc CLKID_DAC_CLK>;
 		clock-names = "vdac_clk_gate";
-
-		cutwindow_val_h = <0 0 0 0 8>; /* level 0~4 */
-		cutwindow_val_v = <4 8 14 16 24>;  /* level 0~4 */
 	};
 
 	vbi {
@@ -666,18 +671,18 @@
 			0xffff  0x0>; /* ending flag */
 	};
 
-	/* for external keypad */
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
 		status = "disabled";
-		key_name = "power","up","down","enter","left","right","home";
+		key_name = "vol-", "vol+", "ch+", "ch-",
+			"menu", "source", "exit";
 		key_num = <7>;
-		io-channels = <&saradc SARADC_CH2>,<&saradc SARADC_CH3>;
+		io-channels = <&saradc SARADC_CH2 &saradc SARADC_CH3>;
 		io-channel-names = "key-chan-2", "key-chan-3";
-		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2 SARADC_CH2
-			SARADC_CH2 SARADC_CH3 SARADC_CH3>;
-		key_code = <116 103 108 28 105 106 102>;
-		key_val = <0 143 266 389 512 143 266>; //val=voltage/1800mV*1023
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2
+			SARADC_CH2 SARADC_CH3 SARADC_CH3 SARADC_CH3>;
+		key_code = <114 115 192 193 139 466 174>;
+		key_val = <0 143 266 389 0 143 266>; //val=voltage/1800mV*1023
 		key_tolerance = <40 40 40 40 40 40 40>;
 	};
 
@@ -794,47 +799,31 @@
 			key-permit = "read","write","del";
 		};
 		keysn_16:key_16{
-			key-name = "attestationkeybox";// attestation key
-			key-device = "secure";
+			key-name = "lcd";
+			key-device = "normal";
 			key-permit = "read","write","del";
 		};
 		keysn_17:key_17{
-			key-name = "hdcp22_rprx_fw";
+			key-name = "lcd_extern";
 			key-device = "normal";
 			key-permit = "read","write","del";
 		};
 		keysn_18:key_18{
-			key-name = "hdcp22_rprp_fw";
+			key-name = "backlight";
 			key-device = "normal";
 			key-permit = "read","write","del";
 		};
 		keysn_19:key_19{
-			key-name = "hdcp22_rp_private";
-			key-device = "secure";
+			key-name = "lcd_tcon";
+			key-device = "normal";
 			key-permit = "read","write","del";
 		};
 		keysn_20:key_20{
-			key-name = "attestationdevidbox";// attest dev id box
+			key-name = "attestationkeybox";// attestation key
 			key-device = "secure";
 			key-permit = "read","write","del";
 		};
 	}; /* End unifykey */
-
-	amlvideo2_0 {
-		compatible = "amlogic, amlvideo2";
-		dev_name = "amlvideo2";
-		status = "disabled";
-		amlvideo2_id = <0>;
-		cma_mode = <1>;
-	};
-
-	amlvideo2_1 {
-		compatible = "amlogic, amlvideo2";
-		dev_name = "amlvideo2";
-		status = "disabled";
-		amlvideo2_id = <1>;
-		cma_mode = <1>;
-	};
 
 	hdmirx {
 		compatible = "amlogic, hdmirx_tm2";
@@ -912,8 +901,8 @@
 		port_num = <4>;
 		ee_cec;
 		/*cec_sel = <2>;*/
-		output = <1>;	/*output port number*/
 		arc_port_mask = <0x2>;
+		output = <1>;	/*output port number*/
 		interrupts = <0 203 1
 					0 199 1>;
 		interrupt-names = "hdmi_aocecb","hdmi_aocec";
@@ -1198,12 +1187,15 @@
 		status = "disabled";
 		tuner_cur = <0>; /* default use tuner */
 		tuner_num = <1>; /* tuner number, multi tuner support */
-		tuner_name_0 = "si2151_tuner";
+		tuner_name_0 = "mxl661_tuner";
 		tuner_i2c_adap_0 = <&i2c0>;
 		tuner_i2c_addr_0 = <0x60>;
-		/* tuner_xtal_0 = <0>; */ /* unuse for si2151 */
-		/* tuner_xtal_mode_0 = <0>; */
-		/* tuner_xtal_cap_0 = <0>; */
+		tuner_xtal_0 = <0>; /* 0: 16MHz, 1: 24MHz */
+		tuner_xtal_mode_0 = <0>;
+					/* NO_SHARE_XTAL(0)
+					 * SLAVE_XTAL_SHARE(3)
+					 */
+		tuner_xtal_cap_0 = <25>; /* when tuner_xtal_mode = 3, set 25 */
 	};
 
 	atv-demod {
@@ -1220,37 +1212,6 @@
 				0x0 0xff64a000 0x0 0x2000>; /* audio reg */
 		reg_23cf = <0x88188832>;
 		/*default:0x88188832;r840 on haier:0x48188832*/
-	};
-
-	bt-dev{
-		compatible = "amlogic, bt-dev";
-		status = "okay";
-		gpio_reset = <&gpio       GPIOC_13       GPIO_ACTIVE_HIGH>;
-	};
-
-	wifi{
-		compatible = "amlogic, aml_wifi";
-		status = "okay";
-		interrupt_pin = <&gpio       GPIOC_12       GPIO_ACTIVE_HIGH>;
-		irq_trigger_type = "GPIO_IRQ_LOW";
-		dhd_static_buf;    //dhd_static_buf support
-		power_on_pin = <&gpio       GPIOC_11       GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pwm_b_pins1>;
-		pwm_config = <&wifi_pwm_conf>;
-	};
-
-	wifi_pwm_conf:wifi_pwm_conf{
-		pwm_channel1_conf {
-			pwms = <&pwm_ab MESON_PWM_1 30541 0>;
-			duty-cycle = <15270>;
-			times = <8>;
-		};
-		pwm_channel2_conf {
-			pwms = <&pwm_ab MESON_PWM_3 30500 0>;
-			duty-cycle = <15250>;
-			times = <12>;
-		};
 	};
 
 /*
@@ -1368,7 +1329,7 @@
 			"samesource_srcpll", "samesource_clk";
 
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdma_mclk &tdmout_a>;
+		pinctrl-0 = </*&tdma_mclk &tdmout_a*/>;
 
 		/*
 		 * 0: tdmout_a;
@@ -1404,7 +1365,7 @@
 		#sound-dai-cells = <0>;
 
 		dai-tdm-lane-slot-mask-in = <1 0 0 0>;
-		dai-tdm-lane-slot-mask-out = <0 1 0 0>;
+		dai-tdm-lane-slot-mask-out = <1 0 0 0>;
 		dai-tdm-clk-sel = <1>;
 
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
@@ -1430,7 +1391,7 @@
 		clock-names = "mclk", "clk_srcpll";
 
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmout_c &tdmin_c>;
+		pinctrl-0 = </*&tdmout_c &tdmin_c*/>;
 
 		/* enable control gain */
 		ctrl_gain = <1>;
@@ -1530,8 +1491,9 @@
 
 		pinctrl-names = "spdif_pins",
 				"spdif_pins_mute";
-		pinctrl-0 = <&spdifin_a>;
-		//pinctrl-1 = <&spdifout_a_mute>;
+
+		pinctrl-0 = <&spdifout_a &spdifin_a>;
+		pinctrl-1 = <&spdifout_a_mute>;
 
 		/*
 		 * whether do asrc for pcm and resample a or b
@@ -1868,6 +1830,15 @@
 
 }; /* end of pinctrl_periphs */
 
+&pinctrl_aobus {
+	spdifout: spdifout {
+		mux { /* gpiao_10 */
+			groups = "spdif_out_ao";
+			function = "spdif_out_ao";
+		};
+	};
+};  /* end of pinctrl_aobus */
+
 &audio_data{
 	status = "disabled";
 };
@@ -1885,30 +1856,15 @@
 		reg = <0x2d>;
 		status = "disable";
 	};
-};
 
-&i2c3 {
-	status = "okay";
-	pinctrl-names="default";
-	pinctrl-0=<&i2c3_h1_pins>;
-	clock-frequency = <400000>;
-
-	ad82584f: ad82584f@60 {
-		compatible = "ESMT, ad82584f";
-		#sound-dai-cells = <0>;
-		reg = <0x30>;
-		status = "okay";
-		reset_pin = <&gpio GPIOH_13 0>;
-		no_mclk;
-	};
-
-	ad82584f1: ad82584f@62 {
+	ad82584f: ad82584f@62 {
 		compatible = "ESMT, ad82584f";
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
-		status = "okay";
-		no_mclk;
+		status = "disabled";
+		reset_pin = <&gpio_ao GPIOAO_6 0>;
 	};
+
 };
 
 &sd_emmc_c {
@@ -2004,9 +1960,9 @@
 
 &ethmac {
 	status = "disabled";
-	//pinctrl-names = "internal_eth_pins", "internal_gpio_pins";
-	//pinctrl-0 = <&internal_eth_pins>;
-	//pinctrl-1 = <&internal_gpio_pins>;
+	pinctrl-names = "internal_eth_pins", "internal_gpio_pins";
+	pinctrl-0 = <&internal_eth_pins>;
+	pinctrl-1 = <&internal_gpio_pins>;
 	mc_val = <0x49e04>;
 
 	internal_phy=<1>;
@@ -2044,12 +2000,14 @@
 };
 
 &pcie_A {
-	reset-gpio = <&gpio_ao GPIOAO_4 GPIO_ACTIVE_HIGH>;
+	/* pcie a reset gpio must be updated */
+	reset-gpio = <&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
 	status = "disable";
 };
 
 &pcie_B {
-	/* ab311 only pcie a, no pcie b */
+	/* pcie b reset gpio must be updated */
+	reset-gpio = <&gpio GPIOH_22 GPIO_ACTIVE_HIGH>;
 	status = "disable";
 };
 
@@ -2064,9 +2022,9 @@
 	status = "okay";
 	display_size_default = <1920 1080 1920 2160 32>;
 	mem_size = <0x00800000 0x1980000 0x100000 0x100000 0x800000>;
-	logo_addr = "0x3f800000";
-	mem_alloc = <1>;
-	pxp_mode = <1>; /** 0:normal mode 1:pxp mode */
+	logo_addr = "0x7f800000";
+	mem_alloc = <0>;
+	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
 
 &pwm_AO_cd {
@@ -2082,14 +2040,26 @@
 	clock-frequency = <300000>;
 	pinctrl-names="default";
 	pinctrl-0=<&i2c1_h_pins>;
-};
+	lcd_extern_i2c0: lcd_extern_i2c@0 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_T5800Q";
+		reg = <0x1c>;
+		status = "okay";
+	};
 
-&pwm_ab {
-	status = "okay";
-};
+	lcd_extern_i2c1: lcd_extern_i2c@1 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_ANX6862";
+		reg = <0x20>;
+		status = "okay";
+	};
 
-&pwm_cd {
-	status = "okay";
+	lcd_extern_i2c2: lcd_extern_i2c@2 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_ANX7911";
+		reg = <0x74>;
+		status = "okay";
+	};
 };
 
 &efuse {
