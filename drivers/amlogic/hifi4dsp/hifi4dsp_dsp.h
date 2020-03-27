@@ -115,6 +115,7 @@ struct hifi4dsp_dsp {
 	u32 id;
 	int irq;
 	int freq;
+	int regionsize;
 	/* runtime */
 	spinlock_t spinlock;	/* used for IPC */
 	struct mutex mutex;		/* used for fw */

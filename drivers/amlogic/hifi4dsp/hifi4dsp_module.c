@@ -58,7 +58,8 @@
 #include "dsp_top.h"
 
 struct reg_iomem_t g_regbases;
-static unsigned int boot_sram_addr, boot_sram_size;
+unsigned int boot_sram_addr;
+unsigned int boot_sram_size;
 static unsigned int bootlocation;
 
 static struct reserved_mem hifi4_rmem = {.base = 0, .size = 0};
@@ -1006,6 +1007,7 @@ static int hifi4dsp_platform_probe(struct platform_device *pdev)
 		dsp->dsp_fw = dsp_firmware;
 		dsp->id = id;
 		dsp->freq = pdata->clk_freq;
+		dsp->regionsize = hifi4size;
 		dsp->irq = pdata->irq;
 		dsp->major_id = MAJOR(priv->dev->devt);
 		dsp->dev = priv->dev;

@@ -41,6 +41,8 @@ struct reg_iomem_t {
 };
 
 extern struct reg_iomem_t g_regbases;
+extern unsigned int boot_sram_addr;
+extern unsigned int boot_sram_size;
 
 struct class;
 
