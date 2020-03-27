@@ -330,10 +330,21 @@ void am_meson_crtc_handle_vsync(struct am_meson_crtc *amcrtc)
 {
 	unsigned long flags;
 	struct drm_crtc *crtc;
+	int i;
 
 	crtc = &amcrtc->base;
 	drm_crtc_handle_vblank(crtc);
-
+	for (i = 0; i < VIDEO_LATENCY_VSYNC; i++) {
+		if (!amcrtc->video_fence[i].fence)
+			continue;
+		atomic_dec(&amcrtc->video_fence[i].refcount);
+		if (!atomic_read(&amcrtc->video_fence[i].refcount)) {
+			fence_signal(amcrtc->video_fence[i].fence);
+			fence_put(amcrtc->video_fence[i].fence);
+			amcrtc->video_fence[i].fence = NULL;
+			DRM_DEBUG("video fence signal done index:%d\n", i);
+		}
+	}
 	spin_lock_irqsave(&crtc->dev->event_lock, flags);
 	if (amcrtc->event) {
 		drm_crtc_send_vblank_event(crtc, amcrtc->event);

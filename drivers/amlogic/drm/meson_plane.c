@@ -474,12 +474,15 @@ static int meson_plane_atomic_get_property(struct drm_plane *plane,
 {
 	struct am_osd_plane *osd_plane;
 	struct am_meson_plane_state *plane_state;
+	int ret = -EINVAL;
 
 	osd_plane = to_am_osd_plane(plane);
 	plane_state = to_am_meson_plane_state(state);
-	if (property == osd_plane->prop_premult_en)
+	if (property == osd_plane->prop_premult_en) {
 		*val = plane_state->premult_en;
-	return 0;
+		ret = 0;
+	}
+	return ret;
 }
 
 static int meson_plane_atomic_set_property(struct drm_plane *plane,
@@ -489,13 +492,15 @@ static int meson_plane_atomic_set_property(struct drm_plane *plane,
 {
 	struct am_osd_plane *osd_plane;
 	struct am_meson_plane_state *plane_state;
+	int ret = -EINVAL;
 
 	osd_plane = to_am_osd_plane(plane);
 	plane_state = to_am_meson_plane_state(state);
-	if (property == osd_plane->prop_premult_en)
+	if (property == osd_plane->prop_premult_en) {
 		plane_state->premult_en = val;
-
-	return 0;
+		ret = 0;
+	}
+	return ret;
 }
 
 static struct drm_plane_state *

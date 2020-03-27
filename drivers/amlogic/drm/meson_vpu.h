@@ -20,6 +20,8 @@
 
 #include <linux/amlogic/media/vout/vout_notify.h>
 
+#define VIDEO_LATENCY_VSYNC 2
+
 struct am_meson_vpu_data {
 	u32 version;
 };
