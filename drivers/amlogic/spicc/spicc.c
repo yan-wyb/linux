@@ -1318,12 +1318,12 @@ static int spicc_probe(struct platform_device *pdev)
 	dev_warn(&pdev->dev, "no snor on spicc bus\n");
 #endif
 
-	master = spi_alloc_master(&pdev->dev, sizeof(*spicc));
+	master = spi_alloc_master(&pdev->dev, 0);
 	if (IS_ERR_OR_NULL(master)) {
 		dev_err(&pdev->dev, "allocate spi master failed!\n");
 		return -ENOMEM;
 	}
-	spicc = spi_master_get_devdata(master);
+	spi_master_set_devdata(master, spicc);
 	spicc->master = master;
 	master->dev.of_node = pdev->dev.of_node;
 	master->bus_num = spicc->device_id;
