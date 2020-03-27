@@ -3066,7 +3066,8 @@ void dump_aml_phy_sts(void)
 
 static void dump_phy_status(void)
 {
-	if (rx.chip_id >= CHIP_ID_TM2)
+	if ((rx.chip_id >= CHIP_ID_TM2) &&
+		(rx.phy_ver == PHY_VER_TM2))
 		dump_aml_phy_sts();
 	else
 		dump_aml_phy_sts_pre();
@@ -3572,7 +3573,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
-		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/26");
+		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/27");
 		rx_pr("------------------\n");
 	} else if (strncmp(input[0], "port0", 5) == 0) {
 		hdmirx_open_port(TVIN_PORT_HDMI0);

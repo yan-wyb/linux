@@ -423,6 +423,7 @@ struct emp_buff {
 
 struct rx_s {
 	enum chip_id_e chip_id;
+	enum phy_ver_e phy_ver;
 	struct hdmirx_dev_s *hdmirxdev;
 	/** HDMI RX received signal changed */
 	uint8_t skip;

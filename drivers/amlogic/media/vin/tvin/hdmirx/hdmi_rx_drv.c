@@ -2268,6 +2268,7 @@ static int hdmirx_probe(struct platform_device *pdev)
 
 	if (hdevp->data) {
 		rx.chip_id = hdevp->data->chip_id;
+		rx.phy_ver = hdevp->data->phy_ver;
 		rx_pr("chip id:%d\n", rx.chip_id);
 		rx_pr("phy ver:%d\n", rx.hdmirxdev->data->phy_ver);
 	} else {

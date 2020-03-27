@@ -848,7 +848,7 @@
 	};
 
 	hdmirx {
-		compatible = "amlogic, hdmirx_tm2";
+		compatible = "amlogic, hdmirx_tm2_b";
 		#address-cells=<1>;
 		#size-cells=<1>;
 		/*memory-region = <&hdmirx_emp_cma_reserved>;*/

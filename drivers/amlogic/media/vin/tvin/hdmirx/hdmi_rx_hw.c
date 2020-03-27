@@ -4499,7 +4499,7 @@ void aml_pll_bw_cfg_v2(void)
 		udelay(5);
 
 		/* bit'5: force lock bit'2: improve phy ldo voltage */
-		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL2, 0x00003038);/////
+		wr_reg_hhi(HHI_HDMIRX_APLL_CNTL2, 0x0000301c);/////
 
 		udelay(100);
 		if (pll_rst_cnt++ > pll_rst_max) {
@@ -4604,9 +4604,12 @@ void aml_phy_init_v2(void)
  */
 void hdmirx_phy_init(void)
 {
-	if (rx.chip_id >= CHIP_ID_TM2)
-		aml_phy_init_v2();
-	else if (rx.chip_id == CHIP_ID_TL1)
+	if (rx.chip_id >= CHIP_ID_TM2) {
+		if (rx.phy_ver == PHY_VER_TM2)
+			aml_phy_init_v2();
+		else
+			aml_phy_init_v1();
+	} else if (rx.chip_id == CHIP_ID_TL1)
 		aml_phy_init_v1();
 	else
 		snps_phyg3_init();
@@ -4641,7 +4644,8 @@ unsigned int aml_phy_tmds_valid(void)
 
 	tmds_valid = hdmirx_rd_dwc(DWC_HDMI_PLL_LCK_STS) & 0x01;
 	sqofclk = hdmirx_rd_top(TOP_MISC_STAT0) & 0x1;
-	if (rx.chip_id >= CHIP_ID_TM2)
+	if ((rx.chip_id >= CHIP_ID_TM2) &&
+		(rx.phy_ver == PHY_VER_TM2))
 		tmdsclk_valid = aml_phy_pll_lock();
 	else
 		tmdsclk_valid = is_tmds_clk_stable();
