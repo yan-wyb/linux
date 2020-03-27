@@ -156,12 +156,12 @@ struct vlock_log_s **vlock_log;
 static signed int err_accum;
 static unsigned int last_i_vsync;
 
-u32 loop0_err_lmt = 0x4800;
+u32 loop0_err_lmt = 0xb800;
 u32 loop1_err_lmt = 0x4800;
 u32 loop_err_rs = 3;
 u32 loop_err_gain = 128;
-u32 loop0_en;
-u32 loop1_en = 1;
+u32 loop0_en = 2;	/*0:off, 1:on 2:auto*/
+u32 loop1_en = 1;	/*0:off, 1:on 2:auto*/
 u32 speed_up_en = 1;
 
 int amvecm_hiu_reg_read(unsigned int reg, unsigned int *val)
@@ -389,9 +389,14 @@ void vlock_set_phase_frq_lock_speed(void)
 		WRITE_VPP_REG(VPU_VLOCK_ERR_CTRL0, data);
 
 		data = 0;
-		/*23	RW reg_loop0_err_lmt_en*/
-		if (loop0_en)
-			data |= (0x1 << 23);
+		/*23	RW reg_loop0_err_lmt_en frq*/
+		if (loop0_en > 1) {
+			/*auto enc mode enable limit lock is too slow*/
+			if (IS_AUTO_PLL_MODE(vlock_mode))
+				data |= (0x1 << 23);
+		} else {
+			data |= (loop0_en << 23);
+		}
 		/*22-0	RW reg_loop0_err_lmt*/
 		data |= (loop0_err_lmt << 0);
 		WRITE_VPP_REG(VPU_VLOCK_LOOP0_ERR_LMT, data);
@@ -399,7 +404,7 @@ void vlock_set_phase_frq_lock_speed(void)
 			READ_VPP_REG(VPU_VLOCK_LOOP0_ERR_LMT));
 
 		data = 0;
-		/*23	RW reg_loop1_err_lmt_en*/
+		/*23	RW reg_loop1_err_lmt_en phase*/
 		if (loop1_en)
 			data |= (0x1 << 23);
 		/*22-0	RW reg_loop1_err_lmt*/
@@ -3177,6 +3182,7 @@ ssize_t vlock_debug_store(struct class *cla,
 		pr_info("loop_err_rs val\n");
 		pr_info("loop_err_gain val\n");
 		pr_info("speedup 0 or 1\n");
+		pr_info("not_exit 0 or 1\n");
 	}
 	if (sel < VLOCK_PARAM_MAX)
 		vlock_param_set(temp_val, sel);
