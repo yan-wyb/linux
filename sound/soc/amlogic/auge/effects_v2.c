@@ -690,7 +690,7 @@ static int effect_platform_probe(struct platform_device *pdev)
 
 	/*set eq/drc module lane & channels*/
 	version = check_aed_version();
-	if (version == VERSION3 || version == VERSION4)
+	if (version > VERSION2)
 		aed_set_lane_and_channels_v3(lane_mask, channel_mask);
 	else
 		aed_set_lane_and_channels(lane_mask, channel_mask);

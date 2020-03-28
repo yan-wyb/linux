@@ -34,7 +34,7 @@ void aed_init_ram_coeff(int version, int add, int len, unsigned int *params)
 	}
 
 	/* init RAMB */
-	if (version == VERSION4) {
+	if (version > VERSION3) {
 		p = params;
 		for (i = 0; i < len; i++, p++) {
 			ctrl_v = ((add + i) << 2) | (0x1 << 1) | (0x1 << 0);
@@ -49,7 +49,7 @@ void aed_set_ram_coeff(int version, int add, int len, unsigned int *params)
 	int i, ctrl_v;
 	unsigned int *p = params, value = 0;
 
-	if (version == VERSION4) {
+	if (version > VERSION3) {
 		/*
 		 * dynamic control
 		 * step 1. write params to unselected ram
