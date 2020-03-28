@@ -5076,7 +5076,10 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 	vdin_hdr10plus_check(devp, vf);
 
 	vf->vsif.addr = &devp->prop.dv_vsif_raw;
-	vf->vsif.size = sizeof(struct tvin_dv_vsif_raw_s);
+	if (devp->dv.dv_flag)
+		vf->vsif.size = sizeof(struct tvin_dv_vsif_raw_s);
+	else
+		vf->vsif.size = 0;
 
 	vf->emp.addr = &devp->prop.emp_data.empbuf;
 	vf->emp.size = devp->prop.emp_data.size;

@@ -2222,10 +2222,18 @@ static void vsync_notify(void)
 		    ~(VIDEO_NOTIFY_PROVIDER_GET | VIDEO_NOTIFY_PROVIDER_PUT);
 	}
 	if (video_notify_flag & VIDEO_NOTIFY_NEED_NO_COMP) {
-		/* FIXME: can not use fixed provider name */
-		vf_notify_provider_by_name("vdin0",
-			VFRAME_EVENT_RECEIVER_NEED_NO_COMP,
-			(void *)&vpp_hold_setting_cnt);
+		char *provider_name = vf_get_provider_name(RECEIVER_NAME);
+
+		while (provider_name) {
+			if (!vf_get_provider_name(provider_name))
+				break;
+			provider_name =
+				vf_get_provider_name(provider_name);
+		}
+		if (provider_name)
+			vf_notify_provider_by_name(provider_name,
+				VFRAME_EVENT_RECEIVER_NEED_NO_COMP,
+				(void *)&vpp_hold_setting_cnt);
 		video_notify_flag &= ~VIDEO_NOTIFY_NEED_NO_COMP;
 	}
 #ifdef CONFIG_CLK81_DFS
@@ -2279,19 +2287,20 @@ static enum vmode_e new_vmode = VMODE_MAX;
 static inline bool video_vf_disp_mode_check(struct vframe_s *vf)
 {
 	struct provider_disp_mode_req_s req;
+	char *provider_name = vf_get_provider_name(RECEIVER_NAME);
 	int ret = -1;
 	req.vf = vf;
 	req.disp_mode = 0;
 	req.req_mode = 1;
 
-	if (is_dolby_vision_enable()) {
-		ret = vf_notify_provider_by_name("dv_vdin",
-			VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
-		if (ret == -1)
-			vf_notify_provider_by_name("vdin0",
-				VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
-	} else
-		vf_notify_provider_by_name("vdin0",
+	while (provider_name) {
+		if (!vf_get_provider_name(provider_name))
+			break;
+		provider_name =
+			vf_get_provider_name(provider_name);
+	}
+	if (provider_name)
+		ret = vf_notify_provider_by_name(provider_name,
 			VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
 	if ((req.disp_mode == VFRAME_DISP_MODE_OK) ||
 		(req.disp_mode == VFRAME_DISP_MODE_NULL))
@@ -2303,19 +2312,19 @@ static inline bool video_vf_disp_mode_check(struct vframe_s *vf)
 static enum vframe_disp_mode_e video_vf_disp_mode_get(struct vframe_s *vf)
 {
 	struct provider_disp_mode_req_s req;
-	int ret = -1;
+	char *provider_name = vf_get_provider_name(RECEIVER_NAME);
 	req.vf = vf;
 	req.disp_mode = 0;
 	req.req_mode = 0;
 
-	if (is_dolby_vision_enable()) {
-		ret = vf_notify_provider_by_name("dv_vdin",
-			VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
-		if (ret == -1)
-			vf_notify_provider_by_name("vdin0",
-				VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
-	} else
-		vf_notify_provider_by_name("vdin0",
+	while (provider_name) {
+		if (!vf_get_provider_name(provider_name))
+			break;
+		provider_name =
+			vf_get_provider_name(provider_name);
+	}
+	if (provider_name)
+		vf_notify_provider_by_name(provider_name,
 			VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
 	return req.disp_mode;
 }
@@ -3134,7 +3143,8 @@ static void primary_swap_frame(
 				vpp_hold_setting_cnt);
 	} else {/* apply new vpp settings */
 		if ((layer->next_frame_par->vscale_skip_count <= 1) &&
-		    (vf->type & VIDTYPE_SUPPORT_COMPRESS)) {
+		    (vf->type & VIDTYPE_SUPPORT_COMPRESS) &&
+		    !(vf->type & VIDTYPE_COMPRESS)) {
 			video_notify_flag |=
 				VIDEO_NOTIFY_NEED_NO_COMP;
 			if (layer->global_debug & DEBUG_FLAG_BLACKOUT)
@@ -3648,7 +3658,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		char *provider_name = NULL;
 
 		if (vd1_path_id == VFM_PATH_PIP) {
-			provider_name = vf_get_provider_name("videopip");
+			provider_name = vf_get_provider_name(RECEIVERPIP_NAME);
 			while (provider_name) {
 				if (!vf_get_provider_name(provider_name))
 					break;
@@ -3657,8 +3667,17 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			}
 			if (provider_name)
 				dolby_vision_set_provider(provider_name);
-		} else
-			dolby_vision_set_provider("dvbldec");
+		} else {
+			provider_name = vf_get_provider_name(RECEIVER_NAME);
+			while (provider_name) {
+				if (!vf_get_provider_name(provider_name))
+					break;
+				provider_name =
+					vf_get_provider_name(provider_name);
+			}
+			if (provider_name)
+				dolby_vision_set_provider(provider_name);
+		}
 	}
 
 #endif
