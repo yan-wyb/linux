@@ -1882,6 +1882,8 @@ static void tvafe_cvd2_search_video_mode(struct tvafe_cvd2_s *cvd2,
 					__func__);
 				}
 			}
+		} else {
+			cvd2->info.fmt_shift_cnt = 0;
 		}
 		/* non-standard signal config */
 		tvafe_cvd2_non_std_config(cvd2);
