@@ -34,6 +34,20 @@ enum tvin_sm_status_e {
 	 /* stable - physically good signal & supported */
 	TVIN_SM_STATUS_STABLE,
 };
+
+enum tvin_sg_chg_flg {
+	TVIN_SIG_CHG_NONE = 0,
+	TVIN_SIG_CHG_SDR2HDR = 0x01,
+	TVIN_SIG_CHG_HDR2SDR = 0x02,
+	TVIN_SIG_CHG_DV2NO = 0x04,
+	TVIN_SIG_CHG_NO2DV = 0x08,
+	TVIN_SIG_CHG_COLOR_FMT = 0x10,
+	TVIN_SIG_CHG_RANGE = 0x20,
+};
+
+#define TVIN_SIG_DV_CHG		(TVIN_SIG_CHG_DV2NO | TVIN_SIG_CHG_NO2DV)
+#define TVIN_SIG_HDR_CHG	(TVIN_SIG_CHG_SDR2HDR | TVIN_SIG_CHG_HDR2SDR)
+
 struct tvin_sm_s {
 	enum tvin_sig_status_e sig_status;
 	enum tvin_sm_status_e state;

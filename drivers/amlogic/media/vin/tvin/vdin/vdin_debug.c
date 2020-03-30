@@ -766,6 +766,44 @@ const char *vdin_trans_matrix_str(enum vdin_matrix_csc_e csc_idx)
 	}
 };
 
+const char *vdin_trans_irqflag_to_str(enum vdin_irq_flg_e flag)
+{
+	switch (flag) {
+	case VDIN_IRQ_FLG_NO_END:
+		return "VDIN_IRQ_FLG_NO_FRONT_END";
+	case VDIN_IRQ_FLG_IRQ_STOP:
+		return "VDIN_IRQ_FLG_IRQ_STOP";
+	case VDIN_IRQ_FLG_FAKE_IRQ:
+		return "VDIN_IRQ_FLG_FAKE_IRQ";
+	case VDIN_IRQ_FLG_DROP_FRAME:
+		return "VDIN_IRQ_FLG_DROP_FRAME";
+	case VDIN_IRQ_FLG_DV_CHK_SUM_ERR:
+		return "VDIN_IRQ_FLG_DV_CHK_SUM_ERR";
+	case VDIN_IRQ_FLG_CYCLE_CHK:
+		return "VDIN_IRQ_FLG_CYCLE_CHK";
+	case VDIN_IRQ_FLG_SIG_NOT_STABLE:
+		return "VDIN_IRQ_FLG_SIG_NOT_STABLE";
+	case VDIN_IRQ_FLG_FMT_TRANS_CHG:
+		return "VDIN_IRQ_FLG_FMT_TRANS_CHG";
+	case VDIN_IRQ_FLG_CSC_CHG:
+		return "VDIN_IRQ_FLG_CSC_CHG";
+	case VDIN_IRQ_FLG_BUFF_SKIP:
+		return "VDIN_IRQ_FLG_BUFF_SKIP";
+	case VDIN_IRQ_FLG_IGNORE_FRAME:
+		return "VDIN_IRQ_FLG_IGNORE_FRAME";
+	case VDIN_IRQ_FLG_SKIP_FRAME:
+		return "VDIN_IRQ_FLG_SKIP_FRAME";
+	case VDIN_IRQ_FLG_GM_DV_CHK_SUM_ERR:
+		return "VDIN_IRQ_FLG_GM_DV_CHK_SUM_ERR";
+	case VDIN_IRQ_FLG_NO_WR_FE:
+		return "VDIN_IRQ_FLG_NO_WR_FE";
+	case VDIN_IRQ_FLG_NO_NEXT_FE:
+		return "VDIN_IRQ_FLG_NO_NEXT_FE";
+	default:
+		return "VDIN_IRQ_FLAG_NULL";
+	}
+}
+
 void vdin_dump_vs_info(struct vdin_dev_s *devp)
 {
 	unsigned int cnt = devp->unreliable_vs_cnt;
@@ -856,6 +894,7 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("cma_mem_size:0x%x\n", devp->cma_mem_size);
 	pr_info("cma_mem_mode:%d\n", devp->cma_mem_mode);
 	pr_info("force_yuv444_malloc:%d\n", devp->force_yuv444_malloc);
+	pr_info("hdr_Flag =0x%x\n", devp->prop.vdin_hdr_Flag);
 	vdin_check_hdmi_hdr(devp);
 	vdin_dump_vf_state(devp->vfp);
 	if (vf) {
@@ -898,9 +937,10 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("black_bar_enable: %d, hist_bar_enable: %d, use_frame_rate: %d\n ",
 		devp->black_bar_enable,
 		devp->hist_bar_enable, devp->use_frame_rate);
-	pr_info("vdin_irq_flag: %d, vdin_rest_flag: %d, irq_cnt: %d, rdma_irq_cnt: %d\n",
-		devp->vdin_irq_flag, devp->vdin_reset_flag,
-		devp->irq_cnt, devp->rdma_irq_cnt);
+	pr_info("vdin_rest_flag: %d, irq_cnt: %d, rdma_irq_cnt: %d\n",
+		devp->vdin_reset_flag, devp->irq_cnt, devp->rdma_irq_cnt);
+	pr_info("vdin_irq_flag:%d %s\n", devp->vdin_irq_flag,
+		vdin_trans_irqflag_to_str(devp->vdin_irq_flag));
 	pr_info("vpu crash irq cnt: %d\n", devp->vpu_crash_cnt);
 	pr_info("vdin_drop_cnt: %d frame_cnt:%d ignore_frames:%d\n",
 		vdin_drop_cnt, devp->frame_cnt, devp->ignore_frames);
@@ -933,7 +973,6 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 				devp->afbce_info->frame_body_size);
 		}
 	}
-
 	pr_info("dolby_input :  %d\n", devp->dv.dolby_input);
 	if ((devp->cma_config_en != 1) || !(devp->cma_config_flag & 0x100))
 		pr_info("dolby_mem_start = %ld, dolby_mem_size = %d\n",
@@ -950,12 +989,13 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 			devp->vfp->dv_buf_size[i],
 			devp->vfp->dv_buf_mem[i]);
 	}
-	pr_info("dvEn:%d,dv_flag:%d;dv_cfg:%d,dolby_ver:%d,low_latency:(%d,%d,%d)\n",
+	pr_info("dvEn:%d,dv_flag:%d;dv_config:%d,dolby_ver:%d,low_latency:(%d,%d,%d)\n",
 		is_dolby_vision_enable(),
 		devp->dv.dv_flag, devp->dv.dv_config, devp->prop.dolby_vision,
 		devp->dv.low_latency, devp->prop.low_latency,
 		devp->vfp->low_latency);
-
+	pr_info("dv emp size:%d crc_flag:%d\n", devp->prop.emp_data.size,
+		devp->dv.dv_crc_check);
 	pr_info("size of struct vdin_dev_s: %d\n", devp->vdin_dev_ssize);
 	pr_info("devp->dv.dv_vsif:(%d,%d,%d,%d,%d,%d,%d,%d);\n",
 		devp->dv.dv_vsif.dobly_vision_signal,

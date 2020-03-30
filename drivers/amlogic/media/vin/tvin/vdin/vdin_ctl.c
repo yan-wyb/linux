@@ -4463,13 +4463,20 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 	u32 crc1 = 0;
 	u32 max_pkt = 15;
 	static u32 cnt;
-	u32 rpt_cnt = 0, tail_cnt = 0, rev_cnt = 0;
+	u32 rpt_cnt = 0, tail_cnt = 0, rev_cnt = 0, end_flag = 0;
 	u8 pkt_type;
 	struct dv_meta_pkt *pkt_p;
 	u32 cp_size, cp_offset, cp_sum = 0;
 
-	if (index >= devp->canvas_max_num)
+	devp->dv.dv_crc_check = true;
+	max_pkt = 15;
+	if (index >= devp->canvas_max_num) {
+		if (dv_dbg_log & 0x80)
+			pr_info("%s er: %d %d\n", __func__,
+				index, devp->canvas_max_num);
+		devp->dv.dv_crc_check = false;
 		return;
+	}
 
 	cp = devp->dv.temp_meta_data;
 	/*c = devp->vfp->dv_buf_ori[index];*/
@@ -4492,7 +4499,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 			for (i = 0; i < (32 * max_pkt); i++) {
 				meta32 = rd(offset, VDIN_DOLBY_DSC_STATUS1);
 				p[i] = swap32(meta32);
-				if ((i % 32) == 0) {
+				if (((i % 32) == 0) && !end_flag) {
 					rev_cnt++;
 					pkt_type = c[i * 4] & 0xc0;
 					if (pkt_type == META_PKY_TYPE_START)
@@ -4504,9 +4511,16 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 					if (pkt_type == META_PKY_TYPE_TAIL) {
 						multimetatail_flag = 1;
 						tail_cnt++;
-						//if (tail_cnt > rpt_cnt)
-						//	break;
 					}
+
+					if (tail_cnt >= rpt_cnt) {
+						end_flag = 1;
+						max_pkt = rev_cnt;
+					}
+					if (((cnt % 60) == 0) &&
+					    (dv_dbg_log & (1 << 0)))
+						pr_info("pkt_type %d:0x%x\n", i,
+							pkt_type);
 				}
 
 				if ((i == 31) && (multimeta_flag == 0))
@@ -4518,10 +4532,13 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 		if ((meta_size > 1024) || (rev_cnt > 20) ||
 		    (rpt_cnt != tail_cnt) ||
 		    ((meta_size > 128) && (rev_cnt == 1))) {
-			if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 0)))
-				pr_info("err size:%d rp_cnt:%d, tal_cnt:%d, rv_cnt:%d\n",
-					meta_size, rpt_cnt, tail_cnt, rev_cnt);
-
+			if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 0))) {
+				pr_info("err size:%d rpt_cnt:%d, tal_cnt:%d, rv_cnt:%d max_pkt:%d\n",
+					meta_size, rpt_cnt, tail_cnt, rev_cnt,
+					max_pkt);
+				pr_info("mult_flag:%d\n", multimetatail_flag);
+				/*vdin_dolby_pr_meta_data(c, 128 * rev_cnt);*/
+			}
 			devp->dv.dv_crc_check = false;
 			return;
 		}
@@ -5111,33 +5128,19 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 		pr_info("vdin hdmi hdr eotf:0x%x\n",
 				devp->prop.hdr_info.hdr_data.eotf);
 		if (devp->prop.hdr_info.hdr_state == HDR_STATE_GET) {
+			devp->prop.vdin_hdr_Flag = true;
+			if (vdin_is_dolby_tunnel_444_input(devp))
+				return;
+
 			if ((devp->prop.hdr_info.hdr_data.eotf ==
 					EOTF_HDR) ||
 				(devp->prop.hdr_info.hdr_data.eotf ==
 					EOTF_SMPTE_ST_2048) ||
 				(devp->prop.hdr_info.hdr_data.eotf ==
 					EOTF_HLG)) {
-				#if 0
-				/*4k 444, afbc mode not support 10bit mode*/
-				color_format = devp->prop.color_format;
-				if (!(((color_format == TVIN_RGB444) ||
-					(color_format == TVIN_YUV444) ||
-					(color_format == TVIN_BGGR) ||
-					(color_format == TVIN_RGGB) ||
-					(color_format == TVIN_GBRG) ||
-					(color_format == TVIN_GRBG)) &&
-					((devp->h_active > 1920) &&
-						(devp->v_active > 1080)) &&
-					devp->afbce_valid)) {
-					devp->color_depth_config =
-						COLOR_DEEPS_10BIT;
-					pr_info("vdin is hdr mode,force 10bit\n");
-				}
-				#else
 				devp->color_depth_config =
 					COLOR_DEEPS_10BIT;
 				pr_info("vdin is hdr mode,force 10bit\n");
-				#endif
 			}
 		}
 		/*devp->prop.hdr_info.hdr_data.eotf = 0;*/

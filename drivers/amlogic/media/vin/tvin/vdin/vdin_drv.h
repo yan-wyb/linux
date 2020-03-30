@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0316: add double write functionality"
+#define VDIN_VER "ver:2020-0331: support dynamic hdr/dv on off for DV Pre-Cert"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -60,6 +60,25 @@ enum vdin_hw_ver_e {
 	VDIN_HW_TM2,
 	VDIN_HW_TM2_B,
 };
+
+enum vdin_irq_flg_e {
+	VDIN_IRQ_FLG_NO_END = 1,
+	VDIN_IRQ_FLG_IRQ_STOP = 2,
+	VDIN_IRQ_FLG_FAKE_IRQ = 3,
+	VDIN_IRQ_FLG_DROP_FRAME = 4,
+	VDIN_IRQ_FLG_DV_CHK_SUM_ERR = 5,
+	VDIN_IRQ_FLG_CYCLE_CHK,
+	VDIN_IRQ_FLG_SIG_NOT_STABLE,
+	VDIN_IRQ_FLG_FMT_TRANS_CHG,
+	VDIN_IRQ_FLG_CSC_CHG,
+	VDIN_IRQ_FLG_BUFF_SKIP,
+	VDIN_IRQ_FLG_IGNORE_FRAME,
+	VDIN_IRQ_FLG_SKIP_FRAME,
+	VDIN_IRQ_FLG_GM_DV_CHK_SUM_ERR,
+	VDIN_IRQ_FLG_NO_WR_FE,
+	VDIN_IRQ_FLG_NO_NEXT_FE,
+};
+
 
 /* for config hw function support */
 struct match_data_s {

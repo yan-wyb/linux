@@ -545,6 +545,14 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	if (devp->frontend && devp->frontend->sm_ops) {
 		sm_ops = devp->frontend->sm_ops;
 		sm_ops->get_sig_property(devp->frontend, &devp->prop);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
+			vdin_check_hdmi_hdr(devp);
+		devp->dv.dv_flag = devp->prop.dolby_vision;
+
+		pr_info("%s dv:%d hdr:%d\n", __func__, devp->dv.dv_flag,
+			devp->prop.vdin_hdr_Flag);
+		memcpy(&devp->pre_prop, &devp->prop,
+			sizeof(struct tvin_sig_property_s));
 		if (!(devp->flags & VDIN_FLAG_V4L2_DEBUG))
 			devp->parm.info.cfmt = devp->prop.color_format;
 		if ((devp->parm.dest_width != 0) ||
@@ -614,10 +622,8 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_set_cutwin(devp);
 	vdin_set_hvscale(devp);
 
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB)) {
-		vdin_check_hdmi_hdr(devp);
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 		vdin_set_bitdepth(devp);
-	}
 
 	/* txl new add fix for hdmi switch resolution cause cpu holding */
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXL)
@@ -775,14 +781,13 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	}
 #endif
 
-	disable_irq_nosync(devp->irq);
-
+	disable_irq(devp->irq);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
 	    devp->vpu_crash_irq != 0)
-		disable_irq_nosync(devp->vpu_crash_irq);
+		disable_irq(devp->vpu_crash_irq);
 
 	if (vdin_dbg_en)
-		pr_info("%s vdin.%d disable_irq_nosync\n", __func__,
+		pr_info("%s vdin.%d disable_irq\n", __func__,
 			devp->index);
 
 	if (devp->afbce_mode == 1) {
@@ -1548,7 +1553,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	if (!devp->frontend) {
-		devp->vdin_irq_flag = 1;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_NO_END;
 		vdin_drop_frame_info(devp, "no frontend");
 		return IRQ_HANDLED;
 	}
@@ -1571,7 +1576,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	/* ignore fake irq caused by sw reset*/
 	if (devp->vdin_reset_flag) {
 		devp->vdin_reset_flag = 0;
-		devp->vdin_irq_flag = 10;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_FAKE_IRQ;
 		vdin_drop_frame_info(devp, "reset_flag");
 		return IRQ_HANDLED;
 	}
@@ -1598,7 +1603,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		(!(isr_flag & VDIN_BYPASS_STOP_CHECK))) {
 		vdin_hw_disable(devp);
 		devp->flags &= ~VDIN_FLAG_DEC_STOP_ISR;
-		devp->vdin_irq_flag = 2;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_IRQ_STOP;
 		vdin_drop_frame_info(devp, "stop isr");
 		goto irq_handled;
 	}
@@ -1606,7 +1611,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	vdin_vs_duration_check(devp);
 	if (devp->frame_drop_num) {
 		devp->frame_drop_num--;
-		devp->vdin_irq_flag = 9;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_DROP_FRAME;
 		vdin_drop_frame_info(devp, "drop frame");
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1625,7 +1630,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 						  devp->curr_wr_vfe);
 		/*save the first field stamp*/
 		devp->stamp = stamp;
-		devp->vdin_irq_flag = 3;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_NO_WR_FE;
 		vdin_drop_frame_info(devp, "no wr vfe");
 		goto irq_handled;
 	}
@@ -1654,6 +1659,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 		if (devp->dv.low_latency != devp->vfp->low_latency)
 			devp->vfp->low_latency = devp->dv.low_latency;
+
 		memcpy(&devp->vfp->dv_vsif,
 			&devp->dv.dv_vsif, sizeof(struct tvin_dv_vsif_s));
 		if ((devp->dv.dv_crc_check == true) ||
@@ -1661,7 +1667,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_vframe_put_and_recycle(devp, devp->last_wr_vfe,
 						   put_md);
 		} else {
-			devp->vdin_irq_flag = 5;
+			devp->vdin_irq_flag = VDIN_IRQ_FLG_DV_CHK_SUM_ERR;
 			vdin_drop_frame_info(devp, "dv chk sun err");
 			vdin_drop_cnt++;
 			goto irq_handled;
@@ -1684,7 +1690,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	/*check vs is valid base on the time during continuous vs*/
 	if (vdin_check_cycle(devp) && (!(isr_flag & VDIN_BYPASS_CYC_CHECK))
 		&& (!(devp->flags & VDIN_FLAG_SNOW_FLAG))) {
-		devp->vdin_irq_flag = 4;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_CYCLE_CHK;
 		vdin_drop_frame_info(devp, "cycle chk");
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1707,7 +1713,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	if (((devp->parm.info.status != TVIN_SIG_STATUS_STABLE) ||
 		(state != TVIN_SM_STATUS_STABLE)) &&
 		(!(devp->flags & VDIN_FLAG_SNOW_FLAG))) {
-		devp->vdin_irq_flag = 6;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_SIG_NOT_STABLE;
 		vdin_drop_frame_info(devp, "sig not stable");
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1721,7 +1727,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		 (trans_fmt && (trans_fmt != TVIN_TFMT_3D_FP))) &&
 		((last_field_type & VIDTYPE_INTERLACE_BOTTOM) ==
 				VIDTYPE_INTERLACE_BOTTOM)) {
-		devp->vdin_irq_flag = 7;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_FMT_TRANS_CHG;
 		vdin_drop_frame_info(devp, "tran fmt chg");
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1766,7 +1772,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		pre_prop->color_fmt_range = prop->color_fmt_range;
 		pre_prop->dest_cfmt = prop->dest_cfmt;
 		devp->ignore_frames = 0;
-		devp->vdin_irq_flag = 20;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_CSC_CHG;
 		vdin_drop_frame_info(devp, "csc chg");
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1792,7 +1798,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	decops = devp->frontend->dec_ops;
 	if (decops->decode_isr(devp->frontend, devp->hcnt64) == TVIN_BUF_SKIP) {
-		devp->vdin_irq_flag = 8;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_BUFF_SKIP;
 		vdin_drop_frame_info(devp, "buf skip flg");
 		vdin_drop_cnt++;
 		goto irq_handled;
@@ -1803,7 +1809,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 				VFRAME_PHASE_DB : VFRAME_PHASE_DR;
 
 	if (devp->ignore_frames < max_ignore_frame_cnt) {
-		devp->vdin_irq_flag = 12;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_IGNORE_FRAME;
 		vdin_drop_frame_info(devp, "ignore frame flag");
 		devp->ignore_frames++;
 		vdin_drop_cnt++;
@@ -1818,7 +1824,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 
 	if (sm_ops->check_frame_skip &&
 		sm_ops->check_frame_skip(devp->frontend)) {
-		devp->vdin_irq_flag = 13;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_SKIP_FRAME;
 		vdin_drop_frame_info(devp, "skip frame flag");
 		vdin_drop_cnt++;
 		if (devp->flags&VDIN_FLAG_RDMA_ENABLE)
@@ -1832,7 +1838,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_vframe_put_and_recycle(devp, next_wr_vfe,
 						   VDIN_VF_RECYCLE);
 		} else {
-			devp->vdin_irq_flag = 14;
+			devp->vdin_irq_flag = VDIN_IRQ_FLG_NO_NEXT_FE;
 			vdin_drop_frame_info(devp, "no next wr vfe");
 			/* I need drop two frame */
 			if ((devp->curr_field_type & VIDTYPE_INTERLACE)
@@ -1849,7 +1855,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	/* prepare for next input data */
 	next_wr_vfe = provider_vf_get(devp->vfp);
 	if (!next_wr_vfe) {
-		devp->vdin_irq_flag = 11;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_NO_NEXT_FE;
 		vdin_drop_frame_info(devp, "no next wr vfe");
 
 		vdin_drop_cnt++;
@@ -1945,12 +1951,11 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_dolby_addr_update(devp, next_wr_vfe->vf.index);
 		} else
 			devp->dv.dv_crc_check = true;
-
 		if ((devp->dv.dv_crc_check == true) ||
 			(!(dv_dbg_mask & DV_CRC_CHECK))) {
 			vdin_vframe_put_and_recycle(devp, curr_wr_vfe, put_md);
 		} else {
-			devp->vdin_irq_flag = 15;
+			devp->vdin_irq_flag = VDIN_IRQ_FLG_GM_DV_CHK_SUM_ERR;
 			vdin_drop_frame_info(devp, "game md dv crc");
 			vdin_drop_cnt++;
 			goto irq_handled;
@@ -2342,14 +2347,13 @@ static int vdin_open(struct inode *inode, struct file *file)
 	}
 	devp->flags |= VDIN_FLAG_ISR_REQ;
 	/*disable irq until vdin is configured completely*/
-	disable_irq_nosync(devp->irq);
-
+	disable_irq(devp->irq);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
 	    devp->vpu_crash_irq != 0)
-		disable_irq_nosync(devp->vpu_crash_irq);
+		disable_irq(devp->vpu_crash_irq);
 
 	if (vdin_dbg_en)
-		pr_info("%s vdin.%d disable_irq_nosync\n", __func__,
+		pr_info("%s vdin.%d disable_irq\n", __func__,
 			devp->index);
 
 	/*init queue*/
