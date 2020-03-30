@@ -104,7 +104,7 @@ void show_violation_mem(unsigned long addr)
 		return;
 
 	q = p + ((addr & (PAGE_SIZE - 1)) / sizeof(*p));
-	pr_info(DMC_TAG "[%08lx]:%016lx, f:%8lx, m:%p, a:%ps\n",
+	pr_emerg(DMC_TAG "[%08lx]:%016lx, f:%8lx, m:%p, a:%ps\n",
 		(unsigned long)q, *q, page->flags & 0xffffffff,
 		page->mapping,
 		(void *)get_page_trace(page));

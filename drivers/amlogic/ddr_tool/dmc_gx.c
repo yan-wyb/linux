@@ -112,7 +112,7 @@ static void check_violation(struct dmc_monitor *mon, void *data)
 
 		port = (status >> 10) & 0xf;
 		subport = (status >> 6) & 0xf;
-		pr_info(DMC_TAG", addr:%08lx, s:%08lx, ID:%s, sub:%s, c:%ld, d:%p\n",
+		pr_emerg(DMC_TAG", addr:%08lx, s:%08lx, ID:%s, sub:%s, c:%ld, d:%p\n",
 			addr, status, to_ports(port),
 			to_sub_ports(port, subport, id_str),
 			mon->same_page, data);
@@ -154,7 +154,7 @@ static int gx_dmc_mon_set(struct dmc_monitor *mon)
 	value = (1 << 19) | mon->device;
 	dmc_rw(DMC_PROT0_CTRL, value, DMC_WRITE);
 
-	pr_info("range:%08lx - %08lx, device:%x\n",
+	pr_emerg("range:%08lx - %08lx, device:%x\n",
 		mon->addr_start, mon->addr_end, mon->device);
 	return 0;
 }
