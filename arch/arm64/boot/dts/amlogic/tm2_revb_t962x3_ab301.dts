@@ -1729,7 +1729,7 @@
 };
 
 &i2c2 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c2_z_pins>;
 	clock-frequency = <400000>;
@@ -1740,7 +1740,7 @@
 		codec_name = "tas5805";
 		reg = <0x2e>;
 		reset_pin = <&gpio_ao GPIOAO_6 GPIO_ACTIVE_HIGH>;
-		status = "disable";
+		status = "okay";
 	};
 };
 
