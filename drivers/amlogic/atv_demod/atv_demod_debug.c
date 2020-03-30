@@ -191,12 +191,15 @@ static ssize_t debugfs_write(struct file *file, const char __user *userbuf,
 	int val = 0;
 	int i = 0;
 	char buf[20] = { 0 };
+	size_t buf_size = 0;
 	int len = ARRAY_SIZE(debugfs_dentry);
 
 	memset(buf, 0, sizeof(buf));
-	count = min_t(size_t, count, (sizeof(buf) - 1));
-	if (copy_from_user(buf, userbuf, count))
+	buf_size = min_t(size_t, count, (sizeof(buf) - 1));
+	if (copy_from_user(buf, userbuf, buf_size))
 		return -EFAULT;
+
+	buf[buf_size] = '\0';
 
 	/*i = sscanf(buf, "%d", &val);*/
 	i = kstrtoint(buf, 0, &val);
