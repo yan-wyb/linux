@@ -2184,7 +2184,8 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 		next_vf->next_vf_pts &&
 		(toggled_cnt == 0) &&
 		((int)(timestamp_pcrscr_get() + vsync_pts_inc +
-		vsync_pts_align - next_vf->next_vf_pts) >= 0)) {
+		vsync_pts_align - next_vf->next_vf_pts) >= 0) &&
+		(next_vf->next_vf_pts > next_vf->pts)) {
 		expired = true;
 	}
 #endif
