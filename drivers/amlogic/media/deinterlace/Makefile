@@ -5,7 +5,7 @@ ccflags-y := -DDEBUG
 else
 ccflags-y := -DDEBUG
 endif
-CFLAGS_deinterlace.o := -I$(src)
+CFLAGS_deinterlace_dbg.o := -I$(src)
 obj-$(CONFIG_AMLOGIC_MEDIA_DEINTERLACE) += di.o
 di-objs += deinterlace.o
 di-objs += deinterlace_hw.o
