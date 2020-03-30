@@ -1716,7 +1716,7 @@ unsigned char is_bypass(vframe_t *vf_in)
 	    (di_pre_stru.cur_inp_type & VIDTYPE_RGB_444)))
 		return 1;
 
-	if ((di_pre_stru.cur_width < 16) || (di_pre_stru.cur_height < 16))
+	if ((di_pre_stru.cur_width < 128) || (di_pre_stru.cur_height < 16))
 		return 1;
 
 	if (di_pre_stru.cur_inp_type & VIDTYPE_MVC)
