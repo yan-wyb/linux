@@ -753,6 +753,7 @@ static void set_hdmi_tx_pixel_div(unsigned int div)
 	hd_set_reg_bits(P_HHI_HDMI_CLK_CNTL, div, 16, 4);
 	hd_set_reg_bits(P_HHI_VID_CLK_CNTL2, 1, 5, 1);
 }
+
 static void set_encp_div(unsigned int div)
 {
 	div = check_div(div);
@@ -1025,10 +1026,25 @@ static struct hw_enc_clk_val_group setting_3dfp_enc_clk_val[] = {
 
 static void set_hdmitx_fe_clk(struct hdmitx_dev *hdev)
 {
+	unsigned int tmp = 0;
+	enum hdmi_vic vic = hdev->cur_VIC;
+
 	if (hdev->chip_type < MESON_CPU_ID_TM2B)
 		return;
+
 	hd_set_reg_bits(P_HHI_VID_CLK_CNTL2, 1, 9, 1);
-	hd_set_reg_bits(P_HHI_HDMI_CLK_CNTL, 0, 20, 4);
+
+	switch (vic) {
+	case HDMI_720x480i60_16x9:
+	case HDMI_720x576i50_16x9:
+		tmp = (hd_read_reg(P_HHI_VID_CLK_DIV) >> 28) & 0xf;
+		break;
+	default:
+		tmp = (hd_read_reg(P_HHI_VID_CLK_DIV) >> 24) & 0xf;
+		break;
+	}
+
+	hd_set_reg_bits(P_HHI_HDMI_CLK_CNTL, tmp, 20, 4);
 }
 
 static void hdmitx_set_clk_(struct hdmitx_dev *hdev)
@@ -1111,7 +1127,6 @@ static void hdmitx_set_clk_(struct hdmitx_dev *hdev)
 next:
 	hdmitx_set_cts_sys_clk(hdev);
 	set_hpll_clk_out(p_enc[j].hpll_clk_out);
-	set_hdmitx_fe_clk(hdev);
 	if ((cd == COLORDEPTH_24B) && (hdev->sspll))
 		set_hpll_sspll(vic);
 	set_hpll_od1(p_enc[j].od1);
@@ -1129,6 +1144,7 @@ next:
 		set_encp_div(p_enc[j].encp_div);
 		hdmitx_enable_encp_clk(hdev);
 	}
+	set_hdmitx_fe_clk(hdev);
 }
 
 static int likely_frac_rate_mode(char *m)
