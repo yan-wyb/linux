@@ -4747,6 +4747,11 @@ F:	Documentation/networking/phy.txt
 F:	drivers/of/of_mdio.c
 F:	drivers/of/of_net.c
 
+EXFAT FILE SYSTEM
+M:	Valdis Kletnieks <valdis.kletnieks@vt.edu>
+S:	Maintained
+F:	fs/exfat/
+
 EXT2 FILE SYSTEM
 M:	Jan Kara <jack@suse.com>
 L:	linux-ext4@vger.kernel.org

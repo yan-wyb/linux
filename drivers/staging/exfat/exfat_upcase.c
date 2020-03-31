@@ -1,37 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *  Copyright (C) 2012-2013 Samsung Electronics Co., Ltd.
- *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License
- *  as published by the Free Software Foundation; either version 2
- *  of the License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
  */
 
-/************************************************************************/
-/*                                                                      */
-/*  PROJECT : exFAT & FAT12/16/32 File System                           */
-/*  FILE    : exfat_upcase.c                                            */
-/*  PURPOSE : exFAT Up-case Table                                       */
-/*                                                                      */
-/*----------------------------------------------------------------------*/
-/*  NOTES                                                               */
-/*                                                                      */
-/*----------------------------------------------------------------------*/
-/*  REVISION HISTORY (Ver 0.9)                                          */
-/*                                                                      */
-/*  - 2010.11.15 [Joosun Hahn] : first writing                          */
-/*                                                                      */
-/************************************************************************/
-
-#include "exfat_config.h"
-
-#include "exfat_nls.h"
+#include <linux/types.h>
+#include "exfat.h"
 
 const u8 uni_upcase[NUM_UPCASE << 1] = {
 	0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00,
