@@ -1779,7 +1779,7 @@ int rx_set_global_variable(const char *buf, int size)
 	if (set_pr_var(tmpbuf, edid_mode, value, &index, ret))
 		return pr_var(edid_mode, index);
 	if (set_pr_var(tmpbuf, phy_pddq_en, value, &index, ret))
-		return pr_var(edid_mode, index);
+		return pr_var(phy_pddq_en, index);
 	if (set_pr_var(tmpbuf, long_cable_best_setting, value, &index, ret))
 		return pr_var(long_cable_best_setting, index);
 	if (set_pr_var(tmpbuf, port_map, value, &index, ret))
@@ -1870,6 +1870,8 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(eq_byp, index);
 	if (set_pr_var(tmpbuf, long_cable, value, &index, ret))
 		return pr_var(long_cable, index);
+	if (set_pr_var(tmpbuf, vsvdb_update_hpd_en, value, &index, ret))
+		return pr_var(vsvdb_update_hpd_en, index);
 	return 0;
 }
 
@@ -2000,6 +2002,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(tap1_byp, i++);
 	pr_var(eq_byp, i++);
 	pr_var(long_cable, i++);
+	pr_var(vsvdb_update_hpd_en, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -3107,7 +3110,7 @@ static void dump_video_status(void)
 {
 	enum edid_ver_e edid_slt = get_edid_selection(rx.port);
 	enum edid_ver_e edid_ver =
-		rx_parse_edid_ver(edid_temp + EDID_SIZE * edid_slt);
+		rx_parse_edid_ver(rx_get_cur_edid(rx.port));
 
 	rx_get_video_info();
 	rx_pr("[HDMI info]\n");
@@ -3460,8 +3463,7 @@ int hdmirx_debug(const char *buf, int size)
 	char *cur;
 	int cnt = 0;
 	struct edid_info_s edid_info;
-	enum edid_ver_e edid_slt = get_edid_selection(rx.port);
-	uint8_t *pedid = edid_temp + EDID_SIZE * edid_slt;
+	u_char *pedid = rx_get_cur_edid(rx.port);
 
 	while ((buf[i]) && (buf[i] != ',') && (buf[i] != ' ')) {
 		tmpbuf[i] = buf[i];
