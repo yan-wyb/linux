@@ -1242,6 +1242,8 @@ static int aml_bl_update_status(struct backlight_device *bd)
 {
 	if (brightness_bypass)
 		return 0;
+	if (bl_drv->state & BL_STATE_DV_EN)
+		return 0;
 
 	mutex_lock(&bl_level_mutex);
 	aml_bl_update_brightness_level(bd->props.brightness);
@@ -2338,12 +2340,10 @@ static int aml_bl_off_notifier(struct notifier_block *nb,
 	bl_on_request = 0;
 	bl_drv->state &= ~(BL_STATE_LCD_ON | BL_STATE_BL_POWER_ON);
 	mutex_lock(&bl_level_mutex);
-	if (brightness_bypass) {
-		if (bl_drv->state & BL_STATE_BL_ON)
-			bl_power_off();
-	} else {
-		aml_bl_update_brightness_level(bl_drv->bldev->props.brightness);
-	}
+	bl_drv->state |= BL_STATE_BL_INIT_ON;
+	if (bl_drv->state & BL_STATE_BL_ON)
+		bl_power_off();
+	bl_drv->state &= ~BL_STATE_BL_INIT_ON;
 	mutex_unlock(&bl_level_mutex);
 
 	return NOTIFY_OK;
@@ -2374,6 +2374,12 @@ static inline int aml_bl_pwm_vs_lcd_update(struct bl_pwm_config_s *bl_pwm)
 
 	mutex_lock(&bl_level_mutex);
 	bl_pwm_config_init(bl_pwm);
+
+	if (bl_drv->state & BL_STATE_DV_EN) {
+		mutex_unlock(&bl_level_mutex);
+		return 0;
+	}
+
 	if (brightness_bypass)
 		bl_set_duty_pwm(bl_pwm);
 	else
@@ -2473,6 +2479,79 @@ static int aml_bl_lcd_test_notifier(struct notifier_block *nb,
 
 static struct notifier_block aml_bl_lcd_test_nb = {
 	.notifier_call = aml_bl_lcd_test_notifier,
+};
+
+static int aml_bl_dv_dimming_notifier(struct notifier_block *nb,
+				      unsigned long event, void *data)
+{
+	unsigned int level;
+
+	/* If we aren't interested in this event, skip it immediately */
+	if (event != LCD_EVENT_BACKLIGHT_DV_DIM)
+		return NOTIFY_DONE;
+
+	if (brightness_bypass)
+		return NOTIFY_DONE;
+	if ((bl_drv->state & BL_STATE_DV_EN) == 0)
+		return NOTIFY_DONE;
+
+	if (((bl_drv->state & BL_STATE_LCD_ON) == 0) ||
+	    (bl_drv->state & BL_STATE_BL_INIT_ON) ||
+	    ((bl_drv->state & BL_STATE_BL_POWER_ON) == 0) ||
+	    ((bl_drv->state & BL_STATE_BL_ON) == 0))
+		return NOTIFY_DONE;
+
+	/* atomic notifier, can't schedule or sleep */
+	level = *(unsigned int *)data;
+	if (bl_debug_print_flag)
+		BLPR("%s: level: %d\n", __func__, level);
+
+	level = (level < 10) ? 10 : ((level > 255) ? 255 : level);
+	aml_bl_set_level(level);
+
+	if (bl_debug_print_flag == 4) {
+		BLPR("%s: %u, real brightness: %u, state: 0x%x\n",
+		     __func__, *(unsigned int *)data, level, bl_drv->state);
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block aml_bl_dv_dimming_nb = {
+	.notifier_call = aml_bl_dv_dimming_notifier,
+};
+
+static int aml_bl_dv_sel_notifier(struct notifier_block *nb,
+				  unsigned long event, void *data)
+{
+	unsigned int *sel;
+
+	/* If we aren't interested in this event, skip it immediately */
+	if (event != LCD_EVENT_BACKLIGHT_DV_SEL)
+		return NOTIFY_DONE;
+
+	if (aml_bl_check_driver())
+		return NOTIFY_DONE;
+	if (bl_drv->bconf->method == BL_CTRL_LOCAL_DIMMING)
+		return NOTIFY_DONE;
+
+	if (brightness_bypass)
+		return NOTIFY_DONE;
+
+	sel = (unsigned int *)data;
+	if (bl_debug_print_flag)
+		BLPR("%s: dv_sel: %d\n", __func__, *sel);
+
+	if (*sel)
+		bl_drv->state |= BL_STATE_DV_EN;
+	else
+		bl_drv->state &= ~BL_STATE_DV_EN;
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block aml_bl_dv_sel_nb = {
+	.notifier_call = aml_bl_dv_sel_notifier,
 };
 
 /* bl debug calss */
@@ -3300,11 +3379,15 @@ static ssize_t bl_debug_brightness_store(struct class *class,
 		struct class_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int ret;
-	unsigned int brightness_level = 0;
+	unsigned int level = 0;
 
-	ret = kstrtouint(buf, 10, &brightness_level);
+	ret = kstrtouint(buf, 10, &level);
 	if (ret != 0) {
 		BLERR("invalid data\n");
+		return -EINVAL;
+	}
+	if (level > 255) {
+		BLERR("invalid brightness_level %d\n", level);
 		return -EINVAL;
 	}
 
@@ -3312,11 +3395,10 @@ static ssize_t bl_debug_brightness_store(struct class *class,
 		brightness_bypass = 1;
 
 	mutex_lock(&bl_level_mutex);
-	ret = aml_bl_update_brightness_level(brightness_level);
-	if (ret == 0)
-		BLPR("brightness %d update ok\n", brightness_level);
-	else
-		BLERR("update fail\n");
+
+	aml_bl_update_brightness_level(level);
+	BLPR("%s: %u, state: 0x%x\n", __func__, level, bl_drv->state);
+
 	mutex_unlock(&bl_level_mutex);
 
 	return count;
@@ -3621,6 +3703,12 @@ static int aml_bl_probe(struct platform_device *pdev)
 	ret = aml_lcd_notifier_register(&aml_bl_lcd_test_nb);
 	if (ret)
 		BLERR("register aml_bl_lcd_test_nb failed\n");
+	ret = aml_lcd_atomic_notifier_register(&aml_bl_dv_dimming_nb);
+	if (ret)
+		BLERR("register aml_bl_dv_dimming_nb failed\n");
+	ret = aml_lcd_atomic_notifier_register(&aml_bl_dv_sel_nb);
+	if (ret)
+		BLERR("register aml_bl_dv_sel_nb failed\n");
 #endif
 	aml_bl_creat_class();
 
@@ -3650,6 +3738,9 @@ static int __exit aml_bl_remove(struct platform_device *pdev)
 
 	backlight_device_unregister(bl_drv->bldev);
 #ifdef CONFIG_AMLOGIC_LCD
+	aml_lcd_atomic_notifier_unregister(&aml_bl_dv_sel_nb);
+	aml_lcd_atomic_notifier_unregister(&aml_bl_dv_dimming_nb);
+	aml_lcd_notifier_unregister(&aml_bl_lcd_test_nb);
 	aml_lcd_notifier_unregister(&aml_bl_lcd_update_nb);
 	aml_lcd_notifier_unregister(&aml_bl_on_nb);
 	aml_lcd_notifier_unregister(&aml_bl_off_nb);
