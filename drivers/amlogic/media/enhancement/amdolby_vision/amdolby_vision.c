@@ -6294,6 +6294,7 @@ static int parse_sei_and_meta(
 	int nextId;
 	int rpu_ret = 0;
 	int reset_flag = 0;
+	unsigned int rpu_size = 0;
 
 	nextId = currentId ^ 1;
 	if ((req->aux_buf == NULL)
@@ -6310,19 +6311,63 @@ static int parse_sei_and_meta(
 		type = (type << 8) | *p++;
 		type = (type << 8) | *p++;
 		type = (type << 8) | *p++;
-		if (type == 0x01000000) {
+		if ((type & 0xffffff00) == 0x01000000) {
 			/* source is VS10 */
 			*total_comp_size = 0;
 			*total_md_size = 0;
-			*src_format = FORMAT_DOVI;
-			if (size > (sizeof(meta_buf) - 3))
-				size = (sizeof(meta_buf) - 3);
-			meta_buf[0] = meta_buf[1] = meta_buf[2] = 0;
-			memcpy(&meta_buf[3], p+1, size-1);
+			if (p[0] == 0xb5 &&
+				p[1] == 0x00 &&
+				p[2] == 0x3b &&
+				p[3] == 0x00 &&
+				p[4] == 0x00 &&
+				p[5] == 0x08 &&
+				p[6] == 0x00 &&
+				p[7] == 0x37 &&
+				p[8] == 0xcd &&
+				p[9] == 0x08) {
+				/* AV1 meta in obu */
+				*src_format = FORMAT_DOVI;
+				meta_buf[0] = meta_buf[1] = meta_buf[2] = 0;
+				meta_buf[3] = 0x01;	meta_buf[4] = 0x19;
+				if (p[11] & 0x10) {
+					rpu_size = 0x100;
+					rpu_size |= (p[11] & 0x0f) << 4;
+					rpu_size |= (p[12] >> 4) & 0x0f;
+					if (p[12] & 0x08) {
+						pr_dolby_error(
+							"rpu in obu exceed 512 bytes\n");
+						break;
+					}
+					for (i = 0; i < rpu_size; i++) {
+						meta_buf[5 + i] =
+							(p[12 + i] & 0x07) << 5;
+						meta_buf[5 + i] |=
+							(p[13 + i] >> 3) & 0x1f;
+					}
+					rpu_size += 5;
+				} else {
+					rpu_size = (p[10] & 0x1f) << 3;
+					rpu_size |= (p[11] >> 5) & 0x07;
+					for (i = 0; i < rpu_size; i++) {
+						meta_buf[5 + i] =
+							(p[11 + i] & 0x0f) << 4;
+						meta_buf[5 + i] |=
+							(p[12 + i] >> 4) & 0x0f;
+					}
+					rpu_size += 5;
+				}
+			} else {
+				*src_format = FORMAT_DOVI;
+				if (size > (sizeof(meta_buf) - 3))
+					size = (sizeof(meta_buf) - 3);
+				meta_buf[0] = meta_buf[1] = meta_buf[2] = 0;
+				memcpy(&meta_buf[3], p+1, size-1);
+				rpu_size = size + 2;
+			}
 			if ((debug_dolby & 4) && dump_enable) {
-				pr_dolby_dbg("metadata(%d):\n", size);
-				for (i = 0; i < size+2; i += 8)
-					pr_info("\t%02x %02x %02x %02x %02x %02x %02x %02x\n",
+				pr_dolby_dbg("metadata(%d):\n", rpu_size);
+				for (i = 0; i < size; i += 16)
+					pr_info("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
 						meta_buf[i],
 						meta_buf[i+1],
 						meta_buf[i+2],
@@ -6330,7 +6375,15 @@ static int parse_sei_and_meta(
 						meta_buf[i+4],
 						meta_buf[i+5],
 						meta_buf[i+6],
-						meta_buf[i+7]);
+						meta_buf[i+7],
+						meta_buf[i+8],
+						meta_buf[i+9],
+						meta_buf[i+10],
+						meta_buf[i+11],
+						meta_buf[i+12],
+						meta_buf[i+13],
+						meta_buf[i+14],
+						meta_buf[i+15]);
 			}
 			if (tv_mode) {
 				if (!p_funcs_tv)
@@ -6381,7 +6434,7 @@ static int parse_sei_and_meta(
 				spin_unlock_irqrestore(&dovi_lock, flags);
 				pr_dolby_error(
 					"meta(%d), pts(%lld) -> metadata parser init fail\n",
-					size, vf->pts_us64);
+					rpu_size, vf->pts_us64);
 				*total_comp_size = backup_comp_size;
 				*total_md_size = backup_md_size;
 				return 2;
@@ -6392,7 +6445,7 @@ static int parse_sei_and_meta(
 				if (is_meson_tvmode())
 					rpu_ret =
 					p_funcs_tv->metadata_parser_process(
-					meta_buf, size + 2,
+					meta_buf, rpu_size,
 					drop_comp_buf[nextId] +
 					*total_comp_size,
 					&comp_size,
@@ -6402,7 +6455,7 @@ static int parse_sei_and_meta(
 				else
 					rpu_ret =
 					p_funcs_stb->metadata_parser_process(
-					meta_buf, size + 2,
+					meta_buf, rpu_size,
 					drop_comp_buf[nextId] +
 					*total_comp_size,
 					&comp_size,
@@ -6413,7 +6466,7 @@ static int parse_sei_and_meta(
 				if (is_meson_tvmode())
 					rpu_ret =
 					p_funcs_tv->metadata_parser_process(
-					meta_buf, size + 2,
+					meta_buf, rpu_size,
 					comp_buf[nextId] + *total_comp_size,
 					&comp_size,
 					md_buf[nextId] + *total_md_size,
@@ -6422,7 +6475,7 @@ static int parse_sei_and_meta(
 				else
 					rpu_ret =
 					p_funcs_stb->metadata_parser_process(
-					meta_buf, size + 2,
+					meta_buf, rpu_size,
 					comp_buf[nextId] + *total_comp_size,
 					&comp_size,
 					md_buf[nextId] + *total_md_size,
@@ -6433,7 +6486,7 @@ static int parse_sei_and_meta(
 			if (rpu_ret < 0) {
 				pr_dolby_error(
 					"meta(%d), pts(%lld) -> metadata parser process fail\n",
-					size, vf->pts_us64);
+					rpu_size, vf->pts_us64);
 				ret = 3;
 			} else {
 				if (*total_comp_size + comp_size
