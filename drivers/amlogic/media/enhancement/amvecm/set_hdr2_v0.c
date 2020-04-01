@@ -1955,7 +1955,8 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 {
 	unsigned int hist_ctrl_port = 0;
 	unsigned int hist_height, hist_width, i;
-	u32 num_pixel, total_pixel, percentile_index;
+	u32 num_pixel, total_pixel;
+	int j;
 
 	if (module_sel == VD1_HDR)
 		hist_ctrl_port = VD1_HDR2_HIST_CTRL;
@@ -1981,6 +1982,7 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 
 	for (i = 0; i < NUM_HDR_HIST - 1; i++)
 		memcpy(hdr_hist[i], hdr_hist[i + 1], 128 * sizeof(uint32_t));
+	memset(percentile, 0, 9 * sizeof(uint32_t));
 	total_pixel = 0;
 	for (i = 0; i < 128; i++) {
 		WRITE_VPP_REG_BITS(hist_ctrl_port, i, 16, 8);
@@ -1992,26 +1994,25 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 		hdr_hist[NUM_HDR_HIST - 1][i] = num_pixel;
 	}
 	num_pixel = 0;
-	percentile_index = 0;
+
 	if (total_pixel) {
 		for (i = 0; i < 128; i++) {
 			num_pixel += hdr_hist[NUM_HDR_HIST - 1][i];
-			if (num_pixel * 100 / total_pixel >=
-			percentile_percent[percentile_index]) {
-				percentile[percentile_index] =
+			for (j = 8; j >= 0; j--) {
+				if (num_pixel * 100 / total_pixel >=
+					percentile_percent[j]) {
+					percentile[j] =
 					hist_maxrgb_luminance[i];
-				if (percentile[percentile_index] == 0)
-					percentile[percentile_index] = 1;
-				percentile_index++;
+					break;
+				}
 			}
 			if (hdr_hist[NUM_HDR_HIST - 1][i])
 				hdr_max_rgb =
 					(i + 1) * 10000 / 128;
 		}
-		/*fix the last bins have error value*/
-		if (percentile_index < 9) {
-			for (i = percentile_index; i < 9; i++)
-				percentile[i] = percentile[i - 1] + 1;
+		for (i = 0; i < 9; i++) {
+			if (percentile[i] == 0)
+				percentile[i] = 1;
 		}
 		percentile[1] = percentile[8];
 	}
