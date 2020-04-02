@@ -1562,7 +1562,7 @@ static struct vpu_data_s vpu_data_tm2 = {
 	.reset_table = vpu_reset_tl1,
 };
 
-static struct vpu_data_s vpu_data_tm2 = {
+static struct vpu_data_s vpu_data_tm2b = {
 	.chip_type = VPU_CHIP_TM2B,
 	.chip_name = "tm2b",
 	.clk_level_dft = CLK_LEVEL_DFT_G12A,
@@ -1640,9 +1640,9 @@ static const struct of_device_id vpu_of_table[] = {
 	},
 	{
 		.compatible = "amlogic, vpu-tm2b",
-		.data = &vpu_data_tm2,
+		.data = &vpu_data_tm2b,
 	},
-	{},
+	{}
 };
 
 static int vpu_probe(struct platform_device *pdev)

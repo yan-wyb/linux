@@ -308,7 +308,7 @@
 	};
 
 	vpu {
-		compatible = "amlogic, vpu-tm2";
+		compatible = "amlogic, vpu-tm2b";
 		status = "okay";
 		clocks = <&clkc CLKID_VAPB_MUX>,
 			<&clkc CLKID_VPU_INTR>,
