@@ -2972,6 +2972,10 @@ void vdin_set_dolby_tunnel(struct vdin_dev_s *devp)
 		|| !(devp->frontend->sm_ops->hdmi_dv_config))
 		return;
 
+	if (!IS_HDMI_SRC(devp->parm.port))
+		return;
+
+	sm_ops = devp->frontend->sm_ops;
 	if ((devp->dv.dv_flag) && is_dolby_vision_enable()
 		&& !(is_dolby_vision_stb_mode()	&& is_meson_tm2_cpu())
 		/*&& (devp->dv.low_latency)*/
@@ -2984,7 +2988,6 @@ void vdin_set_dolby_tunnel(struct vdin_dev_s *devp)
 				COMP1_OUT_SWT_BIT, COMP1_OUT_SWT_WID);
 		wr_bits(offset, VDIN_COM_CTRL0, vdin_data_bus_2,
 				COMP2_OUT_SWT_BIT, COMP2_OUT_SWT_WID);
-		sm_ops = devp->frontend->sm_ops;
 		/*hdmi rx call back, 422 tunnel to 444*/
 		sm_ops->hdmi_dv_config(true, devp->frontend);
 		/*vdin de tunnel and tunnel for vdin scaling*/
@@ -2992,7 +2995,9 @@ void vdin_set_dolby_tunnel(struct vdin_dev_s *devp)
 			vdin_dolby_desc_sc_enable(devp, 1);
 		else
 			vdin_dolby_desc_sc_enable(devp, 0);
-
+	} else {
+		sm_ops->hdmi_dv_config(false, devp->frontend);
+		vdin_dolby_desc_sc_enable(devp, 0);
 	}
 }
 
