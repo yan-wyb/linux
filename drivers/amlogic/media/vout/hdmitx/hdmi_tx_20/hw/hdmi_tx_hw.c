@@ -963,7 +963,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
  * 444->420 conversion will be delayed by 1 line. So for 420 mode,
  * we need to delay Vsync by 1 line as well, to meet the timing
  */
-	if (is_hdmi4k_420(param->VIC))
+	if (hdev->chip_type > MESON_CPU_ID_TM2 && is_hdmi4k_420(param->VIC))
 		vs_adjust_420 = 1;
 
 	switch (param->VIC) {
@@ -1135,7 +1135,7 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 			(0 << 12)
 	);
 	if ((is_hdmi4k_420(param->VIC)) &&
-	    hdev->chip_type == MESON_CPU_ID_TM2B) {
+	    hdev->chip_type >= MESON_CPU_ID_TM2B) {
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 8, 1);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 20, 1);
 	}
@@ -2041,8 +2041,7 @@ static void hdmitx_set_phy(struct hdmitx_dev *hdev)
 	if (!hdev)
 		return;
 	hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x0);
-	if (hdev->chip_type == MESON_CPU_ID_TM2 ||
-	    hdev->chip_type == MESON_CPU_ID_TM2B)
+	if (hdev->chip_type >= MESON_CPU_ID_TM2)
 		set_tm2b_phy_reset(hdev->chip_type);
 	else
 		set_phy_reset(hdev->chip_type);
@@ -2222,7 +2221,7 @@ void hdmitx_set_enc_hw(struct hdmitx_dev *hdev)
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 4, 4);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 8, 1);
 		if ((is_hdmi4k_420(hdev->cur_VIC)) &&
-		    hdev->chip_type == MESON_CPU_ID_TM2B)
+		    hdev->chip_type >= MESON_CPU_ID_TM2B)
 			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 8, 1);
 	}
 
