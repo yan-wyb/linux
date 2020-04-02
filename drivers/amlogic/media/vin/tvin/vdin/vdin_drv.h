@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0331: support dynamic hdr/dv on off for DV Pre-Cert"
+#define VDIN_VER "ver:2020-0331: afbc comb mode condition not right"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2

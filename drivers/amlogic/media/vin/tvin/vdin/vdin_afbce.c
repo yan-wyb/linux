@@ -205,6 +205,30 @@ static void afbce_wr(uint32_t reg, const uint32_t val)
 	wr(0, reg, val);
 }
 */
+
+bool vdin_chk_is_comb_mode(struct vdin_dev_s *devp)
+{
+	enum vdin_format_convert_e vdinout_fmt;
+	int reg_fmt444_rgb_en = false;
+	int reg_fmt444_comb = false;
+
+	vdinout_fmt = devp->format_convert;
+	if ((vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_RGB) ||
+	    (vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_GBR) ||
+	    (vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_BRG) ||
+	    (vdinout_fmt == VDIN_FORMAT_CONVERT_RGB_RGB))
+		reg_fmt444_rgb_en = true;
+
+	if (((vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
+	     (vdinout_fmt == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
+	      reg_fmt444_rgb_en) && (devp->h_active > 2048))
+		reg_fmt444_comb = true;
+	else
+		reg_fmt444_comb = false;
+
+	return reg_fmt444_comb;
+}
+
 #define VDIN_AFBCE_HOLD_LINE_NUM    4
 void vdin_afbce_update(struct vdin_dev_s *devp)
 {
@@ -223,13 +247,7 @@ void vdin_afbce_update(struct vdin_dev_s *devp)
 	pr_info("vdin afbce must use RDMA,but it not be opened\n");
 	pr_info("##############################################\n");
 #endif
-
-	if (((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
-	    (devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444)) &&
-	    (devp->h_active > 2048))
-		reg_fmt444_comb = 1;
-	else
-		reg_fmt444_comb = 0;
+	reg_fmt444_comb = vdin_chk_is_comb_mode(devp);
 
 	switch (devp->format_convert) {
 	case VDIN_FORMAT_CONVERT_YUV_NV12:
@@ -267,29 +285,6 @@ void vdin_afbce_update(struct vdin_dev_s *devp)
 		(reg_format_mode  & 0x3) << 8 |
 		(uncmp_bits & 0xf) << 4 |
 		(uncmp_bits & 0xf));
-}
-
-bool vdin_chk_is_comb_mode(struct vdin_dev_s *devp)
-{
-	enum vdin_format_convert_e vdinout_fmt;
-	int reg_fmt444_rgb_en = false;
-	int reg_fmt444_comb = false;
-
-	vdinout_fmt = devp->format_convert;
-	if ((vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_RGB) ||
-	    (vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_GBR) ||
-	    (vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_BRG) ||
-	    (vdinout_fmt == VDIN_FORMAT_CONVERT_RGB_RGB))
-		reg_fmt444_rgb_en = true;
-
-	if (((vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
-	     (vdinout_fmt == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
-	      reg_fmt444_rgb_en) && (devp->h_active > 2048))
-		reg_fmt444_comb = true;
-	else
-		reg_fmt444_comb = false;
-
-	return reg_fmt444_comb;
 }
 
 void vdin_afbce_config(struct vdin_dev_s *devp)
@@ -341,7 +336,6 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	blk_out_end_v	=  enc_win_bgn_v      >> 2 ;//output blk scope
 	blk_out_bgn_v	= (enc_win_end_v + 3) >> 2 ;//output blk scope
 
-	pr_info("%s format_convert:%d\n", __func__, devp->format_convert);
 	vdinout_fmt = devp->format_convert;
 
 	if ((vdinout_fmt == VDIN_FORMAT_CONVERT_YUV_RGB) ||
@@ -372,7 +366,8 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 
 	//bit size of uncompression mode
 	uncmp_size = (((((16*uncmp_bits*sblk_num)+7)>>3)+31)/32)<<1;
-
+	pr_info("%s fmt_convert:%d comb:%d\n", __func__,
+		devp->format_convert, reg_fmt444_comb);
 	W_VCBUS_BIT(AFBCE_MODE_EN, 1, 18, 1);/* disable order mode */
 
 	W_VCBUS_BIT(VDIN_WRARB_REQEN_SLV, 0x1, 3, 1);//vpu arb axi_enable
