@@ -6388,11 +6388,16 @@ static int parse_sei_and_meta(
 		type = (type << 8) | *p++;
 		type = (type << 8) | *p++;
 		type = (type << 8) | *p++;
-		if ((type & 0xffffff00) == 0x01000000) {
-			/* source is VS10 */
+		if (debug_dolby & 4)
+			pr_dolby_dbg("metadata type=%08x, size=%d:\n",
+				type, size);
+		if ((type == 0x01000000) || /* hevc t35 sei */
+		((type & 0xff000000) == 0x14000000)) { /* av1 t35 obu */
 			*total_comp_size = 0;
 			*total_md_size = 0;
-			if (p[0] == 0xb5 &&
+
+			if ((type & 0xff000000) == 0x14000000 &&
+				p[0] == 0xb5 &&
 				p[1] == 0x00 &&
 				p[2] == 0x3b &&
 				p[3] == 0x00 &&
@@ -6402,10 +6407,10 @@ static int parse_sei_and_meta(
 				p[7] == 0x37 &&
 				p[8] == 0xcd &&
 				p[9] == 0x08) {
-				/* AV1 meta in obu */
+				/* AV1 dv meta in obu */
 				*src_format = FORMAT_DOVI;
 				meta_buf[0] = meta_buf[1] = meta_buf[2] = 0;
-				meta_buf[3] = 0x01;	meta_buf[4] = 0x19;
+				meta_buf[3] = 0x01; meta_buf[4] = 0x19;
 				if (p[11] & 0x10) {
 					rpu_size = 0x100;
 					rpu_size |= (p[11] & 0x0f) << 4;
@@ -6434,6 +6439,7 @@ static int parse_sei_and_meta(
 					rpu_size += 5;
 				}
 			} else {
+				/* HEVC dv meta in sei */
 				*src_format = FORMAT_DOVI;
 				if (size > (sizeof(meta_buf) - 3))
 					size = (sizeof(meta_buf) - 3);
