@@ -472,7 +472,9 @@ void earctx_cmdc_hpd_detect(struct regmap *top_map,
 	}
 }
 
-void earctx_dmac_init(struct regmap *top_map, struct regmap *dmac_map)
+void earctx_dmac_init(struct regmap *top_map,
+		      struct regmap *dmac_map,
+		      int earc_spdifout_lane_mask)
 {
 	mmio_update_bits(dmac_map, EARCTX_SPDIFOUT_CTRL0,
 			 0x3 << 28,
@@ -486,16 +488,23 @@ void earctx_dmac_init(struct regmap *top_map, struct regmap *dmac_map)
 			 0x1 << 24 | /* chdata select*/
 			 0x1 << 20 | /* reg_data_sel, 1: data from 27bit */
 			 0x1 << 19 | /* 0: lsb first */
-			 0x1 << 18 | /* biphase encode valid Bit value sel */
-			 0xff << 4,   /* lane mask */
+			 0x1 << 18,  /* biphase encode valid Bit value sel */
 			 0x1 << 28 |
 			 0x1 << 26 |
 			 0x1 << 24 |
 			 0x1 << 20 |
 			 0x0 << 19 |
-			 0x1 << 18 |
-			 0x3 << 4   //  ODO: lane 0 now
+			 0x1 << 18
 			);
+
+	if (earc_spdifout_lane_mask == EARC_SPDIFOUT_LANE_MASK_V2)
+		mmio_update_bits(dmac_map, EARCTX_SPDIFOUT_CTRL2,
+				 0xffff,   /* lane mask */
+				 0x3);     /*  ODO: lane 0 now */
+	else
+		mmio_update_bits(dmac_map, EARCTX_SPDIFOUT_CTRL0,
+				 0xff << 4,   /* lane mask */
+				 0x3 << 4);   /*  ODO: lane 0 now */
 
 	mmio_update_bits(dmac_map, EARCTX_ERR_CORRT_CTRL0,
 			 0x1 << 23 | /* reg_bch_in_reverse */

@@ -22,6 +22,15 @@
 #include <linux/amlogic/media/sound/iomapres.h>
 #include <linux/amlogic/media/sound/iec_info.h>
 
+/* For earc spdifout mask lane register offset V1:
+ * EARCTX_SPDIFOUT_CTRL0, offset: 4 - 11
+ */
+#define EARC_SPDIFOUT_LANE_MASK_V1 1
+/* For earc spdifout mask lane register offset V2:
+ * EARCTX_SPDIFOUT_CTRL2, offset: 0 - 15
+ */
+#define EARC_SPDIFOUT_LANE_MASK_V2 2
+
 #define INT_EARCRX_CMDC_IDLE2               (0x1 << 15)
 #define INT_EARCRX_CMDC_IDLE1               (0x1 << 14)
 #define INT_EARCRX_CMDC_DISC2               (0x1 << 13)
@@ -148,7 +157,9 @@ void earctx_cmdc_arc_connect(struct regmap *cmdc_map, bool init);
 void earctx_cmdc_hpd_detect(struct regmap *top_map,
 			    struct regmap *cmdc_map,
 			    int earc_port, bool st);
-void earctx_dmac_init(struct regmap *top_map, struct regmap *dmac_map);
+void earctx_dmac_init(struct regmap *top_map,
+		      struct regmap *dmac_map,
+		      int earc_spdifout_lane_mask);
 void earctx_dmac_set_format(struct regmap *dmac_map,
 			    int frddr_idx, int msb, int frddr_type);
 void earctx_set_channel_status_info(struct regmap *dmac_map,

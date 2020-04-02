@@ -52,6 +52,10 @@ enum work_event {
 	EVENT_TX_ANA_AUTO_CAL = 0x1 << 1,
 };
 
+struct earc_chipinfo {
+	unsigned int earc_spdifout_lane_mask;
+};
+
 struct earc {
 	struct aml_audio_controller *actrl;
 	struct device *dev;
@@ -95,6 +99,8 @@ struct earc {
 	enum work_event event;
 	bool rx_bootup_auto_cal;
 	bool tx_bootup_auto_cal;
+
+	struct earc_chipinfo *chipinfo;
 };
 
 static struct earc *s_earc;
@@ -582,7 +588,9 @@ static int earc_dai_prepare(
 				     frddr_type);
 		aml_frddr_select_dst(fr, dst);
 
-		earctx_dmac_init(p_earc->tx_top_map, p_earc->tx_dmac_map);
+		earctx_dmac_init(p_earc->tx_top_map,
+				 p_earc->tx_dmac_map,
+				 p_earc->chipinfo->earc_spdifout_lane_mask);
 		earctx_dmac_set_format(p_earc->tx_dmac_map,
 				       fr->fifo_id,
 				       bit_depth - 1,
@@ -1221,12 +1229,30 @@ static const struct snd_soc_component_driver earc_component = {
 	.name		= DRV_NAME,
 };
 
+struct earc_chipinfo sm1_earc_chipinfo = {
+	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V1,
+};
+
+struct earc_chipinfo tm2_earc_chipinfo = {
+	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V1,
+};
+
+struct earc_chipinfo tm2_revb_earc_chipinfo = {
+	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V2,
+};
+
 static const struct of_device_id earc_device_id[] = {
 	{
 		.compatible = "amlogic, sm1-snd-earc",
+		.data = &sm1_earc_chipinfo,
 	},
 	{
 		.compatible = "amlogic, tm2-snd-earc",
+		.data = &tm2_earc_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tm2-revb-snd-earc",
+		.data = &tm2_revb_earc_chipinfo,
 	},
 	{},
 };
@@ -1465,6 +1491,14 @@ static int earc_platform_probe(struct platform_device *pdev)
 
 	p_earc->dev = dev;
 	dev_set_drvdata(dev, p_earc);
+
+	p_earc->chipinfo = (struct earc_chipinfo *)
+		of_device_get_match_data(dev);
+
+	if (!p_earc->chipinfo) {
+		dev_warn_once(dev, "check whether to update earc chipinfo\n");
+		return -EINVAL;
+	}
 
 	/* get audio controller */
 	node_prt = of_get_parent(node);
