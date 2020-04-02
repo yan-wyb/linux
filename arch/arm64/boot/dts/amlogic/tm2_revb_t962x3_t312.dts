@@ -1707,7 +1707,7 @@
 };  /* end of pinctrl_aobus */
 
 &audio_data{
-	status = "disabled";
+	status = "okay";
 };
 
 &sd_emmc_c {

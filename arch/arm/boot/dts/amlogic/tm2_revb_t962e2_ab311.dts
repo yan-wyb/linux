@@ -1682,7 +1682,7 @@
 }; /* end of pinctrl_periphs */
 
 &audio_data{
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c2 {
