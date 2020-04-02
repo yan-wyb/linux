@@ -3215,7 +3215,7 @@ config_di_pre_mc_mif(struct DI_MC_MIF_s *di_mcinfo_mif,
 
 	if (di_buf) {
 		pre_size_w = di_buf->vframe->width;
-		pre_size_h = (di_buf->vframe->height + 1) / 2;
+		pre_size_h = di_buf->vframe->height  / 2;
 		di_mcinfo_mif->size_x = pre_size_h / 2 - 1;
 		di_mcinfo_mif->size_y = 1;
 		di_mcinfo_mif->canvas_num = di_buf->mcinfo_canvas_idx;
@@ -5580,7 +5580,7 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		if ((di_height > 3) && di_vscale_skip_count_real)
 			di_height = di_height - 3;
 		else
-			di_height++;
+			di_height--;
 	}
 
 	if (Rd(DI_POST_SIZE) != ((di_width - 1) | ((di_height - 1) << 16)) ||
