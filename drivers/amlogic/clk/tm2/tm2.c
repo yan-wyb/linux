@@ -27,6 +27,8 @@
 #include "../tl1/tl1.h"
 #include "tm2.h"
 
+int tm2_revb_pcie;
+
 static const struct pll_rate_table tm2_pcie_pll_rate_table[] = {
 	PLL_RATE(100000000, 200, 1, 12),
 	{ /* sentinel */ },
@@ -295,6 +297,9 @@ static void __init tm2_clkc_init(struct device_node *np)
 			WARN_ON(IS_ERR(clks[clkid]));
 		}
 	}
+
+	if (of_property_read_bool(np, "pcie-revb"))
+		tm2_revb_pcie = 1;
 }
 
 CLK_OF_DECLARE(tm2, "amlogic,tm2-clkc", tm2_clkc_init);

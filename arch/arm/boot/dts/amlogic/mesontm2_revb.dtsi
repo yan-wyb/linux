@@ -671,6 +671,7 @@
 			clkc1: clock-controller@1 {
 				compatible = "amlogic,tm2-clkc";
 				#clock-cells = <1>;
+				pcie-revb;
 			};
 		};/* end of hiubus*/
 
