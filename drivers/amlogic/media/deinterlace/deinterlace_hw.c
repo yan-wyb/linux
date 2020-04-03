@@ -619,7 +619,7 @@ static void set_ma_pre_mif_g12(struct DI_SIM_MIF_s *mtnwr_mif,
 	RDMA_WR_BITS(CONTRD_SCOPE_X, contprd_mif->end_x, 16, 13);
 	RDMA_WR_BITS(CONTRD_SCOPE_Y, contprd_mif->start_y, 0, 13);
 	RDMA_WR_BITS(CONTRD_SCOPE_Y, contprd_mif->end_y, 16, 13);
-	RDMA_WR_BITS(CONTRD_CTRL1, contprd_mif->canvas_num, 16, 8);
+	RDMA_WR_BITS(CONTRD_CTRL1, contp2rd_mif->canvas_num, 16, 8);
 	RDMA_WR_BITS(CONTRD_CTRL1, 2, 8, 2);
 	RDMA_WR_BITS(CONTRD_CTRL1, 0, 0, 3);
 
@@ -627,7 +627,7 @@ static void set_ma_pre_mif_g12(struct DI_SIM_MIF_s *mtnwr_mif,
 	RDMA_WR_BITS(CONT2RD_SCOPE_X, contp2rd_mif->end_x, 16, 13);
 	RDMA_WR_BITS(CONT2RD_SCOPE_Y, contp2rd_mif->start_y, 0, 13);
 	RDMA_WR_BITS(CONT2RD_SCOPE_Y, contp2rd_mif->end_y, 16, 13);
-	RDMA_WR_BITS(CONT2RD_CTRL1, contp2rd_mif->canvas_num, 16, 8);
+	RDMA_WR_BITS(CONT2RD_CTRL1, contprd_mif->canvas_num, 16, 8);
 	RDMA_WR_BITS(CONT2RD_CTRL1, 2, 8, 2);
 	RDMA_WR_BITS(CONT2RD_CTRL1, 0, 0, 3);
 
