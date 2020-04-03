@@ -743,6 +743,8 @@ void edid_rm_db_by_idx(uint8_t *p_edid, uint8_t blk_idx);
 void splice_tag_db_to_edid(u8 *p_edid, u8 *add_buf,
 			   u8 buf_len, u16 tagid);
 uint8_t *edid_tag_extract(uint8_t *p_edid, uint16_t tagid);
+void splice_data_blk_to_edid(u_char *p_edid, u_char *add_buf,
+			     u_char blk_idx);
 void rx_modify_edid(unsigned char *buffer,
 				int len, unsigned char *addition);
 void rx_edid_update_audio_info(unsigned char *p_edid,

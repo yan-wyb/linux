@@ -69,6 +69,9 @@ module_param(new_hdr_lum, bool, 0664);
  * 0:not reset hpd after atmos edid update
  */
 bool atmos_edid_update_hpd_en = 1;
+static u_char tmp_sad_len;
+static u_char tmp_sad[30];
+
 /* if free space is not enough in edid to do
  * data blk splice, then remove the last dtd(s)
  */
@@ -1465,6 +1468,81 @@ unsigned char get_atmos_offset(unsigned char *p_edid)
 	return ret;
 }
 
+u_char rx_edid_get_aud_sad(u_char *sad_data)
+{
+	u_char *pedid = rx_get_cur_edid(rx.port);
+	u_char *aud_blk = edid_tag_extract(pedid, AUDIO_TAG);
+	u_char len = 0;
+
+	if (!sad_data || !aud_blk)
+		return 0;
+	len = BLK_LENGTH(aud_blk[0]);
+	memcpy(sad_data, aud_blk + 1, len);
+	return len;
+}
+EXPORT_SYMBOL(rx_edid_get_aud_sad);
+
+/* audio module parse the short audio descriptors
+ * info from ARC/eARC and inform hdmirx
+ * if len = 0, revert to original edid audio blk
+ */
+bool rx_edid_set_aud_sad(u_char *sad, u_char len)
+{
+	if ((len > 30) || (len % 3 != 0)) {
+		if (log_level & AUDIO_LOG)
+			rx_pr("err sad length: %d\n", len);
+		return false;
+	}
+	memset(tmp_sad, 0, sizeof(tmp_sad));
+	if (sad)
+		memcpy(tmp_sad, sad, len);
+	tmp_sad_len = len;
+	hdmi_rx_top_edid_update();
+	if (rx.open_fg && (rx.port != rx.arc_port)) {
+		if (atmos_edid_update_hpd_en)
+			rx_send_hpd_pulse();
+		if (log_level & AUDIO_LOG)
+			rx_pr("*update aud SAD len: %d*\n", len);
+	} else {
+		pre_port = 0xff;
+		if (log_level & AUDIO_LOG)
+			rx_pr("update aud SAD later, in arc port:%s\n",
+		      rx.port == rx.arc_port ? "Y" : "N");
+	}
+	return true;
+}
+EXPORT_SYMBOL(rx_edid_set_aud_sad);
+
+bool rx_edid_update_aud_blk(u_char *pedid,
+	u_char *sad_data, u_char len)
+{
+	u_char *tmp_aud_blk = NULL;
+
+	if (!pedid)
+		return false;
+	/* if len = 0, revert to original edid */
+	if ((len == 0) || (len > 30) || (len % 3 != 0)) {
+		if (log_level & AUDIO_LOG)
+			rx_pr("err SAD length: %d\n", len);
+		return false;
+	}
+	tmp_aud_blk = kmalloc(len + 1, GFP_KERNEL);
+	if (!tmp_aud_blk) {
+		rx_pr("err: malloc aud blk buf\n");
+		return false;
+	}
+	tmp_aud_blk[0] = (0x1 << 5) | len;
+	memcpy(tmp_aud_blk + 1, sad_data, len);
+	edid_rm_db_by_tag(pedid, AUDIO_TAG);
+	/* place aud data blk to blk index = 0x1 */
+	splice_data_blk_to_edid(pedid, tmp_aud_blk, 0x1);
+	kfree(tmp_aud_blk);
+	return true;
+}
+
+/* update atmos bit
+ * it will also update audio data blk(if required from Audio)
+ */
 unsigned char rx_edid_update_atmos(unsigned char *p_edid)
 {
 	unsigned char offset = get_atmos_offset(p_edid);
@@ -1479,6 +1557,7 @@ unsigned char rx_edid_update_atmos(unsigned char *p_edid)
 		if (log_level & EDID_LOG)
 			rx_pr("offset = %d\n", offset);
 	}
+	rx_edid_update_aud_blk(p_edid, tmp_sad, tmp_sad_len);
 	return 0;
 }
 
@@ -3912,8 +3991,8 @@ unsigned char *compose_audio_db(uint8_t *aud_db, uint8_t *add_buf)
  * after the last data blk, otherwise insert it
  * in the blk_idx place.
  */
-void splice_data_blk_to_edid(uint8_t *p_edid, uint8_t *add_buf,
-	uint8_t blk_idx)
+void splice_data_blk_to_edid(u_char *p_edid, u_char *add_buf,
+			     u_char blk_idx)
 {
 	/* uint8_t *tag_data_blk = NULL; */
 	uint8_t *add_data_blk = NULL;

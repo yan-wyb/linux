@@ -558,6 +558,8 @@ extern int adc_set_pll_cntl(bool on, unsigned int module_sel, void *pDtvPara);
 extern void tvafe_set_ddemod_default(void);/* add for dtv demod*/
 extern void rx_get_audio_status(struct rx_audio_stat_s *aud_sts);
 
-extern void rx_set_atmos_flag(bool en);
+void rx_set_atmos_flag(bool en);
 extern bool rx_get_atmos_flag(void);
+u_char rx_edid_get_aud_sad(u_char *sad_data);
+bool rx_edid_set_aud_sad(u_char *sad, u_char len);
 #endif
