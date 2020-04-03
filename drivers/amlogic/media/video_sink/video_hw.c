@@ -4864,6 +4864,27 @@ static void fgrain_stop(u8 layer_id)
 	glayer_info[layer_id].fgrain_start = false;
 }
 
+static void fgrain_set_window(u32 layer_id,
+			      struct fgrain_setting_s *setting)
+{
+	if (layer_id == 0) {
+		VSYNC_WR_MPEG_REG(FGRAIN_WIN_H,
+				  (setting->start_x / 32 * 32 << 0) |
+				  ((setting->end_x / 32 * 32) << 16));
+		VSYNC_WR_MPEG_REG(FGRAIN_WIN_V,
+				  (setting->start_y / 4 * 4 << 0) |
+				  ((setting->end_y / 4 * 4) << 16));
+	} else {
+		VSYNC_WR_MPEG_REG(VD2_FGRAIN_WIN_H,
+				  (setting->start_x / 32 * 32 << 0) |
+				  ((setting->end_x / 32 * 32) << 16));
+		VSYNC_WR_MPEG_REG(VD2_FGRAIN_WIN_V,
+				  (setting->start_y / 4 * 4 << 0) |
+				  ((setting->end_y / 4 * 4) << 16));
+	}
+}
+
+#ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 static int fgrain_init(u8 layer_id, u32 table_size)
 {
 	int ret;
@@ -4894,26 +4915,6 @@ static void fgrain_uninit(u8 layer_id)
 	else if (layer_id == 1)
 		channel = FILM_GRAIN1_CHAN;
 	lut_dma_unregister(LUT_DMA_WR, channel);
-}
-
-static void fgrain_set_window(u32 layer_id,
-			      struct fgrain_setting_s *setting)
-{
-	if (layer_id == 0) {
-		VSYNC_WR_MPEG_REG(FGRAIN_WIN_H,
-				  (setting->start_x / 32 * 32 << 0) |
-				  ((setting->end_x / 32 * 32) << 16));
-		VSYNC_WR_MPEG_REG(FGRAIN_WIN_V,
-				  (setting->start_y / 4 * 4 << 0) |
-				  ((setting->end_y / 4 * 4) << 16));
-	} else {
-		VSYNC_WR_MPEG_REG(VD2_FGRAIN_WIN_H,
-				  (setting->start_x / 32 * 32 << 0) |
-				  ((setting->end_x / 32 * 32) << 16));
-		VSYNC_WR_MPEG_REG(VD2_FGRAIN_WIN_V,
-				  (setting->start_y / 4 * 4 << 0) |
-				  ((setting->end_y / 4 * 4) << 16));
-	}
 }
 
 static int fgrain_write(u32 layer_id, u32 fgs_table_addr)
@@ -4957,6 +4958,25 @@ static void fgrain_update_irq_source(u32 layer_id)
 
 	lut_dma_update_irq_source(channel, irq_source);
 }
+#else
+static int fgrain_init(u8 layer_id, u32 table_size)
+{
+	return 0;
+}
+
+static void fgrain_uninit(u8 layer_id)
+{
+}
+
+static int fgrain_write(u32 layer_id, u32 fgs_table_addr)
+{
+	return 0;
+}
+
+static void fgrain_update_irq_source(u32 layer_id)
+{
+}
+#endif
 
 void fgrain_config(u8 layer_id,
 		   struct vpp_frame_par_s *frame_par,
@@ -5000,10 +5020,10 @@ void fgrain_config(u8 layer_id,
 		#endif
 	}
 
-	if (vf->bitdepth & BITDEPTH_Y8)
-		setting->bitdepth = 0;
-	else if (vf->bitdepth & BITDEPTH_Y10)
+	if (vf->bitdepth & BITDEPTH_Y10)
 		setting->bitdepth = 1;
+	else
+		setting->bitdepth = 0;
 
 	if (glayer_info[layer_id].reverse)
 		setting->reverse = 3;
