@@ -674,7 +674,7 @@
 
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
-		status = "disabled";
+		status = "okay";
 		key_name = "vol-", "vol+", "ch+", "ch-",
 			"menu", "source", "exit";
 		key_num = <7>;
