@@ -746,6 +746,7 @@ struct tv_dovi_setting_s {
 	uint32_t video_width;
 	uint32_t video_height;
 	enum input_mode_e input_mode;
+	uint16_t backlight;
 };
 #ifdef V1_6_1
 extern int tv_control_path(

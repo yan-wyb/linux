@@ -59,6 +59,7 @@
 #include <linux/vmalloc.h>
 #include <linux/arm-smccc.h>
 #include <linux/spinlock.h>
+#include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 
 DEFINE_SPINLOCK(dovi_lock);
 
@@ -545,8 +546,8 @@ static const s16 EXTER_MAX_PQ = 256;
 static const s16 INTER_MIN_PQ = -4096;
 static const s16 INTER_MAX_PQ = 4095;
 
-#define LEFT_RANGE_BRIGHTNESS  (-1536) /*limit the range*/
-#define RIGHT_RANGE_BRIGHTNESS (1536)
+#define LEFT_RANGE_BRIGHTNESS  (-4096) /*limit the range*/
+#define RIGHT_RANGE_BRIGHTNESS (4095)
 #define LEFT_RANGE_CONTRAST    (-4096)
 #define RIGHT_RANGE_CONTRAST   (4095)
 #define LEFT_RANGE_COLORSHIFT  (-4096)
@@ -2007,6 +2008,9 @@ static uint64_t stb_core1_lut[STB_DMA_TBL_SIZE];
 
 static bool tv_mode;
 static bool mel_mode;
+static uint16_t tv_backlight;
+static bool tv_backlight_changed;
+static bool set_backlight_delay_one_vsync;
 
 #define MAX_PARAM   8
 static bool is_meson_gxm(void)
@@ -5590,6 +5594,7 @@ static void update_src_format(
 	enum signal_format_e src_format, struct vframe_s *vf)
 {
 	enum signal_format_e cur_format = dolby_vision_src_format;
+	int gd_en = 0;
 
 	if (src_format == FORMAT_DOVI ||
 		src_format == FORMAT_DOVI_LL) {
@@ -5609,6 +5614,15 @@ static void update_src_format(
 		}
 	}
 	if (cur_format != dolby_vision_src_format) {
+		if (dolby_vision_src_format == 3) /*non dv -> dv*/
+			gd_en = 1;
+		else if (cur_format == 3) /* dv -> non dv*/
+			gd_en = 0;
+
+		if (is_meson_tm2_tvmode())
+			aml_lcd_atomic_notifier_call_chain
+			(LCD_EVENT_BACKLIGHT_DV_SEL, &gd_en);
+
 		pr_dolby_dbg(
 			"dolby_vision_src_format changed: %s => %s, signal_type = 0x%x\n",
 			input_str[cur_format],
@@ -8777,6 +8791,7 @@ int dolby_vision_parse_metadata(
 				->input_mode = input_mode;
 			tv_dovi_setting_change_flag = true;
 			dovi_setting_video_flag = video_frame;
+
 			if (debug_dolby & 1) {
 				if (el_flag)
 					pr_dolby_dbg("tv setting %s-%d: flag=%02x,md=%d,comp=%d\n",
@@ -9838,6 +9853,32 @@ int dolby_vision_process(
 				&& (dolby_vision_on_count == 0))
 					pr_dolby_dbg("first frame reset %d\n",
 						reset_flag);
+
+				if (tv_backlight_changed &&
+				    set_backlight_delay_one_vsync) {
+					aml_lcd_atomic_notifier_call_chain
+						(LCD_EVENT_BACKLIGHT_DV_DIM,
+						 &tv_backlight);
+					tv_backlight_changed = false;
+				}
+				if ((tv_dovi_setting->backlight !=
+				    tv_backlight) ||
+				    (dovi_setting_video_flag &&
+				    dolby_vision_on_count == 0)) {
+					pr_dolby_dbg("backlight %d -> %d\n",
+						tv_backlight,
+						tv_dovi_setting->backlight);
+					tv_backlight =
+						tv_dovi_setting->backlight;
+					tv_backlight_changed = true;
+				}
+				if (tv_backlight_changed &&
+				    !set_backlight_delay_one_vsync) {
+					aml_lcd_atomic_notifier_call_chain
+						(LCD_EVENT_BACKLIGHT_DV_DIM,
+						 &tv_backlight);
+					tv_backlight_changed = false;
+				}
 				enable_dolby_vision(1);
 				tv_dovi_setting_change_flag = false;
 				core1_disp_hsize = h_size;
@@ -11230,7 +11271,7 @@ static ssize_t amdolby_vision_bin_config_show
 		pr_info("alFall:             %d\n",
 			config->ambientConfig.alFall);
 
-		pr_info("vsvdb:              %d,%d,%d,%d,%d,%d,%d\n",
+		pr_info("vsvdb:              %x,%x,%x,%x,%x,%x,%x\n",
 			config->vsvdb[0],
 			config->vsvdb[1],
 			config->vsvdb[2],
@@ -11778,6 +11819,8 @@ static const char *amdolby_vision_debug_usage_str = {
 	"echo dv_efuse > /sys/class/amdolby_vision/debug; get dv efuse info\n"
 	"echo dv_el > /sys/class/amdolby_vision/debug; get dv enhanced layer info\n"
 	"echo force_support_emp 1/0 > /sys/class/amdolby_vision/debug; send emp\n"
+	"echo set_backlight_delay 0 > /sys/class/amdolby_vision/debug; set backlight no delay\n"
+	"echo set_backlight_delay 1 > /sys/class/amdolby_vision/debug; set backlight delay one vysnc\n"
 };
 static ssize_t  amdolby_vision_debug_show(struct class *cla,
 		struct class_attribute *attr, char *buf)
@@ -11826,6 +11869,15 @@ static ssize_t amdolby_vision_debug_store(struct class *cla,
 			force_support_emp = 1;
 		pr_info("force_support_emp %d\n", force_support_emp);
 #endif
+	} else if (!strcmp(parm[0], "set_backlight_delay")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		if (val == 0)
+			set_backlight_delay_one_vsync = 0;
+		else
+			set_backlight_delay_one_vsync = 1;
+		pr_info("set_backlight_delay_one_vsync %d\n",
+			set_backlight_delay_one_vsync);
 	} else {
 		pr_info("unsupport cmd\n");
 	}
