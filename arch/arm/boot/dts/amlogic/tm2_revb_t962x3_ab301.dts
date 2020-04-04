@@ -1928,7 +1928,7 @@
 };
 
 &saradc {
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c1 {
