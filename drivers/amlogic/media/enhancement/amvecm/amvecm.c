@@ -4804,7 +4804,8 @@ static void amvecm_pq_enable(int enable)
 				1, 23, 1);
 		}
 
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+		   !(is_meson_tm2_cpu() && is_meson_rev_a())) {
 			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
 				0x3f, 0, 6);
 			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
@@ -4927,7 +4928,8 @@ static void amvecm_pq_enable(int enable)
 				0, 23, 1);
 		}
 
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+		   !(is_meson_tm2_cpu() && is_meson_rev_a())) {
 			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
 				0, 0, 6);
 			WRITE_VPP_REG_BITS(SRSHARP0_SR7_DRTLPF_EN,
