@@ -1955,7 +1955,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		else
 			devp->csc_idx = vdin_set_color_matrix0(
@@ -1964,7 +1964,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (vdin_is_dolby_signal_in(devp) ||
@@ -1983,7 +1983,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				format_convert_matrix1,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
 			is_meson_sm1_cpu() || is_meson_tm2_cpu())
@@ -1993,7 +1993,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		else
 			devp->csc_idx = vdin_set_color_matrix0(
@@ -2002,7 +2002,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				format_convert_matrix0,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		if (devp->parm.info.fmt == TVIN_SIG_FMT_CVBS_SECAM)
 			wr_bits(offset, VDIN_MATRIX_CTRL, 0,
@@ -2034,7 +2034,7 @@ void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char id,
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		else
 			devp->csc_idx = vdin_set_color_matrix0(
@@ -2042,7 +2042,7 @@ void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char id,
 				devp->fmt_info_p, csc,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		break;
 	case 1:
@@ -2051,7 +2051,7 @@ void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char id,
 				devp->fmt_info_p, csc,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag,
+				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		break;
 	default:
@@ -2990,6 +2990,7 @@ void vdin_set_dolby_tunnel(struct vdin_dev_s *devp)
 				COMP2_OUT_SWT_BIT, COMP2_OUT_SWT_WID);
 		/*hdmi rx call back, 422 tunnel to 444*/
 		sm_ops->hdmi_dv_config(true, devp->frontend);
+		pr_info("dv rx tunnel mode\n");
 		/*vdin de tunnel and tunnel for vdin scaling*/
 		if (devp->dtdata->de_tunnel_tunnel && dv_de_scramble)
 			vdin_dolby_desc_sc_enable(devp, 1);
