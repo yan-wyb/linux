@@ -32,7 +32,7 @@
 /* ************************************************* */
 /* *** macro definitions ********************************************* */
 /* *********************************************************** */
-#define TVAFE_VER "Ref.2020/03/03"
+#define TVAFE_VER "Ref.2020/04/08"
 
 /* used to set the flag of tvafe_dev_s */
 #define TVAFE_FLAG_DEV_OPENED 0x00000010

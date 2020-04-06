@@ -25,6 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <linux/delay.h>
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 /* Local Headers */
 #include "../tvin_global.h"
@@ -62,6 +63,9 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 	tvafe_pr_info("devp->cma_mem_size:0x%x\n", devp->cma_mem_size);
 	tvafe_pr_info("devp->cma_mem_alloc:%d\n", devp->cma_mem_alloc);
 	#endif
+	tvafe_pr_info("devp->mem.start:0x%x\n", devp->mem.start);
+	tvafe_pr_info("devp->mem.end:%d\n", devp->mem.start + devp->mem.size);
+	tvafe_pr_info("devp->mem.size:0x%x\n", devp->mem.size);
 	tvafe_pr_info("tvafe_info_s->aspect_ratio:%d\n",
 		devp->tvafe.aspect_ratio);
 	tvafe_pr_info("tvafe_info_s->aspect_ratio_cnt:%d\n",
@@ -597,21 +601,92 @@ static ssize_t tvafe_show(struct device *dev,
 
 static DEVICE_ATTR(debug, 0644, tvafe_show, tvafe_store);
 
-/**************************************************/
-/*before to excute the func of tvafe_dumpmem_store ,*/
-/*it must be setting the steps below:*/
-/*echo wa 0x30b2 4c > /sys/class/register/reg*/
-/*echo wa 0x3122 3000000 > /sys/class/register/reg*/
-/*echo wa 0x3096 0 > /sys/class/register/reg*/
-/*echo wa 0x3150 2 > /sys/class/register/reg*/
+static void tvafe_dumpmem_adc(struct tvafe_dev_s *devp)
+{
+	unsigned int mem_start, mem_end;
+	unsigned int i, n;
 
-/*echo wa 0x3151 11b40000 > /sys/class/register/reg   //start mem adr*/
-/*echo wa 0x3152 11bf61f0 > /sys/class/register/reg	//end mem adr*/
-/*echo wa 0x3150 3 > /sys/class/register/reg*/
-/*echo wa 0x3150 1 > /sys/class/register/reg*/
+	tvafe_pr_info("%s: mem_start: 0x%x, mem_end: 0x%x, size: 0x%x\n",
+		     __func__, devp->mem.start,
+		     devp->mem.start + devp->mem.size,
+		     devp->mem.size);
+	mem_start = devp->mem.start >> 4;
+	mem_end = (devp->mem.start + devp->mem.size) >> 4;
 
-/*the steps above set  the cvd that  will  write the signal data to mem*/
-/**************************************************/
+	/* step 1: */
+	W_APB_REG(CVD2_REG_B2, 0x4c);
+	msleep(20);
+	W_APB_REG(ACD_REG_22, 0x3000000);
+	msleep(20);
+	W_APB_REG(CVD2_REG_96, 0x0);
+	msleep(20);
+	W_APB_REG(ACD_REG_50, 0x2);
+	msleep(20);
+
+	/* step 2: */
+	mem_start = devp->mem.start >> 4;
+	mem_end = (devp->mem.start + devp->mem.size) >> 4;
+	W_APB_REG(ACD_REG_51, mem_start);
+	msleep(20);
+	W_APB_REG(ACD_REG_52, mem_end);
+	msleep(20);
+	W_APB_REG(ACD_REG_50, 0x3);
+	msleep(20);
+	W_APB_REG(ACD_REG_50, 0x1);
+
+	/* wait adc data write to memory */
+	n = devp->cma_mem_size / SZ_1M + 1;
+	for (i = 0; i < n; i++)
+		msleep(500);
+	tvafe_pr_info("%s: adc data write done\n", __func__);
+}
+
+static int tvafe_dumpmem_save_buf(struct tvafe_dev_s *devp, const char *str)
+{
+	unsigned int highmem_flag = 0;
+	unsigned long highaddr;
+	struct file *filp = NULL;
+	loff_t pos = 0;
+	void *buf = NULL;
+/* unsigned int canvas_real_size = devp->canvas_h * devp->canvas_w; */
+	mm_segment_t old_fs = get_fs();
+	int i;
+
+	set_fs(KERNEL_DS);
+	filp = filp_open(str, O_RDWR|O_CREAT, 0666);
+	if (IS_ERR(filp)) {
+		tvafe_pr_err("create %s error.\n", str);
+		return -1;
+	}
+	highmem_flag = PageHighMem(phys_to_page(devp->mem.start));
+	pr_info("highmem_flag:%d\n", highmem_flag);
+	if (devp->cma_config_flag == 1 && highmem_flag != 0) {
+		/*tvafe dts config 5M memory*/
+		for (i = 0; i < devp->cma_mem_size / SZ_1M; i++) {
+			highaddr = devp->mem.start + i * SZ_1M;
+			buf = vdin_vmap(highaddr, SZ_1M);
+			if (!buf) {
+				pr_info("vdin_vmap error\n");
+				return -1;
+			}
+			pr_info("buf:0x%p\n", buf);
+/*vdin_dma_flush(devp, buf, SZ_1M, DMA_FROM_DEVICE);*/
+			vfs_write(filp, buf, SZ_1M, &pos);
+			vdin_unmap_phyaddr(buf);
+		}
+	} else {
+		buf = phys_to_virt(devp->mem.start);
+		vfs_write(filp, buf, devp->mem.size, &pos);
+	}
+	vfs_fsync(filp, 0);
+	filp_close(filp, NULL);
+	set_fs(old_fs);
+
+	tvafe_pr_info("write mem 0x%x (size 0x%x) to %s done\n",
+		      devp->mem.start, devp->mem.size, str);
+	return 0;
+}
+
 static ssize_t tvafe_dumpmem_store(struct device *dev,
 		struct device_attribute *attr, const char *buff, size_t len)
 {
@@ -621,16 +696,18 @@ static ssize_t tvafe_dumpmem_store(struct device *dev,
 	struct tvafe_dev_s *devp;
 	char delim1[3] = " ";
 	char delim2[2] = "\n";
-	unsigned int highmem_flag = 0;
-	unsigned long highaddr;
-	int i;
+
+	devp = dev_get_drvdata(dev);
+	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED)) {
+		tvafe_pr_err("tvafe havn't opened, error!!!\n");
+		return len;
+	}
 
 	strcat(delim1, delim2);
 	if (!buff)
 		return len;
 	buf_orig = kstrdup(buff, GFP_KERNEL);
 	/* printk(KERN_INFO "input cmd : %s",buf_orig); */
-	devp = dev_get_drvdata(dev);
 	ps = buf_orig;
 	while (1) {
 		token = strsep(&ps, delim1);
@@ -640,54 +717,17 @@ static ssize_t tvafe_dumpmem_store(struct device *dev,
 			continue;
 		parm[n++] = token;
 	}
-	if (!strncmp(parm[0], "dumpmem", strlen("dumpmem"))) {
-		if (parm[1] != NULL) {
-			struct file *filp = NULL;
-			loff_t pos = 0;
-			void *buf = NULL;
-/* unsigned int canvas_real_size = devp->canvas_h * devp->canvas_w; */
-			mm_segment_t old_fs = get_fs();
 
-			set_fs(KERNEL_DS);
-			filp = filp_open(parm[1], O_RDWR|O_CREAT, 0666);
-			if (IS_ERR(filp)) {
-				tvafe_pr_err("create %s error.\n",
-					parm[1]);
-				kfree(buf_orig);
-				return len;
-			}
-			highmem_flag =
-				PageHighMem(phys_to_page(devp->mem.start));
-			pr_info("highmem_flag:%d\n", highmem_flag);
-			if (devp->cma_config_flag == 1 &&
-				highmem_flag != 0) {
-				/*tvafe dts config 5M memory*/
-				for (i = 0;
-					i < devp->cma_mem_size / SZ_1M;
-					i++) {
-					highaddr = devp->mem.start + i * SZ_1M;
-					buf = vdin_vmap(highaddr, SZ_1M);
-					if (!buf) {
-						pr_info("vdin_vmap error\n");
-						return len;
-					}
-					pr_info("buf:0x%p\n", buf);
-		/*vdin_dma_flush(devp, buf, SZ_1M, DMA_FROM_DEVICE);*/
-					vfs_write(filp, buf, SZ_1M, &pos);
-					vdin_unmap_phyaddr(buf);
-				}
-			} else {
-				buf = phys_to_virt(devp->mem.start);
-				vfs_write(filp, buf, devp->mem.size, &pos);
-				tvafe_pr_info("write buffer %2d of %s.\n",
-					devp->mem.size, parm[1]);
-				tvafe_pr_info("devp->mem.start   %x .\n",
-					devp->mem.start);
-			}
-			vfs_fsync(filp, 0);
-			filp_close(filp, NULL);
-			set_fs(old_fs);
-		}
+	if (!parm[1]) {
+		tvafe_pr_err("%s: dumpmem file name missed\n", __func__);
+		kfree(buf_orig);
+		return len;
+	}
+	if (!strncmp(parm[0], "dumpmem", strlen("dumpmem"))) {
+		tvafe_dumpmem_save_buf(devp, parm[1]);
+	} else if (!strncmp(parm[0], "adc", strlen("adc"))) {
+		tvafe_dumpmem_adc(devp);
+		tvafe_dumpmem_save_buf(devp, parm[1]);
 	}
 	kfree(buf_orig);
 	return len;
@@ -705,6 +745,10 @@ static ssize_t tvafereg_store(struct device *dev,
 	char *argv[3];
 
 	devp = dev_get_drvdata(dev);
+	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED)) {
+		tvafe_pr_err("tvafe havn't opened, error!!!\n");
+		return count;
+	}
 
 	buf_work = kstrdup(buff, GFP_KERNEL);
 	p = buf_work;
@@ -723,11 +767,6 @@ static ssize_t tvafereg_store(struct device *dev,
 
 	cmd = argv[0][0];
 
-	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED)) {
-
-		tvafe_pr_err("tvafe havn't opened, error!!!\n");
-		return count;
-	}
 		switch (cmd) {
 		case 'r':
 		case 'R':
