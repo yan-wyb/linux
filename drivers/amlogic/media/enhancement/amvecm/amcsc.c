@@ -71,7 +71,7 @@ void hdr_osd_off(void)
 
 	cur_hdr_process = hdr_func(
 		OSD1_HDR, HDR_BYPASS, get_current_vinfo(), NULL);
-	pr_csc(8, "am_vecm: module=OSD1_HDR, process=HDR_BYPASS(%d, %d)\n",
+	pr_csc(8, "module=OSD1_HDR, process=HDR_BYPASS(%d, %d)\n",
 		HDR_BYPASS, cur_hdr_process);
 }
 
@@ -81,7 +81,7 @@ void hdr_vd1_off(void)
 
 	cur_hdr_process = hdr_func(
 		VD1_HDR, HDR_BYPASS, get_current_vinfo(), NULL);
-	pr_csc(8, "am_vecm: module=VD1_HDR, process=HDR_BYPASS(%d, %d)\n",
+	pr_csc(8, "module=VD1_HDR, process=HDR_BYPASS(%d, %d)\n",
 		HDR_BYPASS, cur_hdr_process);
 }
 
@@ -91,7 +91,7 @@ void hdr_vd2_off(void)
 
 	cur_hdr_process = hdr_func(
 		VD2_HDR, HDR_BYPASS, get_current_vinfo(), NULL);
-	pr_csc(8, "am_vecm: module=VD2_HDR, process=HDR_BYPASS(%d, %d)\n",
+	pr_csc(8, "module=VD2_HDR, process=HDR_BYPASS(%d, %d)\n",
 	       HDR_BYPASS, cur_hdr_process);
 }
 
@@ -101,7 +101,7 @@ void hdr_vd1_iptmap(void)
 
 	cur_hdr_process = hdr_func(
 		VD1_HDR, IPT_MAP, get_current_vinfo(), NULL);
-	pr_csc(8, "am_vecm: module=VD1_HDR, process=IPT_MAP(%d, %d)\n",
+	pr_csc(8, "module=VD1_HDR, process=IPT_MAP(%d, %d)\n",
 		IPT_MAP, cur_hdr_process);
 }
 

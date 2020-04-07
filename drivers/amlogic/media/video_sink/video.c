@@ -7252,10 +7252,18 @@ static ssize_t video_test_screen_store(struct class *cla,
 #endif
 
 	/* show test screen  YUV blend*/
-	if (!legacy_vpp)
+	/* force as black 0x108080 for dolbyvision stb ipt blend */
+	if (!legacy_vpp) {
+		if (is_dolby_vision_enable() &&
+			is_dolby_vision_stb_mode())
+			WRITE_VCBUS_REG(
+				VPP_POST_BLEND_BLEND_DUMMY_DATA,
+				0x00108080);
+		else
 		WRITE_VCBUS_REG(
 			VPP_POST_BLEND_BLEND_DUMMY_DATA,
 			test_screen & 0x00ffffff);
+	}
 	else if (is_meson_gxm_cpu() ||
 		(get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX))
 		/* bit width change to 10bit in gxm, 10/12 in txlx*/
