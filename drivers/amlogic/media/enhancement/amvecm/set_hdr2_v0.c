@@ -1977,23 +1977,49 @@ void set_hist(
 	}
 }
 
-void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
+void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel)
 {
 	unsigned int hist_ctrl_port = 0;
 	unsigned int hist_height, hist_width, i;
 	u32 num_pixel, total_pixel;
 	int j;
+	enum hdr_module_sel module_sel = VD1_HDR;
+	unsigned int hdr2_hist_rd;
 
-	if (module_sel == VD1_HDR)
-		hist_ctrl_port = VD1_HDR2_HIST_CTRL;
+	if (vd_path == VD1_PATH)
+		module_sel = VD1_HDR;
 	else
-		return;
+		module_sel = VD2_HDR;
+
+	if (module_sel == VD1_HDR) {
+		hist_ctrl_port = VD1_HDR2_HIST_CTRL;
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
+			hdr2_hist_rd = VD1_HDR2_HIST_RD_2;
+		else
+			hdr2_hist_rd = VD1_HDR2_HIST_CTRL + 3;
+	} else {
+		hist_ctrl_port = VD2_HDR2_HIST_CTRL;
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
+			hdr2_hist_rd = VD2_HDR2_HIST_RD_2;
+		else
+			hdr2_hist_rd = VD2_HDR2_HIST_CTRL + 3;
+	}
 
 	if (get_cpu_type() < MESON_CPU_MAJOR_ID_G12A)
 		return;
 
-	hist_width = READ_VPP_REG_BITS(VPP_PREBLEND_H_SIZE, 0, 13);
-	hist_height = READ_VPP_REG_BITS(VPP_PREBLEND_H_SIZE, 16, 13);
+	/*no vd2 in TL1*/
+	if ((get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) &&
+	   (module_sel == VD2_HDR))
+		return;
+
+	if (module_sel == VD1_HDR) {
+		hist_width = READ_VPP_REG_BITS(VPP_PREBLEND_H_SIZE, 0, 13);
+		hist_height = READ_VPP_REG_BITS(VPP_PREBLEND_H_SIZE, 16, 13);
+	} else if (module_sel == VD2_HDR) {
+		hist_width = READ_VPP_REG_BITS(VPP_VD2_HDR_IN_SIZE, 0, 13);
+		hist_height = READ_VPP_REG_BITS(VPP_VD2_HDR_IN_SIZE, 16, 13);
+	}
 
 	if (!hist_width || !hist_height)
 		return;
@@ -2012,10 +2038,7 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 	total_pixel = 0;
 	for (i = 0; i < 128; i++) {
 		WRITE_VPP_REG_BITS(hist_ctrl_port, i, 16, 8);
-		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
-			num_pixel = READ_VPP_REG(VD1_HDR2_HIST_RD_2);
-		else
-			num_pixel = READ_VPP_REG(hist_ctrl_port + 3);
+		num_pixel = READ_VPP_REG(hdr2_hist_rd);
 		total_pixel += num_pixel;
 		hdr_hist[NUM_HDR_HIST - 1][i] = num_pixel;
 	}

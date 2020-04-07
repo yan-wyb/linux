@@ -243,7 +243,8 @@ extern void send_hdr10_plus_pkt(enum vd_path_e vd_path);
 #define HDRPLUS_PKT_REPEAT	1
 #define HDRPLUS_PKT_IDLE	0
 
-void hdr10_plus_process_update(int force_source_lumin);
+void hdr10_plus_process_update(
+	int force_source_lumin, enum vd_path_e vd_path);
 extern int customer_hdr_clipping;
 
 /* api to get sink capability */

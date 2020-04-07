@@ -232,7 +232,7 @@ extern unsigned int hdr10_clip_disable;
 extern unsigned int hdr10_clip_luma;
 extern unsigned int hdr10_clip_margin;
 void get_hist(
-	enum hdr_module_sel module_sel,
+	enum vd_path_e vd_path,
 	enum hdr_hist_sel hist_sel);
 #define NUM_HDR_HIST 16
 extern u32 hdr_hist[NUM_HDR_HIST][128];

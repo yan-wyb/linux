@@ -6848,20 +6848,35 @@ static bool hdr10_plus_metadata_update(
 }
 
 static struct hdr10pgen_param_s hdr10pgen_param;
-void hdr10_plus_process_update(int force_source_lumin)
+void hdr10_plus_process_update(
+	int force_source_lumin, enum vd_path_e vd_path)
 {
 	hdr10_plus_ootf_gen(
 		customer_panel_lumin,
 		force_source_lumin,
 		&hdr10pgen_param);
-	hdr10p_ebzcurve_update(VD1_HDR, HDR10P_SDR, &hdr10pgen_param);
+	if (vd_path == VD1_PATH)
+		hdr10p_ebzcurve_update(
+			VD1_HDR,
+			HDR10P_SDR,
+			&hdr10pgen_param);
+	else if (vd_path == VD2_PATH)
+		hdr10p_ebzcurve_update(
+			VD2_HDR,
+			HDR10P_SDR,
+			&hdr10pgen_param);
 }
 EXPORT_SYMBOL(hdr10_plus_process_update);
 
-static void hdr10_tm_process_update(struct vframe_master_display_colour_s *p)
+static void hdr10_tm_process_update(
+	struct vframe_master_display_colour_s *p,
+	enum vd_path_e vd_path)
 {
 	hdr10_tm_dynamic_proc(p);
-	hdr10_tm_update(VD1_HDR, HDR_SDR);
+	if (vd_path == VD1_PATH)
+		hdr10_tm_update(VD1_HDR, HDR_SDR);
+	else if (vd_path == VD2_PATH)
+		hdr10_tm_update(VD2_HDR, HDR_SDR);
 }
 
 static struct hdr10plus_para hdmitx_hdr10plus_params[VD_PATH_MAX];
@@ -7636,9 +7651,9 @@ static int vpp_matrix_update(
 		if ((csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB_DYNAMIC) ||
 		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB)) {
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
-				get_hist(VD1_HDR, HIST_E_RGBMAX);
+				get_hist(vd_path, HIST_E_RGBMAX);
 			else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
-				get_hist(VD1_HDR, HIST_E_RGBMAX);
+				get_hist(vd_path, HIST_E_RGBMAX);
 		}
 	}
 
@@ -7692,18 +7707,18 @@ static int vpp_matrix_update(
 		if ((hdr_process_mode[vd_path] == PROC_HDR_TO_SDR) &&
 		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			!(get_hdr_type() & HLG_FLAG))
-			hdr10_tm_process_update(p);
+			hdr10_tm_process_update(p, vd_path);
 		if (hdr10p_meta_updated &&
 			hdr10_plus_process_mode[vd_path] == PROC_HDRP_TO_SDR)
-			hdr10_plus_process_update(0);
+			hdr10_plus_process_update(0, vd_path);
 	} else {
 		if ((hdr_process_mode[vd_path] == PROC_MATCH) &&
 		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
 			!(get_hdr_type() & HLG_FLAG))
-			hdr10_tm_process_update(p);
+			hdr10_tm_process_update(p, vd_path);
 		if (hdr10p_meta_updated &&
 			hdr10_plus_process_mode[vd_path] == PROC_MATCH)
-			hdr10_plus_process_update(0);
+			hdr10_plus_process_update(0, vd_path);
 	}
 
 	/* eye protection mode */
