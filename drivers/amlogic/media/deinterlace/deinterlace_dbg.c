@@ -1071,27 +1071,6 @@ void dump_buf_addr(struct di_buf_s *di_buf, unsigned int num)
 	}
 }
 
-void dump_afbcd_reg(void)
-{
-	u32 i;
-	u32 afbc_reg;
-
-	pr_info("---- dump afbc eAFBC_DEC0 reg -----\n");
-	for (i = 0; i < AFBC_REG_INDEX_NUB; i++) {
-		afbc_reg = reg_AFBC[eAFBC_DEC0][i];
-		pr_info("reg 0x%x val:0x%x\n", afbc_reg, RDMA_RD(afbc_reg));
-	}
-	pr_info("---- dump afbc eAFBC_DEC1 reg -----\n");
-	for (i = 0; i < AFBC_REG_INDEX_NUB; i++) {
-		afbc_reg = reg_AFBC[eAFBC_DEC1][i];
-		pr_info("reg 0x%x val:0x%x\n", afbc_reg, RDMA_RD(afbc_reg));
-	}
-	pr_info("reg 0x%x val:0x%x\n",
-		VD1_AFBCD0_MISC_CTRL, RDMA_RD(VD1_AFBCD0_MISC_CTRL));
-	pr_info("reg 0x%x val:0x%x\n",
-		VD2_AFBCD1_MISC_CTRL, RDMA_RD(VD2_AFBCD1_MISC_CTRL));
-}
-
 static int dbg_patch_mov_data_show(struct seq_file *seq, void *v)
 {
 	struct di_dev_s *de_devp = get_di_de_devp();
@@ -1275,6 +1254,29 @@ static int seq_file_afbc_show(struct seq_file *seq, void *v)
 	return 0;
 }
 
+static int dbg_afd0_reg_show(struct seq_file *s, void *v)
+{
+	dbg_afd_reg(s, EAFBC_DEC0);
+	return 0;
+}
+
+static int dbg_afd1_reg_show(struct seq_file *s, void *v)
+{
+	dbg_afd_reg(s, EAFBC_DEC1);
+	return 0;
+}
+
+static int dbg_afd2_reg_show(struct seq_file *s, void *v)
+{
+	dbg_afd_reg(s, EAFBC_DEC2_DI);
+	return 0;
+}
+
+static int dbg_afd3_reg_show(struct seq_file *s, void *v)
+{
+	dbg_afd_reg(s, EAFBC_DEC3_MEM);
+	return 0;
+}
 /*2018-08-17 add debugfs*/
 #define DEFINE_SHOW_DI(__name) \
 static int __name ## _open(struct inode *inode, struct file *file)	\
@@ -1297,6 +1299,11 @@ DEFINE_SHOW_DI(seq_file_afbc);
 DEFINE_SHOW_DI(reg_cue_int);
 DEFINE_SHOW_DI(dbg_patch_mov_data);
 
+DEFINE_SHOW_DI(dbg_afbc_cfg);
+DEFINE_SHOW_DI(dbg_afd0_reg);
+DEFINE_SHOW_DI(dbg_afd1_reg);
+DEFINE_SHOW_DI(dbg_afd2_reg);
+DEFINE_SHOW_DI(dbg_afd3_reg);
 struct di_debugfs_files_t {
 	const char *name;
 	const umode_t mode;
@@ -1310,6 +1317,11 @@ static struct di_debugfs_files_t di_debugfs_files[] = {
 	{"dumpafbc", S_IFREG | 0644, &seq_file_afbc_fops},
 	{"reg_cue", S_IFREG | 0644, &reg_cue_int_fops},
 	{"dumpmov", S_IFREG | 0644, &dbg_patch_mov_data_fops},
+	{"afbc_cfg", S_IFREG | 0644, &dbg_afbc_cfg_fops},
+	{"reg_afd0", S_IFREG | 0644, &dbg_afd0_reg_fops},
+	{"reg_afd1", S_IFREG | 0644, &dbg_afd1_reg_fops},
+	{"reg_afd2", S_IFREG | 0644, &dbg_afd2_reg_fops},
+	{"reg_afd3", S_IFREG | 0644, &dbg_afd3_reg_fops},
 };
 
 void di_debugfs_init(void)

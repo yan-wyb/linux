@@ -15300,3 +15300,9 @@ F:  drivers/staging/android/ion/ion_secure_heap.c
 AMLOGIC DECODE RESOURCE MANAGE
 M: Baoguo Chen <baoguo.chen@amlogic.com>
 F: drivers/amlogic/media/common/resource_mgr/*
+
+AMLOGIC DEINTERLACE DRIVER
+M:      Jihong Sui <jihong.sui@amlogic.com>
+F:      drivers/amlogic/media/deinterlace/di_afbc.h
+F:      drivers/amlogic/media/deinterlace/di_afbc.c
+

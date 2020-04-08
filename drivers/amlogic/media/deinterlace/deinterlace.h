@@ -84,6 +84,10 @@
 
 #define IS_COMP_MODE(vftype) (vftype & VIDTYPE_COMPRESS)
 
+#define IS_420P_SRC(vftype) (((vftype) & VIDTYPE_INTERLACE_BOTTOM) == 0	&& \
+			     ((vftype) & VIDTYPE_VIU_422) == 0		&& \
+			     ((vftype) & VIDTYPE_VIU_444) == 0)
+
 enum process_fun_index_e {
 	PROCESS_FUN_NULL = 0,
 	PROCESS_FUN_DI,
@@ -130,6 +134,8 @@ struct di_buf_s {
 	bool bflg_vmap;
 	unsigned long mcvec_adr;
 	int mcvec_canvas_idx;
+	unsigned long afbc_adr;
+	unsigned long afbct_adr;
 	struct mcinfo_pre_s {
 	unsigned int highvertfrqflg;
 	unsigned int motionparadoxflg;
@@ -278,6 +284,9 @@ struct di_dev_s {
 	atomic_t			mem_flag;
 	struct dentry *dbg_root;	/*dbg_fs*/
 	struct di_patch_mov_s mov;
+	unsigned int ic_id;
+	struct afd_s di_afd;
+	const struct afd_ops_s *afds;
 };
 
 struct di_pre_stru_s {
@@ -387,6 +396,9 @@ struct di_pre_stru_s {
 	int mcinfo_size;
 	int mv_size;
 	int mtn_size;
+	int di_size;	/* no afbc info size */
+	int afbci_size;	/* afbc info size */
+	int afbct_size;
 	int cma_alloc_req;
 	int cma_alloc_done;
 	int cma_release_req;
@@ -394,8 +406,6 @@ struct di_pre_stru_s {
 	unsigned long irq_time[2];
 	/* combing adaptive */
 	struct combing_status_s *mtn_status;
-	u64 afbc_rls_time;
-	bool wait_afbc;
 	/*****************/
 	bool retry_en;
 	unsigned int retry_index;
@@ -492,13 +502,14 @@ unsigned long get_di_reg_unreg_timeout_cnt(void);
 struct vframe_s **get_di_vframe_in(void);
 
 extern s32 di_request_afbc_hw(u8 id, bool on);
-u32 di_requeset_afbc(u32 onoff);
 /***********************/
 extern bool di_wr_cue_int(void);
 extern int reg_cue_int_show(struct seq_file *seq, void *v);
 int di_get_disp_cnt_demo(void);
 bool dil_attach_ext_api(const struct di_ext_ops *di_api);
 /*---------------------*/
+const struct afd_ops_s *di_afds(void);
+struct afbcd_ctr_s *di_get_afd_ctr(void);
 
 struct di_buf_s *get_di_buf(int queue_idx, int *start_pos);
 
@@ -511,7 +522,7 @@ struct di_buf_s *get_di_buf(int queue_idx, int *start_pos);
 
 #define pr_dbg(fmt, args ...)       pr_debug("DI: " fmt, ## args)
 
-#define pr_error(fmt, args ...)     pr_err("DI: " fmt, ## args)
+#define pr_error(fmt, args ...)     pr_err("DI:err:" fmt, ## args)
 
 /******************************************/
 /*#define DI_KEEP_HIS	0*/
