@@ -2878,6 +2878,7 @@ int hdr10p_ebzcurve_update(
 	int bit_depth;
 	unsigned int i = 0;
 	struct hdr_proc_mtx_param_s hdr_mtx_param;
+	bool eo_gmt_bit_mode = false;
 
 	memset(&hdr_mtx_param, 0, sizeof(struct hdr_proc_mtx_param_s));
 	memset(&hdr_lut_param, 0, sizeof(struct hdr_proc_lut_param_s));
@@ -2893,6 +2894,13 @@ int hdr10p_ebzcurve_update(
 		bit_depth = 10;
 	else
 		return 0;
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+		if (is_meson_rev_a() && is_meson_tm2_cpu())
+			eo_gmt_bit_mode = false;
+		else
+			eo_gmt_bit_mode = true;
+	}
 
 	if (is_meson_tl1_cpu())
 		bit_depth = 10;
@@ -2932,7 +2940,8 @@ int hdr10p_ebzcurve_update(
 				ncl_prmy_panel[i] *
 				p_hdr10pgen_param->scale_gmt / 1024;
 	}
-
+	if (eo_gmt_bit_mode)
+		hdr_mtx_param.gmt_bit_mode = 1;
 	hdr_mtx_param.mtx_on = MTX_ON;
 	hdr_mtx_param.p_sel = hdr_process_select;
 
