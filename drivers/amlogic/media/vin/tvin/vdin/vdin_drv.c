@@ -506,6 +506,26 @@ static void vdin_rdma_irq(void *arg)
 static struct rdma_op_s vdin_rdma_op[VDIN_MAX_DEVS];
 #endif
 
+static void vdin_double_write_confirm(struct vdin_dev_s *devp)
+{
+	/* enable doule write only afbce is supported */
+	if (devp->double_wr_cfg && devp->afbce_valid)
+		devp->double_wr = 1;
+	else
+		devp->double_wr = 0;
+
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	/* CAN NOT use dw due to hshrink lose color when dv tunnel signal in */
+	if (vdin_is_dolby_signal_in(devp)) {
+		devp->double_wr = 0;
+
+		if (vdin_dbg_en)
+			pr_info("dv in disable dw\n");
+	}
+#endif
+}
+
+
 /*
  * 1. config canvas base on  canvas_config_mode
  *		0: canvas_config in driver probe
@@ -602,6 +622,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_set_decimation(devp);
 	/* check if need enable afbce */
 	vdin_afbce_mode_init(devp);
+	vdin_double_write_confirm(devp);
 	vdin_set_double_write_regs(devp);
 
 	if (de_fmt_flag == 1 &&

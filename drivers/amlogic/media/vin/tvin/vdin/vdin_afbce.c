@@ -621,12 +621,6 @@ void vdin_afbce_mode_init(struct vdin_dev_s *devp)
 			devp->afbce_valid = false;
 	}
 
-	/* enable doule write only afbce is supported*/
-	if (devp->double_wr_cfg && devp->afbce_valid)
-		devp->double_wr = 1;
-	else
-		devp->double_wr = 0;
-
 	/* default non-afbce mode
 	 * switch to afbce_mode if need by vpp notify
 	 */
