@@ -1142,8 +1142,9 @@ extern int pre_int_en;
 extern int phy_bw;
 extern int vga_dbg_delay;
 extern int alirst_en;
-extern int dfe_dbg;
 extern int tap1_byp;
+extern int eq_byp;
+extern int long_cable;
 
 extern char emp_buf[1024];
 extern void rx_get_best_eq_setting(void);

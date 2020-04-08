@@ -1864,10 +1864,12 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(vga_dbg_delay, index);
 	if (set_pr_var(tmpbuf, alirst_en, value, &index, ret))
 		return pr_var(alirst_en, index);
-	if (set_pr_var(tmpbuf, dfe_dbg, value, &index, ret))
-		return pr_var(dfe_dbg, index);
 	if (set_pr_var(tmpbuf, tap1_byp, value, &index, ret))
 		return pr_var(tap1_byp, index);
+	if (set_pr_var(tmpbuf, eq_byp, value, &index, ret))
+		return pr_var(eq_byp, index);
+	if (set_pr_var(tmpbuf, long_cable, value, &index, ret))
+		return pr_var(long_cable, index);
 	return 0;
 }
 
@@ -1995,8 +1997,9 @@ void rx_get_global_variable(const char *buf)
 	pr_var(phy_bw, i++);
 	pr_var(vga_dbg_delay, i++);
 	pr_var(alirst_en, i++);
-	pr_var(dfe_dbg, i++);
 	pr_var(tap1_byp, i++);
+	pr_var(eq_byp, i++);
+	pr_var(long_cable, i++);
 }
 
 void skip_frame(unsigned int cnt)
@@ -2072,7 +2075,9 @@ void hdmirx_open_port(enum tvin_port_e port)
 	rx_pkt_initial();
 	rx.fsm_ext_state = FSM_NULL;
 	sm_pause = fsmst;
-	pre_int = 1;
+	if ((rx.chip_id >= CHIP_ID_TM2) &&
+		(rx.phy_ver == PHY_VER_TM2))
+		pre_int = 1;
 	extcon_set_state_sync(rx.rx_excton_open, EXTCON_DISP_HDMI, 1);
 	rx_pr("%s:%d\n", __func__, rx.port);
 }
@@ -2869,8 +2874,8 @@ void comb_val(char *type, unsigned int val_0, unsigned int val_1,
 	pos += snprintf(out+pos, 32-pos,  "%s[", type);
 	pos += snprintf(out+pos, 32-pos, " %s,", v0_buf);
 	pos += snprintf(out+pos, 32-pos, " %s,", v1_buf);
-	pos += snprintf(out+pos, 32-pos, " %s]\n", v2_buf);
-	rx_pr("\n%s\n", out);
+	pos += snprintf(out+pos, 32-pos, " %s]", v2_buf);
+	rx_pr("%s\n", out);
 }
 void dump_aml_phy_sts(void)
 {
@@ -3038,15 +3043,15 @@ void dump_aml_phy_sts(void)
 	rx_pr("eq_boost=[%d,%d,%d]\n",
 		ch0_eq_boost, ch1_eq_boost, ch2_eq_boost);
 
-	comb_val("dfe_tap0", dfe0_tap0, dfe1_tap0, dfe2_tap0, 8);
-	comb_val("dfe_tap1", dfe0_tap1, dfe1_tap1, dfe2_tap1, 6);
-	comb_val("dfe_tap2", dfe0_tap2, dfe1_tap2, dfe2_tap2, 5);
-	comb_val("dfe_tap3", dfe0_tap3, dfe1_tap3, dfe2_tap3, 4);
-	comb_val("dfe_tap4", dfe0_tap4, dfe1_tap4, dfe2_tap4, 4);
-	comb_val("dfe_tap5", dfe0_tap5, dfe1_tap5, dfe2_tap5, 4);
-	comb_val("dfe_tap6", dfe0_tap6, dfe1_tap6, dfe2_tap6, 4);
-	comb_val("dfe_tap7", dfe0_tap7, dfe1_tap7, dfe2_tap7, 4);
-	comb_val("dfe_tap8", dfe0_tap8, dfe1_tap8, dfe2_tap8, 4);
+	comb_val("    dfe_tap0", dfe0_tap0, dfe1_tap0, dfe2_tap0, 8);
+	comb_val("    dfe_tap1", dfe0_tap1, dfe1_tap1, dfe2_tap1, 6);
+	comb_val("    dfe_tap2", dfe0_tap2, dfe1_tap2, dfe2_tap2, 5);
+	comb_val("    dfe_tap3", dfe0_tap3, dfe1_tap3, dfe2_tap3, 4);
+	comb_val("    dfe_tap4", dfe0_tap4, dfe1_tap4, dfe2_tap4, 4);
+	comb_val("    dfe_tap5", dfe0_tap5, dfe1_tap5, dfe2_tap5, 4);
+	comb_val("    dfe_tap6", dfe0_tap6, dfe1_tap6, dfe2_tap6, 4);
+	comb_val("    dfe_tap7", dfe0_tap7, dfe1_tap7, dfe2_tap7, 4);
+	comb_val("    dfe_tap8", dfe0_tap8, dfe1_tap8, dfe2_tap8, 4);
 
 	comb_val("slicer_ofst0", sli0_ofst0, sli1_ofst0, sli2_ofst0, 5);
 	comb_val("slicer_ofst1", sli0_ofst1, sli1_ofst1, sli2_ofst1, 5);
@@ -3573,7 +3578,7 @@ int hdmirx_debug(const char *buf, int size)
 		rx_pr("Hdmirx version0: %s\n", RX_VER0);
 		rx_pr("Hdmirx version1: %s\n", RX_VER1);
 		rx_pr("Hdmirx version2: %s\n", RX_VER2);
-		rx_pr("Hdmirx version3: %s\n", "ver.2020/03/27");
+		rx_pr("Hdmirx version3: %s\n", "ver.2020/04/04");
 		rx_pr("------------------\n");
 	} else if (strncmp(input[0], "port0", 5) == 0) {
 		hdmirx_open_port(TVIN_PORT_HDMI0);

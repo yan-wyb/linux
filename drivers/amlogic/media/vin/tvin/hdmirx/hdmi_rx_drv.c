@@ -705,7 +705,7 @@ static bool is_it_vid_fmt(void)
 	else
 		ret = false;
 
-	if (log_level & VIDEO_LOG)
+	if (log_level & ERR_LOG)
 		rx_pr("sw_vic: %d, it video format: %d\n", rx.pre.sw_vic, ret);
 	return ret;
 }
