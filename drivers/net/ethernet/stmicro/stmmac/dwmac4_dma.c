@@ -86,6 +86,10 @@ static void dwmac4_dma_init_channel(void __iomem *ioaddr, int pbl,
 
 	value = readl(ioaddr + DMA_CHAN_TX_CONTROL(channel));
 	value = value | (pbl << DMA_BUS_MODE_PBL_SHIFT);
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	/*OSF*/
+	value = value | 0x10;
+#endif
 	writel(value, ioaddr + DMA_CHAN_TX_CONTROL(channel));
 
 	value = readl(ioaddr + DMA_CHAN_RX_CONTROL(channel));

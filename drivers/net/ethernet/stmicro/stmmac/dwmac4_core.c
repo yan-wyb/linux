@@ -257,7 +257,13 @@ static void dwmac4_phystatus(void __iomem *ioaddr, struct stmmac_extra_stats *x)
 			x->pcs_speed = SPEED_100;
 		else
 			x->pcs_speed = SPEED_10;
-
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+		/*1g patch*/
+		if (x->pcs_speed == SPEED_1000) {
+			status |= GMAC_PHYIF_CTRLSTATUS_LNKMOD_MASK;
+			writel(status, ioaddr + GMAC_PHYIF_CONTROL_STATUS);
+		}
+#endif
 		x->pcs_duplex = (status & GMAC_PHYIF_CTRLSTATUS_LNKMOD_MASK);
 
 		pr_info("Link is Up - %d/%s\n", (int)x->pcs_speed,
