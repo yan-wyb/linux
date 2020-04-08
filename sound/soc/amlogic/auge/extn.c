@@ -447,8 +447,11 @@ static int extn_dai_probe(struct snd_soc_dai *cpu_dai)
 
 	pr_info("asoc debug: %s-%d\n", __func__, __LINE__);
 
-	if (p_extn->chipinfo && p_extn->chipinfo->arc_version >= TL1)
+	if (p_extn->chipinfo && p_extn->chipinfo->arc_version == TL1)
 		extn_create_controls(card, p_extn);
+
+	if (p_extn->chipinfo && p_extn->chipinfo->arc_version == TM2)
+		tm2_arc_source_select(SPDIFA_TO_HDMIRX);
 
 	return 0;
 }

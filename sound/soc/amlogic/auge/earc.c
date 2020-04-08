@@ -425,6 +425,9 @@ static int earc_prepare(struct snd_pcm_substream *substream)
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		struct frddr *fr = p_earc->fddr;
 
+		/* select hdmirx arc source from earctx spdif */
+		tm2_arc_source_select(EARCTX_SPDIF_TO_HDMIRX);
+
 		/*
 		 * Contrast minimum of period and fifo depth,
 		 * and set the value as half.
@@ -1447,9 +1450,6 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 	earctx_cmdc_set_timeout(p_earc->tx_cmdc_map, 1);
 	/* Default: arc arc_initiated */
 	earctx_cmdc_int_mask(p_earc->tx_top_map);
-
-	/* select hdmirx arc source from earctx spdif */
-	tm2_arc_source_select(EARCTX_SPDIF_TO_HDMIRX);
 
 	return ret;
 }
