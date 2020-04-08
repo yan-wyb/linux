@@ -987,6 +987,8 @@ enum {
 			/*1:gp0 pll path1*/
 	CMD_VP_SET_PLLPATH,
 
+	CMD_VDAC,
+
 	CMD_HELP,
 
 	CMD_MAX
@@ -1033,34 +1035,36 @@ static void cvbs_debug_store(char *buf)
 		argv[argc] = para;
 	}
 
-	if (!strcmp(argv[0], "r"))
+	if (!strcmp(argv[0], "r")) {
 		cmd = CMD_REG_READ;
-	else if (!strcmp(argv[0], "rb"))
+	} else if (!strcmp(argv[0], "rb")) {
 		cmd = CMD_REG_READ_BITS;
-	else if (!strcmp(argv[0], "dump"))
+	} else if (!strcmp(argv[0], "dump")) {
 		cmd = CMD_REG_DUMP;
-	else if (!strcmp(argv[0], "w"))
+	} else if (!strcmp(argv[0], "w")) {
 		cmd = CMD_REG_WRITE;
-	else if (!strcmp(argv[0], "wb"))
+	} else if (!strcmp(argv[0], "wb")) {
 		cmd = CMD_REG_WRITE_BITS;
-	else if (!strncmp(argv[0], "clkdump", strlen("clkdump")))
+	} else if (!strncmp(argv[0], "clkdump", strlen("clkdump"))) {
 		cmd = CMD_CLK_DUMP;
-	else if (!strncmp(argv[0], "clkmsr", strlen("clkmsr")))
+	} else if (!strncmp(argv[0], "clkmsr", strlen("clkmsr"))) {
 		cmd = CMD_CLK_MSR;
-	else if (!strncmp(argv[0], "bist", strlen("bist")))
+	} else if (!strncmp(argv[0], "bist", strlen("bist"))) {
 		cmd = CMD_BIST;
-	else if (!strncmp(argv[0], "vpset", strlen("vpset")))
+	} else if (!strncmp(argv[0], "vpset", strlen("vpset"))) {
 		cmd = CMD_VP_SET;
-	else if (!strncmp(argv[0], "vpget", strlen("vpget")))
+	} else if (!strncmp(argv[0], "vpget", strlen("vpget"))) {
 		cmd = CMD_VP_GET;
-	else if (!strncmp(argv[0], "vpconf", strlen("vpconf")))
+	} else if (!strncmp(argv[0], "vpconf", strlen("vpconf"))) {
 		cmd = CMD_VP_CONFIG_DUMP;
-	else if ((!strncmp(argv[0], "set_clkpath", strlen("set_clkpath"))) ||
-		(!strncmp(argv[0], "clkpath", strlen("clkpath"))))
+	} else if ((!strncmp(argv[0], "set_clkpath", strlen("set_clkpath"))) ||
+		(!strncmp(argv[0], "clkpath", strlen("clkpath")))) {
 		cmd = CMD_VP_SET_PLLPATH;
-	else if (!strncmp(argv[0], "help", strlen("help")))
+	} else if (!strncmp(argv[0], "vdac", strlen("vdac"))) {
+		cmd = CMD_VDAC;
+	} else if (!strncmp(argv[0], "help", strlen("help"))) {
 		cmd = CMD_HELP;
-	else if (!strncmp(argv[0], "cvbs_ver", strlen("cvbs_ver"))) {
+	} else if (!strncmp(argv[0], "cvbs_ver", strlen("cvbs_ver"))) {
 		pr_info("cvbsout version : %s\n", CVBSOUT_VER);
 		goto DEBUG_END;
 	} else {
@@ -1235,6 +1239,22 @@ static void cvbs_debug_store(char *buf)
 		pr_info("bit[1]: 0=vid2_clk, 1=vid1_clk\n");
 
 		break;
+	case CMD_VDAC:
+		if (argc != 2) {
+			pr_info("[%s] set clkpath 0x0~0x3\n", __func__);
+			goto DEBUG_END;
+		}
+		ret = kstrtoul(argv[1], 10, &value);
+		if (value > 0x3) {
+			pr_info("invalid clkpath, only support 0x0~0x3\n");
+		} else {
+			cvbs_clk_path = value;
+			pr_info("set clkpath 0x%x\n", cvbs_clk_path);
+		}
+		pr_info("bit[0]: 0=vid_pll, 1=gp0_pll\n");
+		pr_info("bit[1]: 0=vid2_clk, 1=vid1_clk\n");
+
+		break;
 	case CMD_HELP:
 		pr_info("command format:\n"
 		"\tr c/h/v address_hex\n"
@@ -1245,6 +1265,7 @@ static void cvbs_debug_store(char *buf)
 		"\tbist 0/1/2/3/off\n"
 		"\tclkdump\n"
 		"\tclkpath 0/1/2/3\n"
+		"\tvdac 0/1\n"
 		"\tcvbs_ver\n");
 		break;
 	}
