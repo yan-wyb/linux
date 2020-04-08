@@ -220,6 +220,8 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		}
 
 		cur_dv_flag = prop->dolby_vision;
+		if (!vdin_re_config && sm_debug_enable)
+			pr_info("get dolby_vision=0x%x\n", prop->dolby_vision);
 		pre_dv_flag = devp->dv.dv_flag;
 		if (cur_dv_flag != pre_dv_flag) {
 			signal_chg |= cur_dv_flag ? TVIN_SIG_CHG_NO2DV :

@@ -103,6 +103,10 @@ static unsigned int dv_dbg_log;
 module_param(dv_dbg_log, uint, 0664);
 MODULE_PARM_DESC(dv_dbg_log, "enable/disable dv_dbg_log");
 
+static unsigned int dv_dbg_log_du = 60;
+module_param(dv_dbg_log_du, uint, 0664);
+MODULE_PARM_DESC(dv_dbg_log_du, "dv_dbg_log_duration");
+
 unsigned int dv_dbg_mask = (DV_BUF_START_RESET | DV_CRC_CHECK);
 module_param(dv_dbg_mask, uint, 0664);
 MODULE_PARM_DESC(dv_dbg_mask, "enable/disable dv_dbg_mask");
@@ -2976,7 +2980,8 @@ void vdin_set_dolby_tunnel(struct vdin_dev_s *devp)
 		return;
 
 	sm_ops = devp->frontend->sm_ops;
-	if ((devp->dv.dv_flag) && is_dolby_vision_enable()
+
+	if ((devp->dv.dv_flag)/* && is_dolby_vision_enable()*/
 		&& !(is_dolby_vision_stb_mode()	&& is_meson_tm2_cpu())
 		/*&& (devp->dv.low_latency)*/
 		&& (devp->prop.color_format == TVIN_YUV422)) {
@@ -4259,7 +4264,7 @@ void vdin_force_gofiled(struct vdin_dev_s *devp)
 bool vdin_is_dolby_signal_in(struct vdin_dev_s *devp)
 {
 	return ((devp->dv.dolby_input & (1 << devp->index)) ||
-		(devp->dv.dv_flag && is_dolby_vision_enable()));
+		(devp->dv.dv_flag/* && is_dolby_vision_enable()*/));
 }
 
 void vdin_dolby_addr_alloc(struct vdin_dev_s *devp, unsigned int size)
@@ -4449,20 +4454,10 @@ static uint32_t crc32(uint32_t crc, const void *buf, size_t size)
 	return crc;
 }
 
-bool vdin_is_dolby_input(struct vdin_dev_s *devp)
-{
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (devp->dv.dolby_input ||
-	    (devp->dv.dv_flag && is_dolby_vision_enable()))
-		return true;
-#endif
-	return false;
-}
-
 bool vdin_is_dolby_tunnel_444_input(struct vdin_dev_s *devp)
 {
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (vdin_is_dolby_input(devp) &&
+	if (vdin_is_dolby_signal_in(devp) &&
 	    devp->prop.color_format == TVIN_YUV422)
 		return true;
 #endif
@@ -4553,7 +4548,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 						end_flag = 1;
 						max_pkt = rev_cnt;
 					}
-					if (((cnt % 60) == 0) &&
+					if (((cnt % dv_dbg_log_du) == 0) &&
 					    (dv_dbg_log & (1 << 0)))
 						pr_info("pkt_type %d:0x%x\n", i,
 							pkt_type);
@@ -4568,7 +4563,8 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 		if ((meta_size > 1024) || (rev_cnt > 20) ||
 		    (rpt_cnt != tail_cnt) ||
 		    ((meta_size > 128) && (rev_cnt == 1))) {
-			if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 0))) {
+			if (((cnt % dv_dbg_log_du) == 0) &&
+			    (dv_dbg_log & (1 << 0))) {
 				pr_info("err size:%d rpt_cnt:%d, tal_cnt:%d, rv_cnt:%d max_pkt:%d\n",
 					meta_size, rpt_cnt, tail_cnt, rev_cnt,
 					max_pkt);
@@ -4598,7 +4594,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 					crc1 = pkt_p->crc;
 					crc1_r = crc32(0, (char *)pkt_p, 124);
 					crc1_r = swap32(crc1_r);
-					if (((cnt % 60) == 0) &&
+					if (((cnt % dv_dbg_log_du) == 0) &&
 					    (dv_dbg_log & (1 << 0)))
 						pr_info("crc:0x%x, 0x%x\n",
 							crc1, crc1_r);
@@ -4611,7 +4607,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 						break;
 					}
 				}
-				if (((cnt % 60) == 0) &&
+				if (((cnt % dv_dbg_log_du) == 0) &&
 				    (dv_dbg_log & (1 << 0)))
 					pr_info("data idx %d:0x%x\n",
 						j, c[j] & 0xc0);
@@ -4622,7 +4618,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 			tail_cnt = 0;
 		}
 
-		if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 0))) {
+		if (((cnt % dv_dbg_log_du) == 0) && (dv_dbg_log & (1 << 0))) {
 			pr_info("mult_flag=%d tail_flag=%d meta_size=%d\n",
 				multimeta_flag, multimetatail_flag, meta_size);
 			pr_info("rpt_cnt:%d tail_cnt:%d rev_cnt:%d cp_sum:%d\n",
@@ -4640,7 +4636,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 	}
 
 	/*meta data pkt data*/
-	if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 5)))
+	if (((cnt % dv_dbg_log_du) == 0) && (dv_dbg_log & (1 << 5)))
 		vdin_dolby_pr_meta_data(c, 128 * rev_cnt);
 
 	if ((crc != crc_r) ||
@@ -4651,7 +4647,7 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 		 */
 		devp->vfp->dv_buf[index] = &c[5];
 		devp->vfp->dv_buf_size[index] = 4;
-		if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 3))) {
+		if (((cnt % dv_dbg_log_du) == 0) && (dv_dbg_log & (1 << 3))) {
 			pr_err("%s:hdmi dovi meta crc error:%08x!=%08x\n",
 				__func__, crc, crc_r);
 			pr_info("%s:index:%d dma:%x vaddr:%p size:%d\n",
@@ -4670,20 +4666,21 @@ void vdin_dolby_buffer_update(struct vdin_dev_s *devp, unsigned int index)
 			devp->vfp->dv_buf[index] = c;
 			cp = devp->dv.temp_meta_data;
 			memcpy(c, cp, meta_size);
-			if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 0)))
+			if (((cnt % dv_dbg_log_du) == 0) &&
+			    (dv_dbg_log & (1 << 0)))
 				pr_info("cp %d meta to buff\n", meta_size);
 		} else if (meta_size > DV_META_SINGLE_PKT_SIZE) {
 			devp->dv.dv_crc_check = false;
 		}
 
-		if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 0)))
+		if (((cnt % dv_dbg_log_du) == 0) && (dv_dbg_log & (1 << 0)))
 			pr_info("%s:index:%d dma:%x vaddr:%p size:%d crc:%x crc1:%x\n",
 				__func__, index,
 				devp->vfp->dv_buf_mem[index],
 				devp->vfp->dv_buf_vmem[index],
 				meta_size, crc, crc1);
 		/*meta data raw data*/
-		if (((cnt % 60) == 0) && (dv_dbg_log & (1 << 4)))
+		if (((cnt % dv_dbg_log_du) == 0) && (dv_dbg_log & (1 << 4)))
 			vdin_dolby_pr_meta_data(c, meta_size);
 	}
 
@@ -4724,6 +4721,7 @@ void vdin_dolby_config(struct vdin_dev_s *devp)
 	unsigned int offset = devp->addr_offset;
 
 	devp->dv.dv_config = 1;
+	devp->dv.dv_path_idx = devp->index;
 	devp->vfp->low_latency = devp->dv.low_latency;
 	memcpy(&devp->vfp->dv_vsif,
 		&devp->dv.dv_vsif, sizeof(struct tvin_dv_vsif_s));

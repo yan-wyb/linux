@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0331: all dv mode need disable matrix"
+#define VDIN_VER "ver:2020-0408: dv patch sometime unreg"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -323,6 +323,7 @@ struct vdin_dv_s {
 	unsigned int dv_flag_cnt;/*cnt for no dv input*/
 	bool dv_flag;
 	bool dv_config;
+	bool dv_path_idx;
 	bool dv_crc_check;/*0:fail;1:ok*/
 	unsigned int dv_mem_alloced;
 	struct tvin_dv_vsif_s dv_vsif;/*dolby vsi info*/

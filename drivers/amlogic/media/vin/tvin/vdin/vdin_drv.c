@@ -665,7 +665,8 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_game_mode_check(devp);
 	vdin_vf_init(devp);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (vdin_is_dolby_signal_in(devp)) {
+	if (vdin_is_dolby_signal_in(devp) &&
+	    (devp->index == devp->dv.dv_path_idx)) {
 		/* config dolby mem base */
 		vdin_dolby_addr_alloc(devp, devp->vfp->size);
 		/* config dolby vision */
@@ -713,19 +714,20 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	/*only for vdin0;vdin1 used for debug*/
-	if (vdin_is_dolby_signal_in(devp))
+	if (vdin_is_dolby_signal_in(devp) &&
+	    (devp->index == devp->dv.dv_path_idx)) {
 		vf_reg_provider(&devp->dv.vprov_dv);
-	else
-#endif
-		vf_reg_provider(&devp->vprov);
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (vdin_is_dolby_signal_in(devp))
+		pr_info("vdin%d provider: dv reg\n", devp->index);
 		vf_notify_receiver(VDIN_DV_NAME,
 			VFRAME_EVENT_PROVIDER_START, NULL);
-	else
+	} else
 #endif
+	{
+		vf_reg_provider(&devp->vprov);
+		pr_info("vdin%d provider: reg\n", devp->index);
 		vf_notify_receiver(devp->name,
 			VFRAME_EVENT_PROVIDER_START, NULL);
+	}
 
 	if (vdin_dbg_en)
 		pr_info("****[%s]ok!****\n", __func__);
@@ -823,22 +825,21 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	/* reset default canvas  */
 	vdin_set_def_wr_canvas(devp);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (((devp->dv.dolby_input & (1 << devp->index)) ||
-		is_dolby_vision_enable()) &&
-		(devp->dv.dv_config == true))
+	if (devp->dv.dv_config && (devp->index == devp->dv.dv_path_idx)) {
+		devp->dv.dv_config = 0;
 		vf_unreg_provider(&devp->dv.vprov_dv);
-	else
+		pr_info("vdin%d provider: dv unreg\n", devp->index);
+		vdin_dolby_addr_release(devp, devp->vfp->size);
+	} else
 #endif
+	{
 		vf_unreg_provider(&devp->vprov);
-	devp->dv.dv_config = 0;
+		pr_info("vdin%d provider: unreg\n", devp->index);
+	}
 	vdin_dolby_desc_sc_enable(devp, 0);
 
 	if (devp->afbce_mode == 1)
 		vdin_afbce_soft_reset();
-
-#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	vdin_dolby_addr_release(devp, devp->vfp->size);
-#endif
 
 #ifdef CONFIG_CMA
 	vdin_cma_release(devp);
@@ -1676,6 +1677,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_drop_cnt++;
 			goto irq_handled;
 		}
+
 		/*skip policy process*/
 		if (devp->vfp->skip_vf_num > 0)
 			vdin_vf_disp_mode_update(devp->last_wr_vfe, devp->vfp);
@@ -1964,6 +1966,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_drop_cnt++;
 			goto irq_handled;
 		}
+
 		/*skip policy process*/
 		if (devp->vfp->skip_vf_num > 0)
 			vdin_vf_disp_mode_update(curr_wr_vfe, devp->vfp);
@@ -2012,8 +2015,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		/* game mode 2 */
 		vdin_vframe_put_and_recycle(devp, next_wr_vfe, put_md);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-		if (((devp->dv.dolby_input & (1 << devp->index)) ||
-		     (devp->dv.dv_flag && is_dolby_vision_enable())) &&
+		if ((vdin_is_dolby_signal_in(devp)) &&
 		     devp->dv.dv_config == true)
 			vf_notify_receiver(VDIN_DV_NAME,
 					   VFRAME_EVENT_PROVIDER_VFRAME_READY,
@@ -3696,6 +3698,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	/*set vdin_dev_s size*/
 	vdevp->vdin_dev_ssize = sizeof(struct vdin_dev_s);
 	vdevp->canvas_config_mode = canvas_config_mode;
+	vdevp->dv.dv_config = false;
 	INIT_DELAYED_WORK(&vdevp->dv.dv_dwork, vdin_dv_dwork);
 	INIT_DELAYED_WORK(&vdevp->vlock_dwork, vdin_vlock_dwork);
 
