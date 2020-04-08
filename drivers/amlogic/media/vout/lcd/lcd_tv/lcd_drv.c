@@ -1214,7 +1214,7 @@ static irqreturn_t lcd_vbyone_interrupt_handler(int irq, void *dev_id)
 
 	if (vx1_conf->vsync_intr_en == 3) {
 		if (data32 & 0x1000) {
-			if (vsync_cnt >= (VSYNC_CNT_VX1_RESET + 1)) {
+			if (vsync_cnt >= (VSYNC_CNT_VX1_STABLE + 1)) {
 				vsync_cnt = 0;
 				LCDPR("vx1 lockn rise edge occurred\n");
 			}
