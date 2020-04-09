@@ -5056,7 +5056,8 @@ void fgrain_setting(u8 layer_id,
 {
 	if (!vf || !setting)
 		return;
-	if (!setting->used || !vf->fgs_valid)
+	if (!setting->used || !vf->fgs_valid ||
+		!glayer_info[layer_id].fgrain_support)
 		fgrain_stop(layer_id);
 
 	if (glayer_info[layer_id].fgrain_support) {
@@ -5073,7 +5074,7 @@ void fgrain_update_table(u8 layer_id,
 {
 	if (!vf)
 		return;
-	if (!vf->fgs_valid)
+	if (!vf->fgs_valid || !glayer_info[layer_id].fgrain_support)
 		fgrain_stop(layer_id);
 
 	if (glayer_info[layer_id].fgrain_support) {
@@ -5271,7 +5272,10 @@ int video_early_init(void)
 			glayer_info[i].afbc_support = true;
 			glayer_info[i].pps_support = true;
 		}
-		glayer_info[i].fgrain_support = false;
+		if (is_meson_tm2_cpu() && is_meson_tm2_revb())
+			glayer_info[i].fgrain_support = true;
+		else
+			glayer_info[i].fgrain_support = false;
 	}
 	/* only enable vd1 as default */
 	vd_layer[0].global_output = 1;
