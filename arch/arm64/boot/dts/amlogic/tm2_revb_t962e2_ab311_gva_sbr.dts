@@ -315,8 +315,13 @@
 			};
 			tdmacodec: codec {
 				//sound-dai = <&dummy_codec>;
-				prefix-names = "AMP", "AMP1";
-				sound-dai = <&ad82584f &ad82584f1 &tl1_codec>;
+				//prefix-names = "AMP", "AMP1";
+				//sound-dai = <&ad82584f &ad82584f1 &tl1_codec>;
+				prefix-names = "AMP", "AMP1", "tas5782m_pu1",
+				"tas5782m_pu2", "tas5782m_pu3", "tas5782m_pu4";
+				sound-dai = <&ad82584f &ad82584f1 &tas5782m_pu1
+				&tas5782m_pu2 &tas5782m_pu3 &tas5782m_pu4
+				&tl1_codec>;
 			};
 		};
 
@@ -1661,9 +1666,9 @@
 };
 
 &i2c2 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&i2c2_z_pins>;
+	pinctrl-0 = <&i2c2_h_pins>;
 	clock-frequency = <400000>;
 
 	/*****************************************************************/
@@ -1924,7 +1929,7 @@
 };
 
 &efuse {
-	status = "disabled";
+	status = "okay";
 };
 
 &lut_dma {
