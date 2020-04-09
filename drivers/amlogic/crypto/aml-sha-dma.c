@@ -336,10 +336,10 @@ static int aml_sha_update_dma_slow(struct aml_sha_dev *dd,
 	struct aml_sha_reqctx *ctx = ahash_request_ctx(req);
 	unsigned int final;
 	size_t count;
-
+#if 0
 	if (!ctx->total)
 		return 0;
-
+#endif
 	ctx->flags &= ~SHA_FLAGS_FAST;
 	aml_sha_append_sg(ctx);
 
