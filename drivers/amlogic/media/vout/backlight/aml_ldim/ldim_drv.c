@@ -338,8 +338,8 @@ static void ldim_stts_initial(unsigned int pic_h, unsigned int pic_v,
 {
 	LDIMPR("%s: %d %d %d %d\n", __func__, pic_h, pic_v, BLK_Vnum, BLK_Hnum);
 
-	ldim_fw_para.hist_col = BLK_Vnum;
-	ldim_fw_para.hist_row = BLK_Hnum;
+	ldim_fw_para.hist_col = BLK_Hnum;
+	ldim_fw_para.hist_row = BLK_Vnum;
 
 	if (ldim_dev.ldim_op_func == NULL) {
 		LDIMERR("%s: invalid ldim_op_func\n", __func__);
@@ -2985,7 +2985,7 @@ static struct ldim_fw_para_s ldim_fw_para = {
 	.TF_BLK_FRESH_BL = 5,
 	.side_blk_diff_th = 100,
 	.bbd_th = 200,
-	.bbd_detect_en = 1,
+	.bbd_detect_en = 0,
 	.diff_blk_luma_en = 1,
 
 	.fw_rgb_diff_th = 32760,
@@ -2994,8 +2994,8 @@ static struct ldim_fw_para_s ldim_fw_para = {
 	.fw_TF_sum_th = 32760,/*20180530*/
 
 	.Sf_bypass = 0,
-	.Boost_light_bypass = 0,
-	.Lpf_bypass = 0,
+	.Boost_light_bypass = 1,
+	.Lpf_bypass = 1,
 	.Ld_remap_bypass = 0,
 	.black_frm = 0,
 
