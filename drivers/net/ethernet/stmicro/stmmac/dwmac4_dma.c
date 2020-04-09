@@ -220,7 +220,7 @@ static void dwmac4_dma_chan_op_mode(void __iomem *ioaddr, int txmode,
 			mtl_tx_op |= MTL_OP_MODE_TTC_512;
 	}
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
-	writel(0x70008, ioaddr +  MTL_CHAN_TX_OP_MODE(channel));
+	writel(0x7000a, ioaddr +  MTL_CHAN_TX_OP_MODE(channel));
 #else
 	writel(mtl_tx_op, ioaddr +  MTL_CHAN_TX_OP_MODE(channel));
 #endif
