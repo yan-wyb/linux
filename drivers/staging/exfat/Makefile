@@ -9,4 +9,6 @@ exfat-y :=	exfat_core.o	\
 		exfat_nls.o	\
 		exfat_upcase.o
 
+ifndef CONFIG_KASAN
 KBUILD_CFLAGS += -Wframe-larger-than=900
+endif
