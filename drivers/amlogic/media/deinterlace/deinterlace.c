@@ -5580,7 +5580,7 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 		if ((di_height > 3) && di_vscale_skip_count_real)
 			di_height = di_height - 3;
 		else
-			di_height--;
+			di_height++;
 	}
 
 	if (Rd(DI_POST_SIZE) != ((di_width - 1) | ((di_height - 1) << 16)) ||
