@@ -1341,6 +1341,8 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	int iHeight = pRDat->iHeight;
 	int nFlm22Lvl = 0;
 	int nSIZE = iWidth * iHeight + 1;
+	int max_diff;
+	int ratio;
 
 	prt_flg = ((pr_pd >> 3) & 0x1);
 	if (prt_flg)
@@ -1703,15 +1705,25 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	}
 	/* ---------------------- */
 	/*DI:PQ patch fix 480i error into pulldown22(by yanling)*/
+	max_diff = max(abs(nDif01[HISDIFNUM - 1] - nDif01[HISDIFNUM - 3]),
+		       abs(nDif01[HISDIFNUM - 2] - nDif01[HISDIFNUM - 4]));
+	if (max_diff > (1 << 15))
+		ratio = 2;
+	else
+		ratio = 3;
 	flm22_min = nDif01[HISDIFNUM-1] > nDif01[HISDIFNUM-2]
 		? nDif01[HISDIFNUM-2] : nDif01[HISDIFNUM-1];
-	flm22_th = min(flm22_min / 2, 1 << 16);
+	flm22_th = max(flm22_min / ratio, 1 << 16);
 	dif_flag = abs(nDif01[HISDIFNUM-1]-nDif01[HISDIFNUM-2])
 		> flm22_th ? 1:0;
-	dif_flag =
+	/*the small diff01 bigger*/
+	dif_flag = (flm22_min > max((3 << 17), nDif02[HISDIFNUM - 1])) ? 0 :
 		max(nDif01[HISDIFNUM-1], nDif01[HISDIFNUM-2]) > (1<<16) ?
 		dif_flag : 0;
-	if (flm22_flag && dif_flag) {
+	if (pr_pd)
+		pr_info("max_diff = %d, dif_flag = %d, flm22_th = %d, flm22_min = %d\n",
+			max_diff, dif_flag, flm22_th, flm22_min);
+	if (flm22_flag && dif_flag && (max_diff < (5 << 14))) {
 	/* ---------------------- */
 		if (pFlg[HISDETNUM-1] == 3
 				|| pFlg[HISDETNUM-1] == 1) {
