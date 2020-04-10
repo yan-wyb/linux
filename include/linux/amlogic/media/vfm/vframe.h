@@ -367,11 +367,6 @@ struct vframe_s {
 	u32 compHeadAddr;
 	u32 compBodyAddr;
 
-	u32 dwHeadAddr;
-	u32 dwBodyAddr;
-	bool fgs_valid;
-	u32 fgs_table_adr;
-
 	u32 plane_num;
 	struct canvas_config_s canvas0_config[3];
 	struct canvas_config_s canvas1_config[3];
@@ -474,6 +469,12 @@ struct vframe_s {
 	struct vsif_info vsif;
 	struct emp_info emp;
 	u32 di_cm_cnt;
+
+	u32 dwHeadAddr;
+	u32 dwBodyAddr;
+	bool fgs_valid;
+	u32 fgs_table_adr;
+
 } /*vframe_t */;
 
 #if 0
