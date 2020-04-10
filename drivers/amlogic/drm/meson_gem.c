@@ -270,18 +270,18 @@ int am_meson_gem_mmap(
 	return ret;
 }
 
-int am_meson_gem_object_get_phyaddr(
+phys_addr_t am_meson_gem_object_get_phyaddr(
 	struct meson_drm *drm,
-	struct am_meson_gem_object *meson_gem)
+	struct am_meson_gem_object *meson_gem,
+	size_t *len)
 {
-	int addr;
-	size_t len;
+	phys_addr_t addr;
 
 	if (meson_gem->sg || meson_gem->is_secure)
 		return meson_gem->addr;
 
 	ion_phys(drm->gem_client, meson_gem->handle,
-						(ion_phys_addr_t *)&addr, &len);
+						(ion_phys_addr_t *)&addr, len);
 
 	return addr;
 }

@@ -219,7 +219,11 @@ void am_cvbs_encoder_mode_set(struct drm_encoder *encoder,
 
 void am_cvbs_encoder_enable(struct drm_encoder *encoder)
 {
+	enum vmode_e vmode = get_current_vmode();
+
+	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE_PRE, &vmode);
 	cvbs_set_current_vmode(VMODE_CVBS);
+	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE, &vmode);
 }
 
 void am_cvbs_encoder_disable(struct drm_encoder *encoder)

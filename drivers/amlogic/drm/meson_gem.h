@@ -85,9 +85,10 @@ int am_meson_gem_object_mmap(
 	struct am_meson_gem_object *obj,
 	struct vm_area_struct *vma);
 
-extern int am_meson_gem_object_get_phyaddr(
+extern phys_addr_t am_meson_gem_object_get_phyaddr(
 	struct meson_drm *drm,
-	struct am_meson_gem_object *meson_gem);
+	struct am_meson_gem_object *meson_gem,
+	size_t *len);
 
 /* GEM PRIME OPERATIONS */
 struct sg_table *am_meson_gem_prime_get_sg_table(

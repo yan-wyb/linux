@@ -62,6 +62,8 @@ meson_plane_position_calc(struct meson_vpu_osd_layer_info *plane_info,
 	struct drm_crtc_state *crtc_state = atomic_state->crtcs[index].state;
 	struct drm_display_mode *mode = &crtc_state->mode;
 
+	if (!crtc_state || !mode)
+		mode = &pipeline->mode;
 	scan_mode_out = mode->flags & DRM_MODE_FLAG_INTERLACE;
 	plane_info->src_x = state->src_x >> 16;
 	plane_info->src_y = state->src_y >> 16;
@@ -154,6 +156,8 @@ meson_video_plane_position_calc(struct meson_vpu_video_layer_info *plane_info,
 	struct drm_crtc_state *crtc_state = atomic_state->crtcs[index].state;
 	struct drm_display_mode *mode = &crtc_state->mode;
 
+	if (!crtc_state || !mode)
+		mode = &pipeline->mode;
 	scan_mode_out = mode->flags & DRM_MODE_FLAG_INTERLACE;
 	plane_info->src_x = state->src_x >> 16;
 	plane_info->src_y = state->src_y >> 16;
@@ -254,6 +258,7 @@ static int meson_plane_fb_check(struct drm_plane *plane,
 	#else
 	struct drm_gem_cma_object *gem;
 	#endif
+	u32 fb_size = 0;
 	phys_addr_t phyaddr;
 
 	#ifdef CONFIG_DRM_MESON_USE_ION
@@ -272,7 +277,8 @@ static int meson_plane_fb_check(struct drm_plane *plane,
 		DRM_DEBUG("logo->phyaddr=0x%pa\n", &phyaddr);
 	} else  if (meson_fb->bufp[0]) {
 		phyaddr = am_meson_gem_object_get_phyaddr(drv,
-							  meson_fb->bufp[0]);
+							  meson_fb->bufp[0],
+							  (size_t *)&fb_size);
 	} else {
 		phyaddr = 0;
 		DRM_INFO("don't find phyaddr!\n");
@@ -292,6 +298,7 @@ static int meson_plane_fb_check(struct drm_plane *plane,
 	phyaddr = gem->paddr;
 	#endif
 	plane_info->phy_addr = phyaddr;
+	plane_info->fb_size = fb_size;
 	return 0;
 }
 
@@ -308,6 +315,7 @@ static int meson_video_plane_fb_check(struct drm_plane *plane,
 	#else
 	struct drm_gem_cma_object *gem;
 	#endif
+	u32 fb_size[2] = {0};
 	phys_addr_t phyaddr, phyaddr1 = 0;
 
 	#ifdef CONFIG_DRM_MESON_USE_ION
@@ -321,8 +329,10 @@ static int meson_video_plane_fb_check(struct drm_plane *plane,
 		  atomic_read(&meson_fb->base.base.refcount.refcount),
 		  meson_fb);
 	if (meson_fb->bufp[0]) {
-		phyaddr = am_meson_gem_object_get_phyaddr(drv,
-							  meson_fb->bufp[0]);
+		phyaddr =
+			am_meson_gem_object_get_phyaddr(drv,
+							meson_fb->bufp[0],
+							(size_t *)&fb_size[0]);
 	} else {
 		phyaddr = 0;
 		DRM_INFO("don't find phyaddr!\n");
@@ -331,8 +341,10 @@ static int meson_video_plane_fb_check(struct drm_plane *plane,
 	if (meson_fb->bufp[1] && meson_fb->bufp[1] != meson_fb->bufp[0] &&
 	    (fb->pixel_format == DRM_FORMAT_NV12 ||
 				  fb->pixel_format == DRM_FORMAT_NV21))
-		phyaddr1 = am_meson_gem_object_get_phyaddr(drv,
-							   meson_fb->bufp[1]);
+		phyaddr1 =
+			am_meson_gem_object_get_phyaddr(drv,
+							meson_fb->bufp[1],
+							(size_t *)&fb_size[1]);
 	/* start to get vframe from uvm */
 	if (meson_fb->bufp[0]->is_uvm) {
 		ubo = &(meson_fb->bufp[0]->ubo);
@@ -354,7 +366,9 @@ static int meson_video_plane_fb_check(struct drm_plane *plane,
 	phyaddr = gem->paddr;
 	#endif
 	plane_info->phy_addr[0] = phyaddr;
+	plane_info->fb_size[0] = fb_size[0];
 	plane_info->phy_addr[1] = phyaddr1;
+	plane_info->fb_size[1] = fb_size[1];
 	return 0;
 }
 
@@ -403,8 +417,8 @@ static int meson_plane_get_fb_info(struct drm_plane *plane,
 	DRM_DEBUG("plane afbc_en=%u, afbc_inter_format=%x\n",
 		  plane_info->afbc_en, plane_info->afbc_inter_format);
 
-	DRM_DEBUG("phy_addr=0x%x,byte_stride=%d,pixel_format=%d\n",
-		  plane_info->phy_addr, plane_info->byte_stride,
+	DRM_DEBUG("phy_addr=0x%pa,byte_stride=%d,pixel_format=%d\n",
+		  &plane_info->phy_addr, plane_info->byte_stride,
 		  plane_info->pixel_format);
 	DRM_DEBUG("plane_index %d, size %d.\n",
 		  osd_plane->plane_index,
@@ -457,13 +471,14 @@ static int meson_video_plane_get_fb_info(struct drm_plane *plane,
 	DRM_DEBUG("plane afbc_en=%u, afbc_inter_format=%x\n",
 		  plane_info->afbc_en, plane_info->afbc_inter_format);
 
-	DRM_DEBUG("phy_addr[0]=0x%x,byte_stride=%d,pixel_format=%d\n",
-		  plane_info->phy_addr[0], plane_info->byte_stride,
-		plane_info->pixel_format);
-	DRM_DEBUG("phy_addr[1]=0x%x, plane_index %d, size %d.\n",
-		  plane_info->phy_addr[1],
+	DRM_DEBUG("phy_addr[0]=0x%pa,byte_stride=%d,pixel_format=%d\n",
+		  &plane_info->phy_addr[0], plane_info->byte_stride,
+		  plane_info->pixel_format);
+	DRM_DEBUG("phy_addr[1]=0x%pa, plane_index %d, size-0 %d, size-1 %d.\n",
+		  &plane_info->phy_addr[1],
 		  video_plane->plane_index,
-		  plane_info->fb_size);
+		  plane_info->fb_size[0],
+		  plane_info->fb_size[1]);
 	return 0;
 }
 

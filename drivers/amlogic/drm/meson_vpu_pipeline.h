@@ -166,7 +166,7 @@ struct meson_vpu_osd_layer_info {
 	u32 zorder;
 	u32 byte_stride;
 	u32 pixel_format;
-	u32 phy_addr;
+	u64 phy_addr;
 	u32 plane_index;
 	u32 enable;
 	u32 ratio_x;/*input_w/output_w*/
@@ -185,6 +185,7 @@ struct meson_vpu_osd {
 struct meson_vpu_osd_state {
 	struct meson_vpu_block_state base;
 
+	u64 phy_addr;
 	u32 index;
 	u32 enable;
 	u32 color_key_enable;
@@ -195,7 +196,6 @@ struct meson_vpu_osd_state {
 	u32 alpha;
 	u32 global_alpha;
 	u32 dimm_color;
-	u32 phy_addr;
 	u32 pixel_format;
 	u32 zorder;
 	u32 byte_stride;
@@ -228,13 +228,13 @@ struct meson_vpu_video_layer_info {
 	u32 zorder;
 	u32 byte_stride;
 	u32 pixel_format;
-	u32 phy_addr[2];
+	u64 phy_addr[2];
 	u32 plane_index;
 	u32 enable;
 	u32 ratio_x;/*input_w/output_w*/
 	u32 afbc_inter_format;
 	u32 afbc_en;
-	u32 fb_size;
+	u32 fb_size[2];
 	u32 premult_en;
 	struct vframe_s *vf;
 	bool is_uvm;
@@ -280,7 +280,7 @@ struct meson_vpu_video_state {
 	int s_mode;
 	int r_mode;
 	u32 plane_index;
-	u32 fb_size;
+	u32 fb_size[2];
 	u32 premult_en;
 	u32 afbc_en;
 	struct vframe_s *vf;

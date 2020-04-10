@@ -159,7 +159,8 @@ static int video_check_state(struct meson_vpu_block *vblk,
 	mvvs->phy_addr[1] = plane_info->phy_addr[1];
 
 	mvvs->pixel_format = plane_info->pixel_format;
-	mvvs->fb_size = plane_info->fb_size;
+	mvvs->fb_size[0] = plane_info->fb_size[0];
+	mvvs->fb_size[1] = plane_info->fb_size[1];
 	mvvs->vf = plane_info->vf;
 	mvvs->is_uvm = plane_info->is_uvm;
 
@@ -183,8 +184,8 @@ static void video_set_state(struct meson_vpu_block *vblk,
 	struct vframe_s *vf = NULL;
 	struct meson_vpu_video *video = to_video_block(vblk);
 	struct meson_vpu_video_state *mvvs = to_video_state(state);
-	u32 pixel_format, src_h, byte_stride, phy_addr;
-	u32 phy_addr2 = 0;
+	u32 pixel_format, src_h, byte_stride;
+	u64 phy_addr, phy_addr2 = 0;
 
 	if (!vblk) {
 		DRM_DEBUG("set_state break for NULL.\n");
@@ -265,8 +266,8 @@ static void video_set_state(struct meson_vpu_block *vblk,
 	}
 	DRM_DEBUG("plane_index=%d,HW-video=%d, byte_stride=%d\n",
 		  mvvs->plane_index, vblk->index, byte_stride);
-	DRM_DEBUG("phy_addr=0x%x,phy_addr2=0x%x\n",
-		  phy_addr, phy_addr2);
+	DRM_DEBUG("phy_addr=0x%pa,phy_addr2=0x%pa\n",
+		  &phy_addr, &phy_addr2);
 	DRM_DEBUG("%s set_state done.\n", video->base.name);
 }
 
