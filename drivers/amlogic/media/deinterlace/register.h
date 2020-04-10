@@ -4510,4 +4510,11 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define DI_AFBCE_MMU_RMIF_SCOPE_X	(0x2084)
 #define DI_AFBCE_MMU_RMIF_SCOPE_Y	(0x2085)
 #define DI_AFBCE_MMU_RMIF_RO_STAT	(0x2086)
+
+/* for TM2-B DI FILM_GRAIN */
+
+#define DI_FGRAIN_CTRL					0x1840
+#define DI_FGRAIN_WIN_H					0x1841
+#define DI_FGRAIN_WIN_V					0x1842
+
 #endif

@@ -21,6 +21,7 @@
 #define LOCAL_DIMMING_CHAN     0
 #define FILM_GRAIN0_CHAN       1
 #define FILM_GRAIN1_CHAN       2
+#define FILM_GRAIN_DI_CHAN     3
 
 enum LUT_DMA_DIR_e {
 	LUT_DMA_RD,
@@ -40,7 +41,7 @@ enum IRQ_TYPE_e {
 	VIU2_VSYNC,
 	VIU1_LINE_N,
 	VDIN0_VSYNC,
-	VDIN1_VSYNC,
+	DI_VSYNC,
 };
 
 struct lut_dma_set_t {

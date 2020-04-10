@@ -27,6 +27,9 @@
 #include "deinterlace_hw.h"
 #include "nr_drv.h"
 #include "../di_local/di_local.h"
+
+#define DI_FILM_GRAIN
+
 /*trigger_pre_di_process param*/
 #define TRIGGER_PRE_BY_PUT			'p'
 #define TRIGGER_PRE_BY_DE_IRQ		'i'
@@ -176,9 +179,6 @@ struct di_buf_s {
 #define MAX_CANVAS_WIDTH				1920
 #define MAX_CANVAS_HEIGHT				1088
 
-
-/* #define DI_BUFFER_DEBUG */
-
 #define DI_LOG_MTNINFO		0x02
 #define DI_LOG_PULLDOWN		0x10
 #define DI_LOG_BUFFER_STATE		0x20
@@ -288,6 +288,31 @@ struct di_dev_s {
 	struct afd_s di_afd;
 	const struct afd_ops_s *afds;
 };
+
+#ifdef DI_FILM_GRAIN
+struct fgrain_diset_s {
+	u32 start_x;
+	u32 end_x;
+	u32 start_y;
+	u32 end_y;
+	u32 fmt_mode; /* only support 420 */
+	u32 bitdepth; /* 8 bit or 10 bit */
+	u32 reverse;
+	u32 afbc; /* afbc or not */
+	u32 last_in_mode; /* related with afbc */
+	u32 used;
+	/* lut dma */
+	u32 fgs_table_adr;
+	u32 table_size;
+};
+
+void di_fgrain_config(struct DI_MIF_s *mif_setting,
+		      struct fgrain_diset_s *setting,
+		      struct vframe_s *vf);
+void di_fgrain_setting(struct fgrain_diset_s *setting,
+		       struct vframe_s *vf);
+void di_fgrain_update_table(struct vframe_s *vf);
+#endif
 
 struct di_pre_stru_s {
 /* pre input */
@@ -413,6 +438,9 @@ struct di_pre_stru_s {
 	/*****************/
 	bool combing_fix_en;
 	unsigned int comb_mode;
+	#ifdef DI_FILM_GRAIN
+	struct fgrain_diset_s fgrain_diset;
+	#endif
 	/*struct di_patch_mov_s mov;*/
 };
 

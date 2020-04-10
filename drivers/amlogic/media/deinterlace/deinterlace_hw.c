@@ -35,6 +35,12 @@
 #include "register_nr4.h"
 #include "nr_drv.h"
 
+#ifdef DI_FILM_GRAIN
+#ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
+#include <linux/amlogic/media/lut_dma/lut_dma.h>
+#endif
+#endif
+
 #ifdef DET3D
 #include "detect3d.h"
 #endif
@@ -132,6 +138,222 @@ static void set_di_if0_mif_g12(struct DI_MIF_s *mif, int urgent,
 	int hold_line, int vskip_cnt, int wr_en);
 
 static void post_frame_reset_g12a(void);
+
+/* add for film grain */
+
+#ifdef DI_FILM_GRAIN
+#define FGRAIN_TBL_SIZE  (498 * 16)
+static bool difgrain_support;
+static bool difgrain_start;
+module_param_named(difgrain_support, difgrain_support, bool, 0644);
+static void di_fgrain_set_config(struct fgrain_diset_s *setting)
+{
+	u32 reg_fgrain_glb_en = 1 << 0;
+	u32 reg_fgrain_loc_en = 1 << 1;
+	u32 reg_block_mode = 1 << 2;
+	u32 reg_rev_mode = 0 << 4;
+	u32 reg_comp_bits = 0 << 6;
+	/* unsigned , RW, default = 0:8bits; 1:10bits, else 12 bits */
+	u32 reg_fmt_mode = 2 << 8;
+	/* unsigned , RW, default =  0:444; 1:422; 2:420; 3:reserved */
+	u32 reg_last_in_mode = 0 << 14;
+	u32 reg_fgrain_ext_imode = 1;
+	/*  unsigned , RW, default = 0 to indicate the
+	 *input data is *4 in 8bit mode
+	 */
+	if (!is_meson_tm2b())
+		return;
+	if (!setting)
+		return;
+
+	reg_block_mode = setting->afbc << 2;
+	reg_rev_mode = setting->reverse << 4;
+	reg_comp_bits = setting->bitdepth << 6;
+	reg_fmt_mode = setting->fmt_mode << 8;
+	reg_last_in_mode = setting->last_in_mode << 14;
+	DI_Wr_reg_bits(DI_FGRAIN_CTRL,
+		       reg_fgrain_glb_en |
+		       reg_fgrain_loc_en |
+		       reg_block_mode |
+		       reg_rev_mode |
+		       reg_comp_bits |
+		       reg_fmt_mode,
+		       0, 10);
+	DI_Wr_reg_bits(DI_FGRAIN_CTRL,
+		       reg_fgrain_ext_imode, 16, 1);
+}
+
+static void di_fgrain_start(void)
+{
+	u32 reg_fgrain_glb_en = 1 << 0;
+	u32 reg_fgrain_loc_en = 1 << 1;
+
+	if (!is_meson_tm2b())
+		return;
+	if (difgrain_start)
+		return;
+
+	DI_Wr_reg_bits(DI_FGRAIN_CTRL,
+		       reg_fgrain_glb_en |
+		       reg_fgrain_loc_en,
+		       0, 2);
+	difgrain_start = true;
+}
+
+static void di_fgrain_stop(void)
+{
+	u32 reg_fgrain_glb_en = 1 << 0;
+	u32 reg_fgrain_loc_en = 0 << 1;
+
+	if (!is_meson_tm2b())
+		return;
+	if (!difgrain_start)
+		return;
+
+	DI_Wr_reg_bits(DI_FGRAIN_CTRL,
+		       reg_fgrain_glb_en |
+		       reg_fgrain_loc_en,
+		       0, 2);
+	difgrain_start = false;
+}
+
+static int di_fgrain_init(u32 table_size)
+{
+	int ret;
+	u32 channel = FILM_GRAIN_DI_CHAN;
+	struct lut_dma_set_t lut_dma_set;
+
+	if (!is_meson_tm2b())
+		return -1;
+
+	difgrain_support = false;
+	lut_dma_set.channel = channel;
+	lut_dma_set.dma_dir = LUT_DMA_WR;
+	lut_dma_set.irq_source = DI_VSYNC;
+	lut_dma_set.mode = LUT_DMA_MANUAL;
+	lut_dma_set.table_size = table_size;
+	ret = lut_dma_register(&lut_dma_set);
+	return ret;
+}
+
+static void di_fgrain_uninit(void)
+{
+	if (!is_meson_tm2b())
+		return;
+	lut_dma_unregister(LUT_DMA_WR, FILM_GRAIN_DI_CHAN);
+}
+
+static void di_fgrain_set_window(struct fgrain_diset_s *setting)
+{
+	DI_Wr(DI_FGRAIN_WIN_H,
+	      (setting->start_x / 32 * 32 << 0) |
+	      ((setting->end_x / 32 * 32) << 16));
+	DI_Wr(DI_FGRAIN_WIN_V,
+	      (setting->start_y / 4 * 4 << 0) |
+	      ((setting->end_y / 4 * 4) << 16));
+}
+
+static int di_fgrain_write(u32 fgs_table_addr)
+{
+	int table_size = FGRAIN_TBL_SIZE;
+
+	lut_dma_write_phy_addr(FILM_GRAIN_DI_CHAN,
+			       fgs_table_addr,
+			       table_size);
+	return 0;
+}
+
+static void di_fgrain_update_irq_source(void)
+{
+	lut_dma_update_irq_source(FILM_GRAIN_DI_CHAN, DI_VSYNC);
+}
+
+void di_fgrain_config(struct DI_MIF_s *mif_setting,
+		      struct fgrain_diset_s *setting,
+		      struct vframe_s *vf)
+{
+	u32 type;
+
+	if (!vf || !mif_setting || !setting)
+		return;
+	if (!is_meson_tm2b())
+		return;
+
+	type = vf->type;
+
+	if (type & VIDTYPE_COMPRESS) {
+		/* 1:afbc mode or 0: non-afbc mode  */
+		setting->afbc = 1;
+		/* bit[2]=0, non-afbc mode */
+		setting->last_in_mode = 0;
+		/* afbc copress is always 420 */
+		setting->fmt_mode = 2;
+		setting->used = 1;
+	} else {
+		setting->afbc = 0;
+		setting->last_in_mode = 1;
+		#if 1
+		if (type & VIDTYPE_VIU_NV21) {
+			setting->fmt_mode = 2;
+			setting->used = 1;
+		} else {
+			/* only support 420 */
+			setting->used = 0;
+		}
+		#else
+		setting->used = 0;
+		#endif
+	}
+
+	if (vf->bitdepth & BITDEPTH_Y8)
+		setting->bitdepth = 0;
+	else if (vf->bitdepth & BITDEPTH_Y10)
+		setting->bitdepth = 1;
+
+	setting->start_x = mif_setting->luma_x_start0;
+	setting->end_x = mif_setting->luma_x_end0;
+	setting->start_y = mif_setting->luma_y_start0;
+	setting->end_y = mif_setting->luma_y_end0;
+}
+
+void di_fgrain_setting(struct fgrain_diset_s *setting,
+		       struct vframe_s *vf)
+{
+	if (!vf || !setting)
+		return;
+	if (!is_meson_tm2b())
+		return;
+	if (!setting->used || !vf->fgs_valid)
+		di_fgrain_stop();
+
+	if (difgrain_support) {
+		if (setting->used && vf->fgs_valid &&
+		    vf->fgs_table_adr) {
+			di_fgrain_set_config(setting);
+			di_fgrain_set_window(setting);
+		}
+	}
+}
+
+void di_fgrain_update_table(struct vframe_s *vf)
+{
+	if (!vf)
+		return;
+	if (!is_meson_tm2b())
+		return;
+	if (!vf->fgs_valid)
+		di_fgrain_stop();
+
+	if (difgrain_support) {
+		if (vf->fgs_valid && vf->fgs_table_adr) {
+			di_fgrain_start();
+			di_fgrain_update_irq_source();
+			di_fgrain_write(vf->fgs_table_adr);
+			vf->fgs_valid = 0;
+		}
+	}
+}
+#endif
 
 static void ma_di_init(void)
 {
@@ -542,6 +764,9 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 	ma_di_init();
 	ei_hw_init();
 	nr_hw_init();
+	#ifdef DI_FILM_GRAIN
+	di_fgrain_init(FGRAIN_TBL_SIZE);
+	#endif
 	if (pd_enable)
 		init_field_mode(288);
 
@@ -569,6 +794,10 @@ void di_hw_uninit(void)
 {
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
 		nr_gate_control(false);
+	#ifdef DI_FILM_GRAIN
+	di_fgrain_uninit();
+	#endif
+
 }
 
 /*

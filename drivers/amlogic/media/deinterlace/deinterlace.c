@@ -3601,6 +3601,12 @@ static void pre_de_process(void)
 		di_pre_stru.input_size_change_flag = false;
 	}
 
+	#ifdef DI_FILM_GRAIN
+	if (di_pre_stru.source_change_flag)
+	di_fgrain_config(&di_pre_stru.di_inp_mif,
+			 &di_pre_stru.fgrain_diset,
+			 di_pre_stru.di_inp_buf->vframe);
+	#endif
 	di_patch_mov_setting();
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		if (de_devp->nrds_enable) {
@@ -3646,7 +3652,13 @@ static void pre_de_process(void)
 		di_afds()->en_pre_set(di_pre_stru.di_inp_buf->vframe,
 				      di_pre_stru.di_mem_buf_dup_p->vframe,
 				      di_pre_stru.di_wr_buf->vframe);
+	#ifdef DI_FILM_GRAIN
+	if (di_pre_stru.source_change_flag)
+		di_fgrain_setting(&di_pre_stru.fgrain_diset,
+				  di_pre_stru.di_inp_buf->vframe);
 
+	di_fgrain_update_table(di_pre_stru.di_inp_buf->vframe);
+	#endif
 	if (mcpre_en) {
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 			enable_mc_di_pre_g12(
