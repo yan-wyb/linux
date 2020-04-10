@@ -1935,3 +1935,8 @@
 &lut_dma {
 	status = "okay";
 };
+
+&dolby_fw {
+	status = "okay";
+};
+
