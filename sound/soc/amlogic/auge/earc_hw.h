@@ -48,6 +48,7 @@
 #define INT_EARCRX_CMDC_RECV_PACKET         (0x1 << 1)
 #define INT_EARCRX_CMDC_REC_TIME_OUT        (0x1 << 0)
 
+#define INT_EARCRX_DMAC_VALID_AUTO_NEG_INT_SET             (0x1 << 28)
 #define INT_EARCRX_ANA_RST_C_NEW_FORMAT_SET                (0x1 << 17)
 #define INT_EARCRX_ANA_RST_C_EARCRX_DIV2_HOLD_SET          (0x1 << 16)
 #define INT_EARCRX_ERR_CORRECT_C_BCHERR_INT_SET            (0x1 << 15)
@@ -136,10 +137,12 @@ enum reg_offset {
 
 void earcrx_pll_refresh(struct regmap *top_map);
 void earcrx_cmdc_int_mask(struct regmap *top_map);
-void earcrx_cmdc_init(struct regmap *top_map, bool en);
+void earcrx_cmdc_init(struct regmap *top_map, bool en, bool rx_dmac_sync_int);
 void earcrx_cmdc_arc_connect(struct regmap *cmdc_map, bool init);
 void earcrx_cmdc_hpd_detect(struct regmap *cmdc_map, bool st);
-void earcrx_dmac_init(struct regmap *top_map, struct regmap *dmac_map);
+void earcrx_dmac_init(struct regmap *top_map,
+		      struct regmap *dmac_map,
+		      bool rx_dmac_sync_int);
 void earcrx_arc_init(struct regmap *dmac_map);
 enum cmdc_st earcrx_cmdc_get_state(struct regmap *cmdc_map);
 enum attend_type earcrx_cmdc_get_attended_type(struct regmap *cmdc_map);
@@ -187,4 +190,6 @@ void earctx_cmdc_get_cds(struct regmap *cmdc_map, u8 *cds);
 
 void earcrx_ana_auto_cal(struct regmap *top_map);
 void earctx_ana_auto_cal(struct regmap *top_map);
+bool earxrx_get_pll_valid(struct regmap *top_map);
+bool earxrx_get_pll_valid_auto(struct regmap *top_map);
 #endif

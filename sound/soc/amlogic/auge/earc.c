@@ -54,6 +54,7 @@ enum work_event {
 
 struct earc_chipinfo {
 	unsigned int earc_spdifout_lane_mask;
+	bool rx_dmac_sync_int;
 };
 
 struct earc {
@@ -236,6 +237,13 @@ static irqreturn_t earc_rx_isr(int irq, void *data)
 			pr_debug("%s ARCRX_I_SAMPLE_MODE_CHANGE\n", __func__);
 		if (status1 & INT_ARCRX_BIPHASE_DECODE_R_PARITY_ERR)
 			pr_debug("%s ARCRX_R_PARITY_ERR\n", __func__);
+
+		if (p_earc->chipinfo->rx_dmac_sync_int &&
+		    status1 & INT_EARCRX_DMAC_VALID_AUTO_NEG_INT_SET) {
+			earcrx_pll_refresh(p_earc->rx_top_map);
+			pr_info("%s EARCRX_DMAC_VALID_AUTO_NEG_INT_SET\n",
+				__func__);
+		}
 	}
 
 	return IRQ_HANDLED;
@@ -645,7 +653,9 @@ static int earc_dai_prepare(
 		aml_toddr_select_src(to, src);
 		aml_toddr_set_format(to, &fmt);
 
-		earcrx_dmac_init(p_earc->rx_top_map, p_earc->rx_dmac_map);
+		earcrx_dmac_init(p_earc->rx_top_map,
+				 p_earc->rx_dmac_map,
+				 p_earc->chipinfo->rx_dmac_sync_int);
 		earcrx_arc_init(p_earc->rx_dmac_map);
 	}
 
@@ -772,7 +782,7 @@ static int earc_dai_startup(
 	struct snd_soc_dai *cpu_dai)
 {
 	struct earc *p_earc = snd_soc_dai_get_drvdata(cpu_dai);
-	int ret;
+	int ret, i = 0;
 
 	pr_info("%s\n", __func__);
 
@@ -820,12 +830,39 @@ static int earc_dai_startup(
 			}
 		}
 
-		earcrx_pll_refresh(p_earc->rx_top_map);
+		if (!p_earc->chipinfo->rx_dmac_sync_int) {
+			earcrx_pll_refresh(p_earc->rx_top_map);
+		} else {
+			if (!earxrx_get_pll_valid(p_earc->rx_top_map)) {
+				dev_err(p_earc->dev,
+					"earcrx pll is not valid\n");
+				goto err;
+			}
+
+			/* bit 31 is 1, and bit 30 is 0, then need reset pll */
+			while (!earxrx_get_pll_valid_auto(
+					p_earc->rx_top_map) && i < 10) {
+				earcrx_pll_refresh(p_earc->rx_top_map);
+				pr_info("refresh earcrx pll, i %d\n", i++);
+
+				if (!earxrx_get_pll_valid_auto(
+						p_earc->rx_top_map))
+					usleep_range(95, 105);
+				else
+					break;
+			}
+
+			if (!earxrx_get_pll_valid_auto(p_earc->rx_top_map)) {
+				dev_err(p_earc->dev,
+					"refresh earcrx pll failed\n");
+				goto err;
+			}
+		}
 	}
 
 	return 0;
 err:
-	pr_err("failed enable clock\n");
+	pr_err("failed enable clock or earcrx pll is not valid\n");
 	return -EINVAL;
 }
 
@@ -1234,14 +1271,17 @@ static const struct snd_soc_component_driver earc_component = {
 
 struct earc_chipinfo sm1_earc_chipinfo = {
 	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V1,
+	.rx_dmac_sync_int = false,
 };
 
 struct earc_chipinfo tm2_earc_chipinfo = {
 	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V1,
+	.rx_dmac_sync_int = false,
 };
 
 struct earc_chipinfo tm2_revb_earc_chipinfo = {
 	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V2,
+	.rx_dmac_sync_int = true,
 };
 
 static const struct of_device_id earc_device_id[] = {
@@ -1313,7 +1353,9 @@ void earc_hdmitx_hpdst(bool st)
 	}
 
 	/* rx cmdc init */
-	earcrx_cmdc_init(p_earc->rx_top_map, st);
+	earcrx_cmdc_init(p_earc->rx_top_map,
+			 st,
+			 p_earc->chipinfo->rx_dmac_sync_int);
 
 	if (st)
 		earcrx_cmdc_int_mask(p_earc->rx_top_map);

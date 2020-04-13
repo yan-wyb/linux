@@ -60,7 +60,7 @@ void earcrx_cmdc_int_mask(struct regmap *top_map)
 		  );
 }
 
-void earcrx_cmdc_init(struct regmap *top_map, bool en)
+void earcrx_cmdc_init(struct regmap *top_map, bool en, bool rx_dmac_sync_int)
 {
 	mmio_write(top_map, EARCRX_ANA_CTRL0,
 		   en  << 31 | /* earcrx_en_d2a */
@@ -84,6 +84,13 @@ void earcrx_cmdc_init(struct regmap *top_map, bool en)
 		   0x1 << 23 | /* earcrx_pll_dmacrx_sqout_rstn_sel */
 		   0x1 << 10   /* earcrx_pll_n */
 		  );
+
+	if (rx_dmac_sync_int) {
+		mmio_update_bits(top_map,
+				 EARCRX_PLL_CTRL2,
+				 0x3,
+				 0x2);
+	}
 }
 
 void earcrx_cmdc_arc_connect(struct regmap *cmdc_map, bool init)
@@ -134,7 +141,9 @@ void earcrx_cmdc_hpd_detect(struct regmap *cmdc_map, bool st)
 	}
 }
 
-void earcrx_dmac_init(struct regmap *top_map, struct regmap *dmac_map)
+void earcrx_dmac_init(struct regmap *top_map,
+		      struct regmap *dmac_map,
+		      bool rx_dmac_sync_int)
 {
 	mmio_write(top_map, EARCRX_DMAC_INT_MASK,
 		   (0x0 << 17) | /* earcrx_ana_rst c_new_format_set */
@@ -156,6 +165,11 @@ void earcrx_dmac_init(struct regmap *top_map, struct regmap *dmac_map)
 		   (0x1 << 1)	| /* arcrx_biphase_decode r_parity_err */
 		   (0x0 << 0)	  /* arcrx_dmac_sync afifo_overflow */
 		  );
+
+	if (rx_dmac_sync_int)
+		/* dmac_sync dmac_valid_auto neg_int_se */
+		mmio_update_bits(top_map, EARCRX_DMAC_INT_MASK,
+				 (0x1 << 28),  (0x1 << 28));
 
 	mmio_write(dmac_map, EARCRX_DMAC_SYNC_CTRL0,
 		   (1 << 16)	|	 /* reg_ana_buf_data_sel_en */
@@ -923,4 +937,28 @@ void earctx_ana_auto_cal(struct regmap *top_map)
 			 EARCTX_ANA_CTRL0,
 			 0x1f << 12,
 			 (stat0 & 0x1f) << 12);
+}
+
+bool earxrx_get_pll_valid(struct regmap *top_map)
+{
+	int stat0 = 0;
+	unsigned int value = 0;
+
+	value = mmio_read(top_map, EARCRX_PLL_STAT0);
+
+	stat0 = (value & 0x80000000) >> 31;
+
+	return stat0;
+}
+
+bool earxrx_get_pll_valid_auto(struct regmap *top_map)
+{
+	int stat0 = 0;
+	unsigned int value = 0;
+
+	value = mmio_read(top_map, EARCRX_PLL_STAT0);
+
+	stat0 = (value & 0x40000000) >> 30;
+
+	return stat0;
 }
