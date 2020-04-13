@@ -3346,6 +3346,12 @@ void vdin_set_default_regmap(struct vdin_dev_s *devp)
 	/* [28:16] input_win.vs               = 0 */
 	/* [12: 0] input_win.ve               = 0 */
 	wr(offset, VDIN_WIN_V_START_END, 0x00000000);
+
+	/* prevent vdin enter hold status by mass vsync from hdmi rx
+	 * phenomenon: not wr any data to DDR, pic stuck
+	 */
+	wr_bits(offset, VDIN_WR_URGENT_CTRL, 1,
+		WR_DONE_LAST_SEL_BIT, WR_DONE_LAST_SEL_WID);
 	/*hw verify:de-tunnel 444 to 422 12bit*/
 	if (devp->dtdata->ipt444_to_422_12bit)
 		vdin_dolby_de_tunnel_to_12bit(devp, false);

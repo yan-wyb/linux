@@ -528,7 +528,12 @@
 #define VDIN_DNLP_HIST29    ((0x1254))/* + 0xd0100000) */
 #define VDIN_DNLP_HIST30    ((0x1255))/* + 0xd0100000) */
 #define VDIN_DNLP_HIST31    ((0x1256))/* + 0xd0100000) */
-#ifdef CONFIG_AML_LOCAL_DIMMING
+#define HIST_ON_BIN_63_BIT              16
+#define HIST_ON_BIN_63_WID              16
+#define HIST_ON_BIN_62_BIT              0
+#define HIST_ON_BIN_62_WID              16
+
+#ifdef CONFIG_AML_LOCAL_DIMMING /* DO NOT enable, already removed from chip */
 /* Bit 31, local dimming statistic enable */
 /* Bit 28, eol enable */
 /* Bit 27:25, vertical line overlap number for max finding */
@@ -544,6 +549,25 @@
  */
 /* Bit 6:0, region read index */
 #define VDIN_LDIM_STTS_HIST_REGION_IDX ((0x1257))/* + 0xd0100000) */
+#define LOCAL_DIM_STATISTIC_EN_BIT          31
+#define LOCAL_DIM_STATISTIC_EN_WID         1
+#define EOL_EN_BIT                                          28
+#define EOL_EN_WID                                        1
+#define VLINE_OVERLAP_NUMBER_BIT        25
+#define VLINE_OVERLAP_NUMBER_WID       3
+/* 0: 17 pix, 1: 9 pix, 2: 5 pix, 3: 3 pix, 4: 0 pix */
+#define HLINE_OVERLAP_NUMBER_BIT        22
+#define HLINE_OVERLAP_NUMBER_WID       3
+#define LPF_BEFORE_STATISTIC_EN_BIT    20
+#define LPF_BEFORE_STATISTIC_EN_WID    1
+/* region H/V position index, refer to VDIN_LDIM_STTS_HIST_SET_REGION */
+#define BLK_HV_POS_IDXS_BIT                     16
+#define BLK_HV_POS_IDXS_WID                    4
+#define REGION_RD_INDEX_INC_BIT             15
+#define REGION_RD_INDEX_INC_WID            1
+#define REGION_RD_INDEX_BIT                      0
+#define REGION_RD_INDEX_WID                     7
+
 /* Bit 28:0, if VDIN_LDIM_STTS_HIST_REGION_IDX[19:16] == 5'h0:
  * read/write hvstart0
  */
@@ -570,6 +594,20 @@
 /* vend89, Bit 28:16 row9 vend, Bit 12:0 row8 vend */
 #define VDIN_LDIM_STTS_HIST_SET_REGION  ((0x1258))/* + 0xd0100000) */
 #else
+#define VDIN_WR_URGENT_CTRL	((0x1257))
+#define AUTO_URGENT_EN_BIT	15
+#define AUTO_URGENT_EN_WID	1
+#define URGENT_WR_BIT	14
+#define URGENT_WR_WID	1
+#define WR_DONE_LAST_SEL_BIT	9
+#define WR_DONE_LAST_SEL_WID	1
+#define BVALID_EN_BIT	8
+#define BVALID_EN_WID	1
+#define UP_THRESHOLD_BIT	4
+#define UP_THRESHOLD_WID	4
+#define DOWN_THRESHOLD_BIT	0
+#define DOWN_THRESHOLD_WID	4
+
 #define VDIN_RO_WRMIF_STATUS		(0x1258)
 #endif
 /* REGION STATISTIC DATA READ OUT PORT, bit 29:20 max_comp2,
@@ -1631,32 +1669,6 @@
 #define HIST_ON_BIN_61_WID              16
 #define HIST_ON_BIN_60_BIT              0
 #define HIST_ON_BIN_60_WID              16
-
-/* #define VDIN_DNLP_HIST31                        0x1256 */
-#define HIST_ON_BIN_63_BIT              16
-#define HIST_ON_BIN_63_WID              16
-#define HIST_ON_BIN_62_BIT              0
-#define HIST_ON_BIN_62_WID              16
-
-/* #define VDIN_LDIM_STTS_HIST_REGION_IDX       0x1257 */
-#define LOCAL_DIM_STATISTIC_EN_BIT          31
-#define LOCAL_DIM_STATISTIC_EN_WID         1
-#define EOL_EN_BIT                                          28
-#define EOL_EN_WID                                        1
-#define VLINE_OVERLAP_NUMBER_BIT        25
-#define VLINE_OVERLAP_NUMBER_WID       3
-/* 0: 17 pix, 1: 9 pix, 2: 5 pix, 3: 3 pix, 4: 0 pix */
-#define HLINE_OVERLAP_NUMBER_BIT        22
-#define HLINE_OVERLAP_NUMBER_WID       3
-#define LPF_BEFORE_STATISTIC_EN_BIT    20
-#define LPF_BEFORE_STATISTIC_EN_WID    1
-/* region H/V position index, refer to VDIN_LDIM_STTS_HIST_SET_REGION */
-#define BLK_HV_POS_IDXS_BIT                     16
-#define BLK_HV_POS_IDXS_WID                    4
-#define REGION_RD_INDEX_INC_BIT             15
-#define REGION_RD_INDEX_INC_WID            1
-#define REGION_RD_INDEX_BIT                      0
-#define REGION_RD_INDEX_WID                     7
 
 /* # VDIN_LDIM_STTS_HIST_SET_REGION                    0x1258 */
 /* Bit 28:0, if VDIN_LDIM_STTS_HIST_REGION_IDX[19:16] == 5'h0:
