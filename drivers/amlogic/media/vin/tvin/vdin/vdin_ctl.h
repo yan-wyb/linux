@@ -225,6 +225,7 @@ void vdin_dolby_de_tunnel_to_12bit(struct vdin_dev_s *devp,
 					  unsigned int onoff);
 void vdin_wr_frame_en(unsigned int ch, unsigned int onoff);
 void vdin_set_mif_onoff(struct vdin_dev_s *devp, unsigned int rdma_enable);
+void vdin_vs_proc_monitor(struct vdin_dev_s *devp);
 
 #endif
 

@@ -813,6 +813,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	    devp->vpu_crash_irq != 0)
 		disable_irq(devp->vpu_crash_irq);
 
+	devp->flags &= (~VDIN_FLAG_ISR_EN);
 	if (vdin_dbg_en)
 		pr_info("%s vdin.%d disable_irq\n", __func__,
 			devp->index);
@@ -1585,6 +1586,11 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	}
 
 	sm_ops = devp->frontend->sm_ops;
+
+	if (sm_ops && sm_ops->get_sig_property) {
+		sm_ops->get_sig_property(devp->frontend, &devp->prop);
+		vdin_vs_proc_monitor(devp);
+	}
 	cur_ms = jiffies_to_msecs(jiffies);
 
 	if (is_meson_tm2_cpu() && cur_ms - pre_ms < 10 &&
@@ -2375,6 +2381,7 @@ static int vdin_open(struct inode *inode, struct file *file)
 				devp->index);
 	}
 	devp->flags |= VDIN_FLAG_ISR_REQ;
+	devp->flags &= (~VDIN_FLAG_ISR_EN);
 	/*disable irq until vdin is configured completely*/
 	disable_irq(devp->irq);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) && devp->index == 0 &&
@@ -2581,6 +2588,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			(viu_hw_irq != 0)) {
 			/*enable irq */
 			enable_irq(devp->irq);
+			devp->flags |= VDIN_FLAG_ISR_EN;
 
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
 			    devp->index == 0 && devp->vpu_crash_irq != 0)

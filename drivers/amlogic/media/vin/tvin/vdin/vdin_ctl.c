@@ -124,6 +124,11 @@ unsigned int vdin_pc_mode;
 module_param(vdin_pc_mode, uint, 0664);
 MODULE_PARM_DESC(vdin_pc_mode, "vdin_pc_mode");
 
+unsigned int vdin_isr_monitor;
+module_param(vdin_isr_monitor, uint, 0664);
+MODULE_PARM_DESC(vdin_isr_monitor, "vdin_isr_monitor");
+
+
 static unsigned int vpu_reg_27af = 0x3;
 
 /***************************Local defines**********************************/
@@ -5142,6 +5147,14 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 	vf->emp.size = devp->prop.emp_data.size;
 }
 
+void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
+{
+	if (IS_HDMI_SRC(devp->parm.port)) {
+		if (vdin_isr_monitor)
+			pr_info("dv:%d, hdr:%d\n", devp->prop.dolby_vision,
+				devp->prop.vdin_hdr_Flag);
+	}
+}
 
 void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 {
@@ -5165,8 +5178,10 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 	sm_ops = devp->frontend->sm_ops;
 	if (sm_ops->get_sig_property) {
 		sm_ops->get_sig_property(devp->frontend, prop);
-		pr_info("vdin hdmi hdr eotf:0x%x\n",
-				devp->prop.hdr_info.hdr_data.eotf);
+		pr_info("vdin%d hdmi hdr eotf:0x%x, state:%d\n",
+				devp->index,
+				devp->prop.hdr_info.hdr_data.eotf,
+				devp->prop.hdr_info.hdr_state);
 		if (devp->prop.hdr_info.hdr_state == HDR_STATE_GET) {
 			devp->prop.vdin_hdr_Flag = true;
 			if (vdin_is_dolby_tunnel_444_input(devp))
@@ -5182,6 +5197,8 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 					COLOR_DEEPS_10BIT;
 				pr_info("vdin is hdr mode,force 10bit\n");
 			}
+		} else {
+			devp->prop.vdin_hdr_Flag = false;
 		}
 		/*devp->prop.hdr_info.hdr_data.eotf = 0;*/
 	}

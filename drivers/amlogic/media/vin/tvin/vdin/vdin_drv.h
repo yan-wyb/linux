@@ -122,6 +122,8 @@ struct match_data_s {
 /* flag for rdma done */
 #define VDIN_FLAG_RDMA_DONE             0x00080000
 
+#define VDIN_FLAG_ISR_EN		0x00100000
+
 /*values of vdin isr bypass check flag */
 #define VDIN_BYPASS_STOP_CHECK          0x00000001
 #define VDIN_BYPASS_CYC_CHECK           0x00000002
@@ -328,6 +330,7 @@ struct vdin_dv_s {
 	unsigned int dv_mem_alloced;
 	struct tvin_dv_vsif_s dv_vsif;/*dolby vsi info*/
 	bool low_latency;
+	unsigned int chg_cnt;
 };
 
 struct vdin_afbce_s {
