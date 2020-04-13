@@ -1470,6 +1470,7 @@ static const struct of_device_id meson_tvafe_dt_match[] = {
 		.compatible = "amlogic, tvafe-tm2_b",
 		.data		= &meson_tm2_b_tvafe_data,
 	},
+	{}
 };
 
 static unsigned int tvafe_use_reserved_mem;

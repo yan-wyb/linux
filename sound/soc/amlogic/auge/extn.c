@@ -998,6 +998,7 @@ static const struct of_device_id extn_device_id[] = {
 		.compatible = "amlogic, tm2-snd-extn",
 		.data       = &tm2_extn_chipinfo,
 	},
+	{}
 };
 
 MODULE_DEVICE_TABLE(of, extn_device_id);
