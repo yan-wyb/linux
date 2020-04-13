@@ -1054,32 +1054,51 @@
 #define HHI_HDMIRX_AXI_CLK_CNTL			(0xb8<<2)
 
 /* tl1 HIU apll register */
-#define HHI_HDMIRX_APLL_CNTL0			(0xd2<<2)/* 0x4C */
-#define HHI_HDMIRX_APLL_CNTL1			(0xd3<<2)/* 0x4D */
-#define HHI_HDMIRX_APLL_CNTL2			(0xd4<<2)/* 0x4E */
-#define HHI_HDMIRX_APLL_CNTL3			(0xd5<<2)/* 0x4F */
-#define HHI_HDMIRX_APLL_CNTL4			(0xd6<<2)/* 0x50 */
+#define HHI_HDMIRX_APLL_CNTL0			(0xd2<<2)
+#define HHI_HDMIRX_APLL_CNTL1			(0xd3<<2)
+#define HHI_HDMIRX_APLL_CNTL2			(0xd4<<2)
+#define HHI_HDMIRX_APLL_CNTL3			(0xd5<<2)
+#define HHI_HDMIRX_APLL_CNTL4			(0xd6<<2)
 
 /* tl1 HIU PHY register */
-#define HHI_HDMIRX_PHY_MISC_CNTL0		(0xd7<<2)/*0x040*/
+#define HHI_HDMIRX_PHY_MISC_CNTL0		(0xd7<<2)
 #define MISCI_COMMON_RST				_BIT(10)
-#define HHI_HDMIRX_PHY_MISC_CNTL1		(0xd8<<2)/*0x041*/
+#define HHI_HDMIRX_PHY_MISC_CNTL1		(0xd8<<2)
 #define MISCI_MANUAL_MODE				_BIT(22)
-#define HHI_HDMIRX_PHY_MISC_CNTL2		(0xe0<<2)/*0x042*/
-#define HHI_HDMIRX_PHY_MISC_CNTL3		(0xe1<<2)/*0x043*/
-#define HHI_HDMIRX_PHY_DCHA_CNTL0		(0xe2<<2)/*0x045*/
-#define HHI_HDMIRX_PHY_DCHA_CNTL1		(0xe3<<2)/*0x046*/
-#define HHI_HDMIRX_PHY_DCHA_CNTL2		(0xe4<<2)/*0x047*/
-#define HHI_HDMIRX_PHY_DCHA_CNTL3		(0xc5<<2)/*tm2 revB new*/
-#define HHI_HDMIRX_PHY_DCHD_CNTL0		(0xe5<<2)/*0x048*/
-#define HHI_HDMIRX_PHY_DCHD_CNTL1		(0xe6<<2)/*0x049*/
-#define HHI_HDMIRX_PHY_DCHD_CNTL2		(0xe7<<2)/*0x04A*/
-#define HHI_HDMIRX_PHY_DCHD_CNTL3		(0xc6<<2)/*tm2 revB new*/
+#define HHI_HDMIRX_PHY_MISC_CNTL2		(0xe0<<2)
+#define HHI_HDMIRX_PHY_MISC_CNTL3		(0xe1<<2)
+#define HHI_HDMIRX_PHY_DCHA_CNTL0		(0xe2<<2)
+#define HHI_HDMIRX_PHY_DCHA_CNTL1		(0xe3<<2)
+	#define DFE_OFSETCAL_START			_BIT(27)
+	#define DFE_TAP1_EN					_BIT(17)
+	#define DEF_SUM_RS_TRIM				MSK(3, 12)
+	/*[4:5] in trim,[6:7] im trim*/
+	#define DFE_SUM_TRIM				MSK(4, 4)
+#define HHI_HDMIRX_PHY_DCHA_CNTL2		(0xe4<<2)
+	#define DFE_VADC_EN					_BIT(21)
+#define HHI_HDMIRX_PHY_DCHA_CNTL3		(0xc5<<2)/*for revB*/
+#define HHI_HDMIRX_PHY_DCHD_CNTL0		(0xe5<<2)
+	#define CDR_LKDET_EN				_BIT(28)
+	/*bit'24:eq rst bit'25:cdr rst*/
+	#define CDR_EQ_RSTB					MSK(2, 24)
+	/*0:manual 1:c only 2:r only 3:both rc*/
+	#define EQ_ADP_MODE					MSK(2, 10)
+	#define EQ_ADP_STG					MSK(2, 8)
+#define HHI_HDMIRX_PHY_DCHD_CNTL1		(0xe6<<2)
+	#define OFST_CAL_START				_BIT(31)
+	#define EQ_BYP_VAL					MSK(5, 12)
+#define HHI_HDMIRX_PHY_DCHD_CNTL2		(0xe7<<2)
+	#define DFE_DBG_STL					MSK(3, 28)
+	#define	DFE_EN						_BIT(27)
+	#define DFE_RSTB					_BIT(26)
+	#define TAP1_BYP_EN					_BIT(19)
+#define HHI_HDMIRX_PHY_DCHD_CNTL3		(0xc6<<2)/*for revB*/
+	#define DBG_STS_SEL					MSK(2, 30)
 #define HHI_HDMIRX_PHY_ARC_CNTL			(0xe8<<2)
 #define HHI_HDMIRX_EARCTX_CNTL0			(0x69<<2)
 #define HHI_HDMIRX_EARCTX_CNTL1			(0x6a<<2)
-#define HHI_HDMIRX_PHY_MISC_STAT		(0xee<<2)//0x044
-#define HHI_HDMIRX_PHY_DCHD_STAT		(0xef<<2)/*0x04B*/
+#define HHI_HDMIRX_PHY_MISC_STAT		(0xee<<2)
+#define HHI_HDMIRX_PHY_DCHD_STAT		(0xef<<2)
 
 #define TMDS_CLK_MIN			(24000UL)
 #define TMDS_CLK_MAX			(340000UL)
@@ -1145,6 +1164,8 @@ extern int alirst_en;
 extern int tap1_byp;
 extern int eq_byp;
 extern int long_cable;
+extern int osc_mode;
+extern int pll_div;
 
 extern char emp_buf[1024];
 extern void rx_get_best_eq_setting(void);
