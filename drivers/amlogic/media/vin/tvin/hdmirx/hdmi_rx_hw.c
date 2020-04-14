@@ -741,7 +741,8 @@ void hdmirx_phy_pddq(unsigned int enable)
 		hdmirx_rd_top(TOP_HPD_PWR5V) & 0x7;
 
 	if (rx.chip_id >= CHIP_ID_TL1) {
-		wr_reg_hhi_bits(HHI_HDMIRX_PHY_MISC_CNTL2, _BIT(1), enable);
+		wr_reg_hhi_bits(HHI_HDMIRX_PHY_MISC_CNTL2,
+			_BIT(1), !enable);
 		/* set rxsense */
 		if (enable)
 			wr_reg_hhi_bits(HHI_HDMIRX_PHY_MISC_CNTL0,
@@ -4781,14 +4782,29 @@ void aml_phy_power_off(void)
 	wr_reg_hhi_bits(HHI_HDMIRX_APLL_CNTL0, _BIT(29), 1);
 
 	/* phy power down */
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, 0x32037800);
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, 0x1000000);
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2, 0x62208002);
-	wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, 0x7);
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0, 0x1e);
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, 0x10000800);
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0, 0x200000);
-	wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1, 0x0);
+	if (rx.phy_ver == PHY_VER_TL1) {
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, 0x32037800);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, 0x1000000);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2, 0x62208002);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, 0x7);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0, 0x1e);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, 0x10000800);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0, 0x200000);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1, 0x0);
+	} else {
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL0, 0x22800800);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL1, 0x01000000);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL2, 0x60000000);
+		wr_reg_hhi(HHI_HDMIRX_PHY_MISC_CNTL3, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL0, 0x01000000);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL1, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL2, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL0, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL1, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL2, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHA_CNTL3, 0x0);
+		wr_reg_hhi(HHI_HDMIRX_PHY_DCHD_CNTL3, 0x0);
+	}
 
 	if (log_level & VIDEO_LOG)
 		rx_pr("%s\n", __func__);
