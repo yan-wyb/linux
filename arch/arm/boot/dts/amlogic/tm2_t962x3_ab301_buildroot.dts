@@ -444,6 +444,7 @@
 			};
 		};
 
+#if 0
 		aml-audio-card,dai-link@7 {
 			mclk-fs = <256>;
 			suffix-name = "alsaPORT-earc";
@@ -455,6 +456,7 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
+#endif
 
 		aml-audio-card,dai-link@8 {
 			mclk-fs = <256>;
@@ -1597,7 +1599,7 @@
 }; /* end of audiobus */
 
 &earc {
-	status = "okay";
+	status = "disabled";
 };
 
 &pinctrl_periphs {
