@@ -5296,7 +5296,6 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdev->hdcp_bcaps_repeater = 0;
 	hdev->hwop.cntlddc(hdev, DDC_HDCP_MUX_INIT, 1);
 	hdev->hwop.cntlddc(hdev, DDC_HDCP_OP, HDCP14_OFF);
-	hdev->hwop.cntlddc(hdev, DDC_GLITCH_FILTER_RESET, 0);
 	if (hdev->cedst_policy)
 		cancel_delayed_work(&hdev->work_cedst);
 	edidinfo_detach_to_vinfo(hdev);
