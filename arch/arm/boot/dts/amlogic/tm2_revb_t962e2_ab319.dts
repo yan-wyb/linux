@@ -1831,7 +1831,7 @@
 };
 
 &efuse {
-	status = "disabled";
+	status = "okay";
 };
 
 &amhdmitx {

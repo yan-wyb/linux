@@ -1986,7 +1986,7 @@
 };
 
 &efuse {
-	status = "disabled";
+	status = "okay";
 };
 
 &lut_dma {
