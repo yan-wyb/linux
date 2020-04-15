@@ -5221,7 +5221,7 @@ static int hlg_process(
 	int i, j;
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		gamut_convert_process(vinfo, source_type, vd_path, &m, 11);
+		gamut_convert_process(vinfo, source_type, vd_path, &m, 8);
 		if (vd_path == VD1_PATH)
 			hdr_func(VD1_HDR, HLG_SDR, vinfo, &m);
 		else
@@ -7676,14 +7676,16 @@ static int vpp_matrix_update(
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) &&
 	(get_cpu_type() != MESON_CPU_MAJOR_ID_TL1)) {
 		if ((hdr_process_mode[vd_path] == PROC_HDR_TO_SDR) &&
-		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB))
+		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+			!(get_hdr_type() & HLG_FLAG))
 			hdr10_tm_process_update(p);
 		if (hdr10p_meta_updated &&
 			hdr10_plus_process_mode[vd_path] == PROC_HDRP_TO_SDR)
 			hdr10_plus_process_update(0);
 	} else {
 		if ((hdr_process_mode[vd_path] == PROC_MATCH) &&
-		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB))
+		    (csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
+			!(get_hdr_type() & HLG_FLAG))
 			hdr10_tm_process_update(p);
 		if (hdr10p_meta_updated &&
 			hdr10_plus_process_mode[vd_path] == PROC_MATCH)
