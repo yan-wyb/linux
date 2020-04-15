@@ -128,7 +128,6 @@ unsigned int vdin_isr_monitor;
 module_param(vdin_isr_monitor, uint, 0664);
 MODULE_PARM_DESC(vdin_isr_monitor, "vdin_isr_monitor");
 
-
 static unsigned int vpu_reg_27af = 0x3;
 
 /***************************Local defines**********************************/
@@ -5158,6 +5157,16 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
 {
 	if (IS_HDMI_SRC(devp->parm.port)) {
+		if (devp->prop.dolby_vision != devp->dv.dv_flag)
+			devp->dv.chg_cnt++;
+		else
+			devp->dv.chg_cnt = 0;
+
+		if (devp->prop.vdin_hdr_Flag != devp->pre_prop.vdin_hdr_Flag)
+			devp->prop.hdr_info.hdr_check_cnt++;
+		else
+			devp->prop.hdr_info.hdr_check_cnt = 0;
+
 		if (vdin_isr_monitor)
 			pr_info("dv:%d, hdr:%d\n", devp->prop.dolby_vision,
 				devp->prop.vdin_hdr_Flag);

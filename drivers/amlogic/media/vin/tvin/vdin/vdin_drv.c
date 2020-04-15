@@ -568,9 +568,9 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 			vdin_check_hdmi_hdr(devp);
 		devp->dv.dv_flag = devp->prop.dolby_vision;
-
-		pr_info("%s dv:%d hdr:%d\n", __func__, devp->dv.dv_flag,
-			devp->prop.vdin_hdr_Flag);
+		pr_info("%s dv:%d hdr:%d signal_type:0x%x\n", __func__,
+			devp->dv.dv_flag, devp->prop.vdin_hdr_Flag,
+			devp->parm.info.signal_type);
 		memcpy(&devp->pre_prop, &devp->prop,
 			sizeof(struct tvin_sig_property_s));
 		if (!(devp->flags & VDIN_FLAG_V4L2_DEBUG))
@@ -692,13 +692,13 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		vdin_dolby_addr_alloc(devp, devp->vfp->size);
 		/* config dolby vision */
 		vdin_dolby_config(devp);
-		if (vdin_dbg_en)
-			pr_info("vdin start dec dv input config\n");
 	} else {
 		/*disable dv mdata write*/
 		vdin_dobly_mdata_write_en(devp->addr_offset, 0);
 	}
 #endif
+	devp->dv.chg_cnt = 0;
+	devp->prop.hdr_info.hdr_check_cnt = 0;
 	devp->abnormal_cnt = 0;
 	devp->last_wr_vfe = NULL;
 	irq_max_count = 0;
@@ -2501,6 +2501,8 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	/* Get the per-device structure that contains this cdev */
 	devp = file->private_data;
+	if (!devp)
+		return -EFAULT;
 	mutex_lock(&devp->fe_lock);
 	switch (cmd) {
 	case TVIN_IOC_OPEN: {
@@ -2728,7 +2730,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case TVIN_IOC_G_FRONTEND_INFO: {
 		struct tvin_frontend_info_s info;
 
-		if ((!devp) || (!devp->fmt_info_p) || (!devp->curr_wr_vfe)) {
+		if ((!devp->fmt_info_p) || (!devp->curr_wr_vfe)) {
 			ret = -EFAULT;
 			break;
 		}

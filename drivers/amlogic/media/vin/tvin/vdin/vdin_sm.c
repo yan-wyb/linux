@@ -60,7 +60,7 @@ static int sm_atv_prestable_fmt;
 static int sm_print_prestable;
 
 /*bit0:general debug bit;bit1:hdmirx color change*/
-static unsigned int sm_debug_enable = 1;
+static unsigned int sm_debug_enable = VDIN_SM_LOG_L_1;
 module_param(sm_debug_enable, uint, 0664);
 MODULE_PARM_DESC(sm_debug_enable,
 		"enable/disable state machine debug message");
@@ -148,6 +148,15 @@ MODULE_PARM_DESC(nosig2_unstable_cnt, "nosig2_unstable_cnt");
 static int signal_status = TVIN_SIG_STATUS_NULL;
 module_param(signal_status, int, 0664);
 MODULE_PARM_DESC(signal_status, "signal_status");
+
+static unsigned int vdin_dv_chg_cnt = 6;
+module_param(vdin_dv_chg_cnt, uint, 0664);
+MODULE_PARM_DESC(vdin_dv_chg_cnt, "vdin_dv_chg_cnt");
+
+static unsigned int vdin_hdr_chg_cnt = 6;
+module_param(vdin_hdr_chg_cnt, uint, 0664);
+MODULE_PARM_DESC(vdin_hdr_chg_cnt, "vdin_hdr_chg_cnt");
+
 enum tvin_color_fmt_range_e tvin_get_force_fmt_range(
 	enum tvin_color_fmt_e color_fmt)
 {
@@ -215,12 +224,14 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		vdin_hdr_flag = prop->vdin_hdr_Flag;
 		pre_vdin_hdr_flag = pre_prop->vdin_hdr_Flag;
 		if (vdin_hdr_flag != pre_vdin_hdr_flag) {
-			if (prop->hdr_info.hdr_check_cnt++ >= 2) {
+			if (prop->hdr_info.hdr_check_cnt >=
+			    vdin_hdr_chg_cnt) {
 				prop->hdr_info.hdr_check_cnt = 0;
 				signal_chg |= vdin_hdr_flag ?
 					TVIN_SIG_CHG_SDR2HDR :
 					TVIN_SIG_CHG_HDR2SDR;
-				if (signal_chg)
+				if (signal_chg &&
+				    (sm_debug_enable & VDIN_SM_LOG_L_2))
 					pr_info("%s hdr chg 0x%x:(0x%x->0x%x)\n",
 						__func__,
 						signal_chg, pre_vdin_hdr_flag,
@@ -230,11 +241,9 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		}
 
 		cur_dv_flag = prop->dolby_vision;
-		if (!vdin_re_config && sm_debug_enable)
-			pr_info("get dolby_vision=0x%x\n", prop->dolby_vision);
 		pre_dv_flag = devp->dv.dv_flag;
 		if (cur_dv_flag != pre_dv_flag) {
-			if (devp->dv.chg_cnt >= 2) {
+			if (devp->dv.chg_cnt > vdin_dv_chg_cnt) {
 				devp->dv.chg_cnt = 0;
 				signal_chg |= cur_dv_flag ? TVIN_SIG_CHG_NO2DV :
 						TVIN_SIG_CHG_DV2NO;
@@ -257,7 +266,7 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		if ((cur_color_fmt != pre_color_fmt) ||
 		    /*(vdin_hdr_flag != pre_vdin_hdr_flag) ||*/
 		    (vdin_fmt_range != pre_vdin_fmt_range)) {
-			if (sm_debug_enable & (1 << 1))
+			if (sm_debug_enable & VDIN_SM_LOG_L_2)
 				pr_info("[smr.%d] fmt(%d->%d), hdr_flag(%d->%d), csc_cfg:0x%x\n",
 					devp->index,
 					pre_color_fmt, cur_color_fmt,
@@ -321,40 +330,47 @@ void tvin_smr_init_counter(int index)
 	sm_dev[index].exit_prestable_cnt = 0;
 }
 
-static u32 tvin_hdmirx_hdr_check(struct vdin_dev_s *devp,
-				  struct tvin_sig_property_s *prop)
+u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 {
 	unsigned int signal_type = devp->parm.info.signal_type;
 	enum tvin_sg_chg_flg signal_chg = TVIN_SIG_CHG_NONE;
 	struct tvin_state_machine_ops_s *sm_ops;
+	struct tvin_sig_property_s *prop;
 
 	/* need always polling the signal property, if isr enable,
 	 * it be called in isr
 	 */
+	prop = &devp->prop;
 	if (!(devp->flags & VDIN_FLAG_ISR_EN) && devp->frontend) {
 		sm_ops = devp->frontend->sm_ops;
-		if (sm_ops && sm_ops->get_sig_property)
+		if (sm_ops && sm_ops->get_sig_property) {
 			sm_ops->get_sig_property(devp->frontend, &devp->prop);
+			/*devp->dv.dv_flag = devp->prop.dolby_vision;*/
+		}
 	}
 
 	if (prop->low_latency != devp->dv.low_latency)
 		devp->dv.low_latency = prop->low_latency;
 	memcpy(&devp->dv.dv_vsif,
 	       &prop->dv_vsif, sizeof(struct tvin_dv_vsif_s));
-
+	#if 0
 	/* check dv begin */
 	if (prop->dolby_vision != devp->dv.dv_flag) {
-		if (devp->dv.chg_cnt++ >= 2) {
+		if (devp->dv.chg_cnt > vdin_dv_chg_cnt) {
+			devp->dv.chg_cnt = 0;
 			devp->dv.dv_flag = prop->dolby_vision;
 			signal_chg = devp->dv.dv_flag ? TVIN_SIG_CHG_NO2DV :
 					TVIN_SIG_CHG_DV2NO;
-			if (signal_chg)
+			if (signal_chg && (sm_debug_enable & VDIN_SM_LOG_L_2))
 				pr_info("%s dv signal chg:0x%x\n", __func__,
 					signal_chg);
 		}
 	}
+	#endif
+	if (sm_debug_enable & VDIN_SM_LOG_L_4)
+		pr_info("get dolby_vision=0x%x\n", prop->dolby_vision);
 
-	if (devp->dv.dv_flag)
+	if (devp->prop.dolby_vision)
 		signal_type |= (1 << 30);
 	else
 		signal_type &= ~(1 << 30);
@@ -432,7 +448,7 @@ static u32 tvin_hdmirx_hdr_check(struct vdin_dev_s *devp,
 	}
 	/* check HDR 10+ end */
 	devp->parm.info.signal_type = signal_type;
-	if (sm_debug_enable > 1)
+	if (sm_debug_enable & VDIN_SM_LOG_L_4)
 		pr_info("[smr.%d] signal_type 0x%x\n", devp->index,
 			signal_type);
 
@@ -484,7 +500,7 @@ void tvin_smr(struct vdin_dev_s *devp)
 	prop = &devp->prop;
 	pre_prop = &devp->pre_prop;
 
-	signal_chg = tvin_hdmirx_hdr_check(devp, prop);
+	signal_chg = tvin_hdmirx_signal_type_check(devp);
 
 	switch (sm_p->state) {
 	case TVIN_SM_STATUS_NOSIG:

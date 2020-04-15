@@ -48,6 +48,15 @@ enum tvin_sg_chg_flg {
 #define TVIN_SIG_DV_CHG		(TVIN_SIG_CHG_DV2NO | TVIN_SIG_CHG_NO2DV)
 #define TVIN_SIG_HDR_CHG	(TVIN_SIG_CHG_SDR2HDR | TVIN_SIG_CHG_HDR2SDR)
 
+enum vdin_sm_log_level {
+	VDIN_SM_LOG_L_1 = 0x01,
+	VDIN_SM_LOG_L_2 = 0x02,
+	VDIN_SM_LOG_L_3 = 0x04,
+	VDIN_SM_LOG_L_4 = 0x08,
+
+};
+
+
 struct tvin_sm_s {
 	enum tvin_sig_status_e sig_status;
 	enum tvin_sm_status_e state;
