@@ -331,8 +331,9 @@ static ssize_t aml_atvdemod_store(struct class *class,
 				vpll_lock == 0 ? "Locked" : "Unlocked");
 
 			retrieve_vpll_carrier_line_lock(&line_lock);
-			pr_info("line lock: %s.\n",
-				line_lock == 0 ? "Locked" : "Unlocked");
+			pr_info("line lock: %s (0x%x).\n",
+				line_lock == 0 ? "Locked" : "Unlocked",
+				line_lock);
 
 			data_afc = retrieve_vpll_carrier_afc();
 			pr_info("afc: %d Khz.\n", data_afc);
@@ -342,13 +343,14 @@ static ssize_t aml_atvdemod_store(struct class *class,
 		}
 
 		pr_info("[params] afc_range: %d\n", p->afc_range);
-		pr_info("[params] frequency: %d\n", p->frequency);
+		pr_info("[params] frequency: %d Hz\n", p->frequency);
 		pr_info("[params] soundsys: %d\n", p->soundsys);
-		pr_info("[params] std: 0x%x (%s %s)\n",
+		pr_info("[params] std: 0x%x (%s, %s)\n",
 				(unsigned int) dev->std,
 				v4l2_std_to_str((0xff000000 & dev->std)),
 				v4l2_std_to_str((0xffffff & dev->std)));
-		pr_info("[params] audmode: 0x%x\n", dev->audmode);
+		pr_info("[params] audmode: 0x%x (%s)\n", dev->audmode,
+				v4l2_std_to_str(0xffffff & dev->audmode));
 		pr_info("[params] flag: %d\n", p->flag);
 		pr_info("[params] tuner_cur: %d\n", dev->tuner_cur);
 		pr_info("[params] tuner_id: %d\n",
@@ -412,9 +414,18 @@ EXIT:
 	return count;
 }
 
-static ssize_t aml_atvdemod_show(struct class *cls,
+static ssize_t aml_atvdemod_show(struct class *class,
 		struct class_attribute *attr, char *buff)
 {
+	struct aml_atvdemod_device *dev =
+			container_of(class, struct aml_atvdemod_device, cls);
+	struct atv_demod_priv *priv = dev->v4l2_fe.fe.analog_demod_priv;
+	struct v4l2_analog_parameters *p = &dev->v4l2_fe.params;
+	int vpll_lock = 0;
+	int line_lock = 0;
+	int data = 0;
+	int len = 0;
+
 	pr_dbg("\n usage:\n");
 	pr_dbg("[get soft version] echo ver_info > /sys/class/amlatvdemod/atvdemod_debug\n");
 	pr_dbg("[get afc value] echo afc_info > /sys/class/amlatvdemod/atvdemod_debug\n");
@@ -423,7 +434,51 @@ static ssize_t aml_atvdemod_show(struct class *cls,
 				"echo get av_gain/av_offset/atv_gain/atv_offset > /sys/class/amlatvdemod/atvdemod_debug\n");
 	pr_dbg("[set av-out-gain/av-out-offset/atv-gain/atv-offset]:\n"
 				"echo set av_gain/av_offset/atv_gain/atv_offset val(0~255) > /sys/class/amlatvdemod/atvdemod_debug\n");
-	return 0;
+
+	len += sprintf(buff + len, "ATV Demod Status:\n");
+	if (priv->state == ATVDEMOD_STATE_WORK) {
+		retrieve_vpll_carrier_lock(&vpll_lock);
+		len += sprintf(buff + len, "atv_demod: vpp lock: %s.\n",
+			vpll_lock == 0 ? "Locked" : "Unlocked");
+
+		retrieve_vpll_carrier_line_lock(&line_lock);
+		len += sprintf(buff + len, "atv_demod: line lock: %s(0x%x).\n",
+			line_lock == 0 ? "Locked" : "Unlocked", line_lock);
+
+		data = retrieve_vpll_carrier_afc();
+		len += sprintf(buff + len, "atv_demod: afc: %d Khz.\n", data);
+
+		data = atvdemod_get_snr_val();
+		len += sprintf(buff + len, "atv_demod: snr: %d.\n", data);
+	}
+
+	len += sprintf(buff + len, "atv_demod: [params] afc_range: %d\n",
+			p->afc_range);
+	len += sprintf(buff + len, "atv_demod: [params] frequency: %d Hz\n",
+			p->frequency);
+	len += sprintf(buff + len, "atv_demod: [params] soundsys: %d\n",
+			p->soundsys);
+	len += sprintf(buff + len, "atv_demod: [params] std: 0x%x (%s, %s)\n",
+			(unsigned int) dev->std,
+			v4l2_std_to_str((0xff000000 & dev->std)),
+			v4l2_std_to_str((0xffffff & dev->std)));
+	len += sprintf(buff + len, "atv_demod: [params] audmode: 0x%x (%s)\n",
+			dev->audmode, v4l2_std_to_str(0xffffff & dev->audmode));
+	len += sprintf(buff + len, "atv_demod: [params] flag: %d\n", p->flag);
+	len += sprintf(buff + len, "atv_demod: [params] tuner_cur: %d\n",
+			dev->tuner_cur);
+	len += sprintf(buff + len, "atv_demod: [params] tuner_id: %d\n",
+			dev->tuners[dev->tuner_cur].cfg.id);
+	len += sprintf(buff + len, "atv_demod: [params] if_freq: %d\n",
+			dev->if_freq);
+	len += sprintf(buff + len, "atv_demod: [params] if_inv: %d\n",
+			dev->if_inv);
+	len += sprintf(buff + len, "atv_demod: [params] fre_offset: %d\n",
+			dev->fre_offset);
+	len += sprintf(buff + len, "atv_demod: version: %s.\n",
+			AMLATVDEMOD_VER);
+
+	return len;
 }
 
 static struct class_attribute aml_atvdemod_attrs[] = {
