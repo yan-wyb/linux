@@ -1349,19 +1349,14 @@ static int vsi_handler(struct hdmi_rx_ctrl *ctx)
  *	stop: 0x05,0x04
  *
  */
+//static int vsi_pkt_cnt;
 uint8_t rx_get_vsi_info(void)
 {
 	struct vsi_infoframe_st *pkt;
 	uint8_t ret = E_VSI_NULL;
 	unsigned int tmp;
 
-  	pkt = (struct vsi_infoframe_st *)&(rx_pkt.vs_info);
-	if (rx.vs_info_details.timeout > 0) {
-		rx.vs_info_details.timeout--;
-	} else {
-		rx.vs_info_details.dolby_vision = false;
-		memset(&rx_pkt.vs_info, 0, sizeof(struct pd_infoframe_s));
-	}
+	pkt = (struct vsi_infoframe_st *)&rx_pkt.vs_info;
 
 	if (rx.empbuff.emppktcnt &&
 	rx.empbuff.emp_tagid == IEEE_DV15) {
@@ -1388,6 +1383,9 @@ uint8_t rx_get_vsi_info(void)
 	rx.vs_info_details._3d_ext_data = 0;
 	rx.vs_info_details.low_latency = false;
 	rx.vs_info_details.backlt_md_bit = false;
+	if (log_level & 0x4000)
+		rx_pr("%x\n", pkt->ieee);
+
 	switch (pkt->ieee) {
 	case IEEE_DV15:
 		/* dolbyvision 1.5 */
@@ -1897,17 +1895,67 @@ void rx_pkt_check_content(void)
 	}
 }
 
+bool is_new_visf_pkt_rcv(union infoframe_u *pktdata)
+{
+	struct vsi_infoframe_st *pkt;
+	enum vsi_state_e new_pkt, old_pkt;
+
+	pkt = (struct vsi_infoframe_st *)&rx_pkt.vs_info;
+	/* old vsif pkt */
+	if (pkt->ieee == IEEE_DV15)
+		old_pkt = E_VSI_DV15;
+	else if (pkt->ieee == IEEE_VSI21)
+		old_pkt = E_VSI_VSI21;
+	else if (pkt->ieee == IEEE_HDR10PLUS)
+		old_pkt = E_VSI_HDR10PLUS;
+	else if ((pkt->ieee == IEEE_VSI14) &&
+		 (pkt->length == E_PKT_LENGTH_24))
+		old_pkt = E_VSI_DV10;
+	else
+		old_pkt = E_VSI_4K3D;
+
+	pkt = (struct vsi_infoframe_st *)(pktdata);
+	/* new vsif */
+	if (pkt->ieee == IEEE_DV15)
+		new_pkt = E_VSI_DV15;
+	else if (pkt->ieee == IEEE_VSI21)
+		new_pkt = E_VSI_VSI21;
+	else if (pkt->ieee == IEEE_HDR10PLUS)
+		new_pkt = E_VSI_HDR10PLUS;
+	else if ((pkt->ieee == IEEE_VSI14) &&
+		 (pkt->length == E_PKT_LENGTH_24))
+		new_pkt = E_VSI_DV10;
+	else
+		new_pkt = E_VSI_4K3D;
+
+	if (new_pkt > old_pkt)
+		return true;
+
+	return false;
+}
+
 int rx_pkt_fifodecode(struct packet_info_s *prx,
 				union infoframe_u *pktdata,
 				struct rxpkt_st *pktsts)
 {
 	switch (pktdata->raw_infoframe.pkttype) {
 	case PKT_TYPE_INFOFRAME_VSI:
-		pktsts->pkt_attach_vsi++;
-		pktsts->pkt_cnt_vsi++;
+		if (rxpktsts.dv_pkt_num > 0) {
+			if (!is_new_visf_pkt_rcv(pktdata))
+				break;
+		} else {
+			pktsts->pkt_attach_vsi++;
+			pktsts->pkt_cnt_vsi++;
+		}
+		rxpktsts.dv_pkt_num++;
 		pktsts->pkt_op_flag |= PKT_OP_VSI;
-		/*memset(&prx->vs_info, 0, sizeof(struct pd_infoframe_s));*/
-		memcpy(&prx->vs_info, pktdata, sizeof(struct pd_infoframe_s));
+		//memcpy(&prx->vs_info, pktdata, sizeof(struct pd_infoframe_s));
+		memcpy(&prx->vs_info, pktdata, 3);
+		memcpy((char *)&prx->vs_info + 3, (char *)pktdata + 4, 28);
+		if (log_level & 0x4000) {
+			rx_pr("HB.%x\n", prx->vs_info.HB);
+			rx_pr("PB0.%x\n", prx->vs_info.PB0);
+		}
 		pktsts->pkt_op_flag &= ~PKT_OP_VSI;
 		break;
 	case PKT_TYPE_INFOFRAME_AVI:
@@ -2033,57 +2081,50 @@ int rx_pkt_fifodecode(struct packet_info_s *prx,
 
 int rx_pkt_handler(enum pkt_decode_type pkt_int_src)
 {
-	uint32_t i = 0;
+	//uint32_t i = 0;
 	uint32_t j = 0;
 	uint32_t pkt_num = 0;
-	uint32_t pkt_cnt = 0;
+	//uint32_t pkt_cnt = 0;
+	u8 try_cnt = 3;
 	union infoframe_u *pktdata;
 	struct packet_info_s *prx = &rx_pkt;
 	/*uint32_t t1, t2;*/
 
+	rxpktsts.dv_pkt_num = 0;
+	rxpktsts.fifo_pkt_num = 0;
 	if (pkt_int_src == PKT_BUFF_SET_FIFO) {
 		/*from pkt fifo*/
 		if (!pd_fifo_buf)
 			return 0;
-
+		memset(pd_fifo_buf, 0, PFIFO_SIZE);
+		memset(&prx->vs_info, 0, sizeof(struct pd_infoframe_s));
 		/*t1 = sched_clock();*/
 		/*for recode interrupt cnt*/
-		rxpktsts.fifo_Int_cnt++;
-
-		/*ps:read 10 packet from fifo cost time < less than 200 us */
-		if (hdmirx_rd_dwc(DWC_PDEC_STS) & PD_TH_START) {
-readpkt:
-			/*how many packet number need read from fifo*/
-			/* If software tries to read more packets from the */
-			/* FIFO than what is stored already, an underflow */
-			/* occurs. */
-			pkt_num = hdmirx_rd_dwc(DWC_PDEC_FIFO_STS1) >> 3;
-			rxpktsts.fifo_pkt_num = pkt_num;
-
-			for (pkt_cnt = 0; pkt_cnt < pkt_num; pkt_cnt++) {
-				/*read one pkt from fifo*/
-				for (j = 0; j < K_ONEPKT_BUFF_SIZE; j++) {
-					/*8 word per packet size*/
-					pd_fifo_buf[i+j] =
+		/* rxpktsts.fifo_Int_cnt++; */
+		pkt_num = hdmirx_rd_dwc(DWC_PDEC_FIFO_STS1);
+		if (log_level & 0x8000)
+			rx_pr("pkt=%d\n", pkt_num);
+		while (pkt_num >= K_ONEPKT_BUFF_SIZE) {
+			rxpktsts.fifo_pkt_num++;
+			/*read one pkt from fifo*/
+			for (j = 0; j < K_ONEPKT_BUFF_SIZE; j++) {
+				/*8 word per packet size*/
+				pd_fifo_buf[j] =
 					hdmirx_rd_dwc(DWC_PDEC_FIFO_DATA);
-				}
-
-				if (log_level & PACKET_LOG)
-					rx_pr("PD[%d]=%x\n", i, pd_fifo_buf[i]);
-
-				pktdata = (union infoframe_u *)&pd_fifo_buf[i];
-				/*mutex_lock(&pktbuff_lock);*/
-				/*pkt decode*/
-				rx_pkt_fifodecode(prx, pktdata, &rxpktsts);
-				/*mutex_unlock(&pktbuff_lock);*/
-				i += 8;
-				if (i > (PFIFO_SIZE - 8))
-					i = 0;
 			}
-			/*while read from buff, other more packets attach*/
-			pkt_num = hdmirx_rd_dwc(DWC_PDEC_FIFO_STS1) >> 3;
-			if (pkt_num > K_PKT_REREAD_SIZE)
-				goto readpkt;
+			if (log_level & PACKET_LOG)
+				rx_pr("PD[%d]=%x\n",
+				      rxpktsts.fifo_pkt_num,
+				      pd_fifo_buf[0]);
+			pktdata = (union infoframe_u *)pd_fifo_buf;
+			rx_pkt_fifodecode(prx, pktdata, &rxpktsts);
+			rx.irq_flag &= ~IRQ_PACKET_FLAG;
+			if (try_cnt != 0)
+				try_cnt--;
+			if (try_cnt == 0)
+				return 0;
+
+			pkt_num = hdmirx_rd_dwc(DWC_PDEC_FIFO_STS1);
 		}
 	} else if (pkt_int_src == PKT_BUFF_SET_VSI) {
 		rxpktsts.pkt_attach_vsi++;

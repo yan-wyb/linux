@@ -807,15 +807,13 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 	if (last_vsi_state != vsi_state) {
 		if (log_level & PACKET_LOG) {
 			rx_pr("!!!vsi state = %d\n", vsi_state);
-			rx_pr("1:4K3D 2:DV10 3:DV15 4:HDR10+\n");
+			rx_pr("1:4K3D;2:vsi21;3:HDR10+;4:DV10;5:DV15\n");
 		}
 		prop->trans_fmt = TVIN_TFMT_2D;
 		prop->dolby_vision = false;
 		prop->hdr10p_info.hdr10p_on = false;
 		last_vsi_state = vsi_state;
 	}
-	if (log_level & 0x1000)
-		rx_pr("***%x\n", vsi_state);
 	switch (vsi_state) {
 	case E_VSI_HDR10PLUS:
 		prop->hdr10p_info.hdr10p_on = rx.vs_info_details.hdr10plus;

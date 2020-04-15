@@ -310,19 +310,21 @@ void rx_tasklet_handler(unsigned long arg)
 	struct rx_s *prx = (struct rx_s *)arg;
 	uint8_t irq_flag = prx->irq_flag;
 
-	prx->irq_flag = 0;
-
-	/*rx_pr("irq_flag = 0x%x\n", irq_flag);*/
-	if (irq_flag & IRQ_PACKET_FLAG)
-		rx_pkt_handler(PKT_BUFF_SET_FIFO);
-
+	/* prx->irq_flag = 0; /
+	 * if (irq_flag & IRQ_PACKET_FLAG)
+	 *	rx_pkt_handler(PKT_BUFF_SET_FIFO);
+	 */
 	/*pkt overflow or underflow*/
-	if (irq_flag & IRQ_PACKET_ERR)
+	if (irq_flag & IRQ_PACKET_ERR) {
 		hdmirx_packet_fifo_rst();
+		irq_flag &= ~IRQ_PACKET_ERR;
+	}
 
-	if (irq_flag & IRQ_AUD_FLAG)
+	if (irq_flag & IRQ_AUD_FLAG) {
 		hdmirx_audio_fifo_rst();
-
+		irq_flag &= ~IRQ_AUD_FLAG;
+	}
+	prx->irq_flag = irq_flag;
 	/*irq_flag = 0;*/
 }
 
@@ -460,9 +462,15 @@ static int hdmi_rx_ctrl_irq_handler(void)
 				rx_pr("[irq] VSI_CKS_CHG\n");
 		}
 		if (rx_get_bits(intr_pedc, PD_FIFO_START_PASS) != 0) {
-			if (log_level & 0x200)
+			if (log_level & VSI_LOG)
 				rx_pr("[irq] FIFO START\n");
+			/* rx.irq_flag |= IRQ_PACKET_FLAG; */
+		}
+		if (rx_get_bits(intr_pedc, PD_FIFO_NEW_ENTRY) != 0) {
+			if (log_level & VSI_LOG)
+				rx_pr("[irq] FIFO NEW_ENTRY\n");
 			rx.irq_flag |= IRQ_PACKET_FLAG;
+			/* rx_pkt_handler(PKT_BUFF_SET_FIFO); */
 		}
 		if (rx_get_bits(intr_pedc, _BIT(1)) != 0) {
 			if (log_level & 0x200)
@@ -509,16 +517,16 @@ static int hdmi_rx_ctrl_irq_handler(void)
 			}
 		}
 		if (rx_get_bits(intr_pedc, PD_FIFO_OVERFL) != 0) {
-			if (log_level & 0x200)
+			if (log_level & VSI_LOG)
 				rx_pr("[irq] PD_FIFO_OVERFL\n");
 			rx.irq_flag |= IRQ_PACKET_ERR;
-			/*hdmirx_packet_fifo_rst();*/
+			hdmirx_packet_fifo_rst();
 		}
 		if (rx_get_bits(intr_pedc, PD_FIFO_UNDERFL) != 0) {
-			if (log_level & 0x200)
+			if (log_level & VSI_LOG)
 				rx_pr("[irq] PD_FIFO_UNDFLOW\n");
 			rx.irq_flag |= IRQ_PACKET_ERR;
-			/*hdmirx_packet_fifo_rst();*/
+			hdmirx_packet_fifo_rst();
 		}
 	}
 
@@ -594,9 +602,13 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT);
 		if (hdmirx_top_intr_stat & (1 << 28))
 			if (log_level & 0x100)
 				rx_pr("[isr] sqofclk_rise\n");
-		if (hdmirx_top_intr_stat & (1 << 27))
+		if (hdmirx_top_intr_stat & (1 << 27)) {
+			#ifdef VSIF_PKT_READ_FROM_PD_FIFO
+			rx_pkt_handler(PKT_BUFF_SET_FIFO);
+			#endif
 			if (log_level & 0x400)
 				rx_pr("[isr] DE rise edge.\n");
+		}
 		if (hdmirx_top_intr_stat & (1 << 26)) {
 			rx_emp_lastpkt_done_irq();
 			if (log_level & 0x400)

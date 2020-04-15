@@ -69,7 +69,8 @@ static bool phy_fsm_enhancement = true;
 static uint32_t modet_clk = 24000;
 int hdcp_enc_mode;
 /* top_irq_en bit[16:13] hdcp_sts */
-int top_intr_maskn_value = 0x20000001;
+/* bit27 DE rise */
+int top_intr_maskn_value = 0x28000001;
 
 bool hdcp_enable = 1;
 int acr_mode;
@@ -80,7 +81,7 @@ int force_clk_rate;
 int md_ists_en = VIDEO_MODE;
 int pdec_ists_en;/* = AVI_CKS_CHG | DVIDET | DRM_CKS_CHG | DRM_RCV_EN;*/
 uint32_t packet_fifo_cfg;
-int pd_fifo_start_cnt = 0x80;
+int pd_fifo_start_cnt = 0x8;
 /* Controls equalizer reference voltage. */
 int hdcp22_on;
 MODULE_PARM_DESC(hdcp22_on, "\n hdcp22_on\n");
@@ -813,7 +814,7 @@ void rx_irq_en(bool enable)
 			data32 |= 1 << 30; /* DRC_RCV */
 			data32 |= 0 << 29; /* AUD_TYPE_CHG */
 			data32 |= 0 << 28; /* DVI_DET */
-			data32 |= 1 << 27; /* VSI_CKS_CHG */
+			data32 |= 0 << 27; /* VSI_CKS_CHG */
 			data32 |= 0 << 26; /* GMD_CKS_CHG */
 			data32 |= 0 << 25; /* AIF_CKS_CHG */
 			data32 |= 1 << 24; /* AVI_CKS_CHG */
@@ -825,13 +826,22 @@ void rx_irq_en(bool enable)
 			data32 |= 0 << 18; /* AVI_RCV */
 			data32 |= 0 << 17; /* ACR_RCV */
 			data32 |= 0 << 16; /* GCP_RCV */
+		#ifdef VSIF_PKT_READ_FROM_PD_FIFO
+			data32 |= 0 << 15; /* VSI_RCV */
+		#else
 			data32 |= 1 << 15; /* VSI_RCV */
+		#endif
 			data32 |= 0 << 14; /* AMP_RCV */
 			data32 |= 0 << 13; /* AMP_CHG */
 			data32 |= 1 << 9; /* EMP_RCV*/
 			data32 |= 0 << 8; /* PD_FIFO_NEW_ENTRY */
+		#ifdef VSIF_PKT_READ_FROM_PD_FIFO
+			data32 |= 1 << 4; /* PD_FIFO_OVERFL */
+			data32 |= 1 << 3; /* PD_FIFO_UNDERFL */
+		#else
 			data32 |= 0 << 4; /* PD_FIFO_OVERFL */
 			data32 |= 0 << 3; /* PD_FIFO_UNDERFL */
+		#endif
 			data32 |= 0 << 2; /* PD_FIFO_TH_START_PASS */
 			data32 |= 0 << 1; /* PD_FIFO_TH_MAX_PASS */
 			data32 |= 0 << 0; /* PD_FIFO_TH_MIN_PASS */
@@ -1223,7 +1233,10 @@ int packet_init(void)
 
 	data32 = hdmirx_rd_dwc(DWC_PDEC_CTRL);
 	data32 |= 1 << 31;	/* PFIFO_STORE_FILTER_EN */
-	data32 |= 1 << 30;  /* Enable packet FIFO store EMP pkt*/
+	data32 |= 0 << 30;  /* Enable packet FIFO store EMP pkt*/
+	#ifdef VSIF_PKT_READ_FROM_PD_FIFO
+	data32 |= 1 << 22;
+	#endif
 	data32 |= 1 << 4;	/* PD_FIFO_WE */
 	data32 |= 0 << 1;	/* emp pkt rev int,0:last 1:every */
 	data32 |= 1 << 0;	/* PDEC_BCH_EN */

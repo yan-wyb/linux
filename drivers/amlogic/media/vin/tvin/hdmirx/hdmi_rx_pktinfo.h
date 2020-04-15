@@ -27,6 +27,7 @@
 
 #define K_FLAG_TAB_END			0xa0a05f5f
 
+/* #define VSIF_PKT_READ_FROM_PD_FIFO */
 
 #define IEEE_VSI14		0x000c03
 #define IEEE_DV15		0x00d046
@@ -36,10 +37,10 @@
 enum vsi_state_e {
 	E_VSI_NULL,
 	E_VSI_4K3D,
-	E_VSI_DV10,
-	E_VSI_DV15,
+	E_VSI_VSI21,
 	E_VSI_HDR10PLUS,
-	E_VSI_VSI21
+	E_VSI_DV10,
+	E_VSI_DV15
 };
 
 enum pkt_length_e {
@@ -943,6 +944,7 @@ struct rxpkt_st {
 
 	uint32_t fifo_Int_cnt;
 	uint32_t fifo_pkt_num;
+	u8	dv_pkt_num;
 
 	uint32_t pkt_chk_flg;
 
