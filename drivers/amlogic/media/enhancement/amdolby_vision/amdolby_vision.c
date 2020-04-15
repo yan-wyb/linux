@@ -9848,7 +9848,7 @@ int dolby_vision_process(
 				&& (!dolby_vision_core1_on)
 				&& (dolby_vision_on_count == 0);
 		if (is_meson_tvmode() && !force_stb_mode) {
-			if (tv_dovi_setting_change_flag) {
+			if (tv_dovi_setting_change_flag || force_set) {
 				if (vf && (vf->type & VIDTYPE_VIU_422))
 					src_chroma_format = 2;
 				else if (vf)
