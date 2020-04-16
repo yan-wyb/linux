@@ -75,7 +75,7 @@ module_param(std_lock_timeout, int, 0644);
 /*0.001for field,0.002 for performance
  *0.04: new method of tl1 dvbc channel fast search(Hisense project)
  */
-static char *demod_version = "V0.04";
+static char *demod_version = "V0.04: solve stuck issue";
 
 
 int aml_demod_debug = DBG_INFO;
@@ -508,6 +508,7 @@ static ssize_t info_show(struct class *cls,
 	int strength = 0;
 
 	pos += snprintf(buf+pos, size-pos, "dtv demod info:\n");
+	pos += snprintf(buf+pos, size-pos, "version:%s\n", demod_version);
 	pos += snprintf(buf+pos, size-pos, "atsc rst done: %d\n",
 			dtvdd_devp->atsc_rst_done);
 
@@ -2520,6 +2521,7 @@ static int gxtv_demod_dtmb_read_status_old
 	if (is_dtmb_ver(IC_DTMB_V2)) {
 		s = dtmb_check_status_gxtv(fe);
 	} else if (is_dtmb_ver(IC_DTMB_V3)) {
+		dtmb_bch_check();
 		if (!is_ic_ver(IC_VER_TL1) && !is_ic_ver(IC_VER_TM2))
 			s = dtmb_check_status_txl(fe);
 	} else {
