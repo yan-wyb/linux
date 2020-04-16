@@ -1175,7 +1175,7 @@ static void ldim_matrix_bl_matrix_mute_print(void)
 	kfree(ldim_matrix_t);
 }
 
-static void ldim_matrix_histgram_mute_print(void)
+static void ldim_matrix_histgram_mute_print(unsigned int sel)
 {
 	unsigned int i, j, k, len;
 	unsigned int *p = NULL;
@@ -1183,10 +1183,19 @@ static void ldim_matrix_histgram_mute_print(void)
 
 	len = ldim_hist_row * ldim_hist_col * 16;
 	p = kcalloc(len, sizeof(unsigned int), GFP_KERNEL);
-	if (p == NULL)
+	if (!p)
 		return;
 
-	len = len * 10 + 20;
+	if (sel == 0xffff) {
+		len = len * 10 + 20;
+	} else {
+		if (sel >= ldim_hist_row * ldim_hist_col) {
+			pr_err("for_tool: wrong hist sel num %d\n", sel);
+			kfree(p);
+			return;
+		}
+		len = 16 * 10 + 20;
+	}
 	buf = kcalloc(len, sizeof(char), GFP_KERNEL);
 	if (buf == NULL) {
 		kfree(p);
@@ -1197,15 +1206,26 @@ static void ldim_matrix_histgram_mute_print(void)
 		ldim_hist_row*ldim_hist_col*16*sizeof(unsigned int));
 
 	len = 0;
-	for (i = 0; i < ldim_hist_row; i++) {
-		for (j = 0; j < ldim_hist_col; j++) {
-			for (k = 0; k < 16; k++) {
-				len += sprintf(buf+len, " 0x%x",
-					*(p+i*16*ldim_hist_col+j*16+k));
+	if (sel == 0xffff) {
+		for (i = 0; i < ldim_hist_row; i++) {
+			for (j = 0; j < ldim_hist_col; j++) {
+				for (k = 0; k < 16; k++) {
+					len += sprintf(buf+len, " 0x%x",
+						*(p+i*16*ldim_hist_col+j*16+k));
+				}
 			}
 		}
+		pr_info("for_tool: %d 16%s\n",
+			(ldim_hist_row * ldim_hist_col), buf);
+	} else {
+		i = (sel + ldim_hist_col - 1) / ldim_hist_col;
+		j = sel % ldim_hist_col;
+		for (k = 0; k < 16; k++) {
+			len += sprintf(buf+len, " 0x%x",
+				*(p+i*16*ldim_hist_col+j*16+k));
+		}
+		pr_info("for_tool: %d 16%s\n", sel, buf);
 	}
-	pr_info("for_tool: %d 16%s\n", (ldim_hist_row * ldim_hist_col), buf);
 
 	kfree(buf);
 	kfree(p);
@@ -1795,9 +1815,16 @@ static ssize_t ldim_attr_store(struct class *cla,
 	}
 
 	if (!strcmp(parm[0], "hist")) {
-		if (parm[1] != NULL) {
+		if (parm[2] != NULL) {
+			if (kstrtouint(parm[2], 10, &i) < 0)
+				goto ldim_attr_store_err;
 			if (!strcmp(parm[1], "r")) {
-				ldim_matrix_histgram_mute_print();
+				ldim_matrix_histgram_mute_print(i);
+				goto ldim_attr_store_end;
+			}
+		} else if (parm[1] != NULL) {
+			if (!strcmp(parm[1], "r")) {
+				ldim_matrix_histgram_mute_print(0xffff);
 				goto ldim_attr_store_end;
 			}
 		}
@@ -2613,6 +2640,10 @@ static ssize_t ldim_attr_store(struct class *cla,
 	} else if (!strcmp(parm[0], "alg_info")) {
 		pr_info("ldim_alg_ver: %s\n", ldim_fw_para.ver_str);
 		pr_info("ldim_fw_alg_frm: 0x%p\n\n", ldim_fw_para.fw_alg_frm);
+		pr_info("hist_row             = %d\n",
+			ldim_fw_para.hist_row);
+		pr_info("hist_col             = %d\n",
+			ldim_fw_para.hist_col);
 		pr_info("litgain              = %ld\n\n", litgain);
 		switch (ldim_fw_para.ver_num) {
 		case 0:
