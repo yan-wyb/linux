@@ -19,6 +19,7 @@
 #include <linux/amlogic/media/vfm/video_common.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
+#include "arch/vpp_regs.h"
 #include "amcsc.h"
 #include "set_hdr2_v0.h"
 #include "hdr/am_hdr10_plus.h"
@@ -1044,11 +1045,14 @@ void hdmi_packet_process(
 }
 
 void video_post_process(
+	struct vframe_s *vf,
 	enum vpp_matrix_csc_e csc_type,
 	struct vinfo_s *vinfo,
 	enum vd_path_e vd_path)
 {
 	enum hdr_type_e src_format = cur_source_format[vd_path];
+	uint sig_range;
+	enum hdr_process_sel m_sel;
 
 	if (get_hdr_module_status(vd_path) == HDR_MODULE_OFF) {
 		if (vd_path == VD1_PATH)
@@ -1067,7 +1071,8 @@ void video_post_process(
 	case HDRTYPE_SDR:
 		if (vd_path == VD2_PATH && is_dolby_vision_on()) {
 			hdr_proc(VD2_HDR, SDR_IPT, vinfo);
-		} else if (sdr_process_mode[vd_path] == PROC_BYPASS) {
+		} else if (sdr_process_mode[vd_path] == PROC_BYPASS &&
+			   vf && !(vf->type & VIDTYPE_RGB_444)) {
 			if (vd_path == VD1_PATH)
 				hdr_proc(VD1_HDR, HDR_BYPASS, vinfo);
 			else
@@ -1077,6 +1082,19 @@ void video_post_process(
 			|| ((vd_path == VD2_PATH) &&
 			!is_video_layer_on(VD1_PATH)))
 				hdr_proc(OSD1_HDR, HDR_BYPASS, vinfo);
+		} else if (sdr_process_mode[vd_path] == PROC_BYPASS &&
+			   vf && (vf->type & VIDTYPE_RGB_444)) {
+			sig_range = (vf->signal_type >> 25) & 0x01;
+			m_sel = sig_range ? RGB_YUVF : SRGB_YUVF;
+			if (vd_path == VD1_PATH)
+				hdr_proc(VD1_HDR, m_sel, vinfo);
+			else
+				hdr_proc(VD2_HDR, m_sel, vinfo);
+			if (((vd_path == VD1_PATH) &&
+			!is_video_layer_on(VD2_PATH))
+			|| ((vd_path == VD2_PATH) &&
+			!is_video_layer_on(VD1_PATH)))
+				hdr_proc(OSD1_HDR, RGB_YUVF, vinfo);
 		} else if (sdr_process_mode[vd_path] == PROC_SDR_TO_HDR) {
 			if (vd_path == VD1_PATH)
 				hdr_proc(VD1_HDR, SDR_HDR, vinfo);
@@ -1182,11 +1200,23 @@ void video_post_process(
 	}
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444)
+		if (vinfo->viu_color_fmt != COLOR_FMT_RGB444) {
 			mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);
-		else
-			mtx_setting(POST2_MTX,
+		} else {
+			if (vf && vf->type & VIDTYPE_RGB_444) {
+				WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 0, 1, 1);
+				WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 0, 1, 1);
+				mtx_setting(
+				POST2_MTX,
+				MATRIX_YUV709F_RGB, MTX_ON);
+			} else {
+				WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 1, 1, 1);
+				WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 1, 1, 1);
+				mtx_setting(
+				POST2_MTX,
 				MATRIX_YUV709_RGB, MTX_ON);
+			}
+		}
 	}
 
 	if (cur_sdr_process_mode[vd_path] !=

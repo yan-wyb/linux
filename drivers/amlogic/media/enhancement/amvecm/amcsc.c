@@ -7666,7 +7666,7 @@ static int vpp_matrix_update(
 		SIG_SRC_CHG | SIG_HDR_OOTF_CHG))) {
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) &&
 		(get_cpu_type() != MESON_CPU_MAJOR_ID_TL1))
-			video_post_process(csc_type, vinfo, vd_path);
+			video_post_process(vf, csc_type, vinfo, vd_path);
 		else
 			video_process(vf, csc_type, signal_change_flag,
 				vinfo, p, vd_path, source_format);
