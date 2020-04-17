@@ -307,7 +307,7 @@ static int vad_engine_check(struct vad *p_vad)
 
 	if (curr_addr < start || curr_addr > end ||
 		last_addr < start || last_addr > end) {
-		pr_info("%s line:%d, start:%x,end:%x, addr:%x, curr_addr=%x\n",
+		pr_debug("%s line:%d, start:%x,end:%x, addr:%x, curr_addr=%x\n",
 			__func__, __LINE__,
 			start,
 			end,
