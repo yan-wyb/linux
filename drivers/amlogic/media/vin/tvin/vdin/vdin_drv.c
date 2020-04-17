@@ -1574,6 +1574,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	enum vdin_vf_put_md put_md = VDIN_VF_PUT;
 	int ret;
 	static unsigned int pre_ms, cur_ms;
+	static unsigned int err_vsync;
 
 	/* avoid null pointer oops */
 	if (!devp)
@@ -1592,9 +1593,13 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		vdin_vs_proc_monitor(devp);
 	}
 	cur_ms = jiffies_to_msecs(jiffies);
-
-	if (is_meson_tm2_cpu() && cur_ms - pre_ms < 10 &&
+	if (cur_ms - pre_ms <= 1)
+		err_vsync++;
+	else
+		err_vsync = 0;
+	if (is_meson_tm2_cpu() && (err_vsync >= 10) &&
 	    IS_HDMI_SRC(devp->parm.port)) {
+		err_vsync = 0;
 		if (sm_ops->hdmi_clr_vsync)
 			sm_ops->hdmi_clr_vsync(devp->frontend);
 		else
