@@ -423,7 +423,8 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 	} else if (timing == MMC_TIMING_SD_HS) {
 		if (aml_card_type_non_sdio(pdata)
 			|| (host->data->chip_type == MMC_CHIP_TXLX)
-			|| (host->data->chip_type == MMC_CHIP_G12A))
+			|| (host->data->chip_type == MMC_CHIP_G12A)
+			|| (host->data->chip_type == MMC_CHIP_TM2_B))
 			clkc->core_phase = para->sd_hs.core_phase;
 		if (pdata->calc_f) {
 			clkc->core_phase = para->calc.core_phase;
