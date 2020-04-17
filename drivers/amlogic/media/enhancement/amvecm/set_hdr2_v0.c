@@ -2125,7 +2125,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 				hdr_process_select = RGB_HLG;
 			/* use in_mtx for g12b rev b, sm1, tl1 */
 			if (hdr_process_select == RGB_YUV
-			&& (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)))
+			&& (cpu_after_eq(MESON_CPU_MAJOR_ID_SM1)))
 				mtx_only_mode = true;
 		}
 	}
@@ -3030,7 +3030,7 @@ enum hdr_process_sel hdr10p_func(
 				hdr_process_select = RGB_YUV;
 			/* use in_mtx for g12b rev b, sm1, tl1 */
 			if (hdr_process_select == RGB_YUV &&
-			    (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)))
+			    (cpu_after_eq(MESON_CPU_MAJOR_ID_SM1)))
 				mtx_only_mode = true;
 		}
 	}
