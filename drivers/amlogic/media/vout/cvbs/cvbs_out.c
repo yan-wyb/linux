@@ -223,14 +223,16 @@ static unsigned int cvbs_config_vdac(unsigned int value)
 	return gsw_cfg;
 }
 
-static void cvbs_cntl_output(unsigned int open)
+static void cvbs_vdac_output(unsigned int open)
 {
 	if (open == 0) { /* close */
+		cvbs_drv->flag &= ~CVBS_FLAG_EN_VDAC;
 		vdac_enable(0, VDAC_MODULE_CVBS_OUT);
 	} else if (open == 1) { /* open */
 		vdac_vref_adj(cvbs_drv->cvbs_data->vdac_vref_adj);
 		vdac_gsw_adj(cvbs_drv->cvbs_data->vdac_gsw);
 		vdac_enable(1, VDAC_MODULE_CVBS_OUT);
+		cvbs_drv->flag |= CVBS_FLAG_EN_VDAC;
 	}
 	cvbs_log_info("%s: %d\n", __func__, open);
 }
@@ -386,14 +388,14 @@ static void cvbs_out_clk_gate_ctrl(int status)
 	}
 }
 
-static void cvbs_dv_dwork(struct work_struct *work)
+static void cvbs_vdac_dwork(struct work_struct *work)
 {
-	if (!cvbs_drv->dwork_flag)
+	if ((cvbs_drv->flag & CVBS_FLAG_EN_ENCI) == 0)
 		return;
-	cvbs_cntl_output(1);
+	cvbs_vdac_output(1);
 }
 
-int cvbs_out_setmode(void)
+static int cvbs_out_setmode(void)
 {
 	int ret;
 
@@ -427,7 +429,7 @@ int cvbs_out_setmode(void)
 	cvbs_out_vpu_power_ctrl(1);
 	cvbs_out_clk_gate_ctrl(1);
 
-	cvbs_cntl_output(0);
+	cvbs_vdac_output(0);
 	cvbs_out_reg_write(VENC_VDAC_SETTING, 0xff);
 	/* Before setting clk for CVBS, disable ENCI to avoid hungup */
 	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
@@ -440,8 +442,8 @@ int cvbs_out_setmode(void)
 #ifdef CONFIG_CVBS_PERFORMANCE_COMPATIBILITY_SUPPORT
 	cvbs_performance_enhancement(local_cvbs_mode);
 #endif
-	cvbs_drv->dwork_flag = 1;
-	schedule_delayed_work(&cvbs_drv->dv_dwork, msecs_to_jiffies(1000));
+	cvbs_drv->flag |= CVBS_FLAG_EN_ENCI;
+	schedule_delayed_work(&cvbs_drv->vdac_dwork, msecs_to_jiffies(1000));
 	mutex_unlock(&setmode_mutex);
 	return 0;
 }
@@ -600,7 +602,8 @@ int cvbs_set_current_vmode(enum vmode_e mode)
 	if (mode & VMODE_INIT_BIT_MASK) {
 		cvbs_out_vpu_power_ctrl(1);
 		cvbs_out_clk_gate_ctrl(1);
-		cvbs_cntl_output(1);
+		cvbs_vdac_output(1);
+		cvbs_drv->flag = (CVBS_FLAG_EN_ENCI | CVBS_FLAG_EN_VDAC);
 		cvbs_log_info("already display in uboot\n");
 		return 0;
 	}
@@ -626,8 +629,8 @@ static int cvbs_vmode_is_supported(enum vmode_e mode)
 }
 static int cvbs_module_disable(enum vmode_e cur_vmod)
 {
-	cvbs_drv->dwork_flag = 0;
-	cvbs_cntl_output(0);
+	cvbs_drv->flag &= ~CVBS_FLAG_EN_ENCI;
+	cvbs_vdac_output(0);
 
 	/*restore full range for encp/encl*/
 	amvecm_clip_range_limit(0);
@@ -661,8 +664,8 @@ static int cvbs_suspend(void)
 {
 	/* TODO */
 	/* video_dac_disable(); */
-	cvbs_drv->dwork_flag = 0;
-	cvbs_cntl_output(0);
+	cvbs_drv->flag &= ~CVBS_FLAG_EN_ENCI;
+	cvbs_vdac_output(0);
 	return 0;
 }
 
@@ -1237,18 +1240,16 @@ static void cvbs_debug_store(char *buf)
 		break;
 	case CMD_VDAC:
 		if (argc != 2) {
-			pr_info("[%s] set clkpath 0x0~0x3\n", __func__);
+			pr_info("[%s] vdac state: %d\n",
+				__func__,
+				(cvbs_drv->flag & CVBS_FLAG_EN_VDAC) ? 1 : 0);
 			goto DEBUG_END;
 		}
 		ret = kstrtoul(argv[1], 10, &value);
-		if (value > 0x3) {
-			pr_info("invalid clkpath, only support 0x0~0x3\n");
-		} else {
-			cvbs_clk_path = value;
-			pr_info("set clkpath 0x%x\n", cvbs_clk_path);
-		}
-		pr_info("bit[0]: 0=vid_pll, 1=gp0_pll\n");
-		pr_info("bit[1]: 0=vid2_clk, 1=vid1_clk\n");
+		if (value)
+			cvbs_vdac_output(1);
+		else
+			cvbs_vdac_output(0);
 
 		break;
 	case CMD_HELP:
@@ -1587,7 +1588,7 @@ static int cvbsout_probe(struct platform_device *pdev)
 	cvbs_clk_path = 0;
 	local_cvbs_mode = MODE_MAX;
 
-	cvbs_drv = kmalloc(sizeof(struct cvbs_drv_s), GFP_KERNEL);
+	cvbs_drv = kzalloc(sizeof(*cvbs_drv), GFP_KERNEL);
 	if (!cvbs_drv)
 		return -ENOMEM;
 
@@ -1616,7 +1617,7 @@ static int cvbsout_probe(struct platform_device *pdev)
 		goto cvbsout_probe_err;
 	}
 
-	INIT_DELAYED_WORK(&cvbs_drv->dv_dwork, cvbs_dv_dwork);
+	INIT_DELAYED_WORK(&cvbs_drv->vdac_dwork, cvbs_vdac_dwork);
 	cvbs_log_info("%s OK\n", __func__);
 	return 0;
 
@@ -1651,12 +1652,19 @@ static int cvbsout_remove(struct platform_device *pdev)
 
 static void cvbsout_shutdown(struct platform_device *pdev)
 {
-	cvbs_drv->dwork_flag = 0;
+	if ((cvbs_drv->flag & CVBS_FLAG_EN_ENCI) == 0)
+		return;
+
+	if (cvbs_drv->flag & CVBS_FLAG_EN_VDAC)
+		cvbs_vdac_output(0);
+
+	cvbs_drv->flag &= ~CVBS_FLAG_EN_ENCI;
 	cvbs_out_reg_write(ENCI_VIDEO_EN, 0);
 	cvbs_out_disable_clk();
 
 	cvbs_out_vpu_power_ctrl(0);
 	cvbs_out_clk_gate_ctrl(0);
+	cvbs_log_info("%s\n", __func__);
 }
 
 static struct platform_driver cvbsout_driver = {
