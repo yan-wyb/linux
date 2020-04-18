@@ -3864,11 +3864,6 @@ static ssize_t amvecm_hdr_dbg_store(struct class *cla,
 		hdr10_clip_disable = val;
 		pr_info("hdr10_clip_disable=0x%x\n",
 			hdr10_clip_disable);
-	} else if (!strncmp(parm[0], "force_clip", 10)) {
-		if (kstrtoul(parm[1], 16, &val) < 0)
-			goto free_buf;
-		hdr10_force_clip = val;
-		pr_info("hdr10_force_clip=0x%x\n", hdr10_force_clip);
 	} else if (!strncmp(parm[0], "clip_luma", 9)) {
 		if (kstrtoul(parm[1], 16, &val) < 0)
 			goto free_buf;
@@ -3879,11 +3874,6 @@ static ssize_t amvecm_hdr_dbg_store(struct class *cla,
 			goto free_buf;
 		hdr10_clip_margin = val;
 		pr_info("hdr10_clip_margin=0x%x\n", hdr10_clip_margin);
-	} else if (!strncmp(parm[0], "clip_mode", 9)) {
-		if (kstrtoul(parm[1], 16, &val) < 0)
-			goto free_buf;
-		hdr10_clip_mode = val;
-		pr_info("hdr10_clip_mode=0x%x\n", hdr10_clip_mode);
 	} else if (!strncmp(parm[0], "hdr_sdr_ootf", 12)) {
 		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++) {
 			pr_info("%d ", oo_y_lut_hdr_sdr_def[i]);

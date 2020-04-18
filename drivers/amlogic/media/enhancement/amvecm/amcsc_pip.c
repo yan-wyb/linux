@@ -102,8 +102,12 @@ void hdr_proc(
 {
 	enum hdr_process_sel cur_hdr_process;
 
-	cur_hdr_process = hdr_func(
-		module_sel, hdr_process_select, vinfo, NULL);
+	if (hdr_process_select == HDR10P_SDR)
+		cur_hdr_process = hdr10p_func(
+			module_sel, hdr_process_select, vinfo, NULL);
+	else
+		cur_hdr_process = hdr_func(
+			module_sel, hdr_process_select, vinfo, NULL);
 	if (cur_hdr_process != hdr_process_select)
 		pr_csc(8, "am_vecm: module=%s, process=%s(%s)\n",
 			module_str[module_sel],
@@ -1048,11 +1052,21 @@ void video_post_process(
 	struct vframe_s *vf,
 	enum vpp_matrix_csc_e csc_type,
 	struct vinfo_s *vinfo,
-	enum vd_path_e vd_path)
+	enum vd_path_e vd_path,
+	struct vframe_master_display_colour_s *master_info)
 {
 	enum hdr_type_e src_format = cur_source_format[vd_path];
 	uint sig_range;
 	enum hdr_process_sel m_sel;
+	/*eo clip select: 0->23bit eo; 1->32 bit eo*/
+	unsigned int eo_sel = 0;
+
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
+		if (is_meson_rev_a() && is_meson_tm2_cpu())
+			eo_sel = 0;
+		else
+			eo_sel = 1;
+	}
 
 	if (get_hdr_module_status(vd_path) == HDR_MODULE_OFF) {
 		if (vd_path == VD1_PATH)
@@ -1119,6 +1133,7 @@ void video_post_process(
 				hdr_proc(VD2_HDR, HDR_BYPASS, vinfo);
 			hdr_proc(OSD1_HDR, SDR_HDR, vinfo);
 		} else if (hdr_process_mode[vd_path] == PROC_HDR_TO_SDR) {
+			eo_clip_proc(master_info, eo_sel);
 			if (vd_path == VD1_PATH) {
 				hdr_proc(VD1_HDR, HDR_SDR, vinfo);
 			} else {

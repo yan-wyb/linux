@@ -135,6 +135,27 @@ int eo_y_lut_hdr[143] = {
 module_param_array(eo_y_lut_hdr, int, &num_eo_y_lut_hdr, 0664);
 MODULE_PARM_DESC(eo_y_lut_hdr, "\n eo_y_lut_hdr\n");
 
+int eo_y_lut_pq_def[143] = {
+	59392, 66560, 94208, 110592, 121984, 132160, 138816, 146432,
+	151264, 156096, 161440, 165568, 168768, 172224, 175952, 179968,
+	182240, 200680, 215102, 226400, 235271, 244625, 250984, 258029,
+	264312, 269323, 275208, 280295, 284260, 288817, 294028, 297434,
+	300794, 304586, 308851, 312465, 315139, 318120, 321437, 325119,
+	328439, 330693, 333181, 335922, 338938, 342251, 344974, 346965,
+	349143, 351524, 354124, 356960, 360050, 361931, 363762, 365751,
+	367912, 370258, 372802, 375559, 377689, 379306, 381056, 382948,
+	384994, 387204, 389591, 392167, 394081, 395581, 397197, 398940,
+	400818, 402840, 405018, 407363, 409743, 411100, 412561, 414132,
+	415820, 417636, 419588, 421685, 423939, 426172, 427472, 428869,
+	430370, 431980, 433710, 435567, 437561, 439701, 441999, 443416,
+	444740, 446160, 447685, 449321, 451078, 452962, 454986, 457157,
+	459120, 460370, 461713, 463154, 464701, 466363, 468146, 470061,
+	472118, 474326, 475917, 477191, 478560, 480031, 481611, 483309,
+	485135, 487098, 489208, 491477, 492719, 494032, 495444, 496965,
+	498601, 500363, 502261, 504304, 506506, 508391, 509670, 511049,
+	512536, 514140, 515870, 517739, 519756, 521934, 524287
+};
+
 int eo_y_lut_pq[143] = {
 	59392, 66560, 94208, 110592, 121984, 132160, 138816, 146432,
 	151264, 156096, 161440, 165568, 168768, 172224, 175952, 179968,
@@ -156,8 +177,7 @@ int eo_y_lut_pq[143] = {
 	512536, 514140, 515870, 517739, 519756, 521934, 524287
 };
 
-static int num_eo_y_lut_hlg = 143;
-int eo_y_lut_hlg[143] = {
+int eo_y_lut_hlg_23[143] = {
 	1032192, 1032192, 1032192, 1032192, 16384, 16384, 16384, 16384,
 	32768, 32768, 32768, 32768, 40960, 40960, 40960, 49152,
 	49152, 73728, 185920, 197344, 204832, 213360, 218480, 224272,
@@ -177,8 +197,25 @@ int eo_y_lut_hlg[143] = {
 	362195, 362970, 363780, 364625, 365509, 366432, 367396, 368403,
 	369455, 370554, 371703, 372902, 374155, 375464, 376832
 };
-module_param_array(eo_y_lut_hlg, int, &num_eo_y_lut_hlg, 0664);
-MODULE_PARM_DESC(eo_y_lut_hlg, "\n eo_y_lut_hlg\n");
+
+int eo_y_lut_hlg[143] = {
+	0, 169296, 202068, 221184, 234837, 246442, 253952, 262485, 267605,
+	273408, 279210, 282794, 286720, 290986, 295253, 297728, 300373, 319488,
+	333141, 344746, 352256, 360789, 365909, 371712, 377514, 381098, 385024,
+	389290, 393557, 396032, 398677, 401493, 404480, 407637, 410282, 412032,
+	413866, 415786, 417792, 419882, 422058, 424320, 426325, 427541, 428800,
+	430101, 431445, 432832, 434261, 435733, 437248, 438805, 440405, 442048,
+	443050, 443914, 444800, 445706, 446634, 447584, 448554, 449546, 450560,
+	451594, 452650, 453728, 454826, 455946, 457088, 458250, 459093, 459696,
+	460309, 460933, 461568, 462213, 462869, 463536, 464213, 464911, 465640,
+	466401, 467197, 468028, 468896, 469803, 470750, 471740, 472774, 473854,
+	474982, 475648, 476264, 476907, 477579, 478281, 479014, 479780, 480580,
+	481416, 482289, 483201, 484154, 485150, 486190, 487276, 488411, 489597,
+	490835, 491824, 492500, 493206, 493944, 494714, 495519, 496360, 497238,
+	498156, 499114, 500115, 501161, 502254, 503396, 504588, 505834, 507135,
+	508199, 508909, 509651, 510426, 511236, 512081, 512965, 513888, 514852,
+	515859, 516911, 518010, 519158, 520358, 521611, 522920, 524287
+};
 
 int eo_y_lut_sdr[143] = {
 	0, 163808, 199044, 219568, 234610, 247036, 255751, 264272, 270593,
@@ -526,28 +563,11 @@ static int eo_y_hdr_10000[143] = {
 	6903, 7431, 8001, 8616, 9281, 10000
 };
 
-static int oo_y_hdr_sdr_10000[149] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 7,
-	7, 8, 9, 9, 10, 12, 13, 14, 15, 17, 18, 19, 21, 24, 26,
-	29, 31, 34, 36, 39, 43, 48, 53, 58, 63, 68, 73, 78, 87,
-	97, 107, 117, 126, 136, 146, 156, 175, 195, 214, 234, 253,
-	273, 292, 312, 351, 390, 429, 468, 507, 546, 585, 625, 703,
-	781, 859, 937, 1015, 1093, 1171, 1250, 1406, 1562, 1718,
-	1875, 2031, 2187, 2343, 2500, 2812, 3125, 3437, 3750, 4062,
-	4375, 4687, 5000, 5312, 5625, 5937, 6250, 6562, 6875, 7187,
-	7500, 7812, 8125, 8437, 8750, 9062, 9375, 9687, 10000
-};
-
 unsigned int hdr10_pr;
 unsigned int hdr10_clip_disable;
-unsigned int hdr10_force_clip;
 unsigned int hdr10_clip_luma;
 /*margin: margin / 10*/
 unsigned int hdr10_clip_margin = 2;
-/*clip mode: 0->eo clip, 1->oo clip*/
-unsigned int hdr10_clip_mode;
 
 static uint force_din_swap = 0xff;
 module_param(force_din_swap, uint, 0664);
@@ -839,9 +859,12 @@ unsigned int _log2(unsigned int value)
 
 	return ret;
 }
-
-void hdr_highclip_by_luma(
-	struct vframe_master_display_colour_s *master_info)
+/*master_info used to get maxl
+ *eo_sel used to sel 23bit eo or 32 bit eo
+ */
+void eo_clip_proc(
+	struct vframe_master_display_colour_s *master_info,
+	unsigned int eo_sel)
 {
 	unsigned int clip_index;
 	unsigned int max_luma;
@@ -853,7 +876,8 @@ void hdr_highclip_by_luma(
 		return;
 	}
 
-	if (hdr10_force_clip) {
+	/*force clip luma used for debug*/
+	if (hdr10_clip_luma) {
 		for (i = HDR2_EOTF_LUT_SIZE - 1; i >= 0; i--) {
 			if (eo_y_hdr_10000[i] < hdr10_clip_luma) {
 				clip_index = i + 1;
@@ -864,10 +888,24 @@ void hdr_highclip_by_luma(
 		if (clip_index > HDR2_EOTF_LUT_SIZE - 1)
 			clip_index = HDR2_EOTF_LUT_SIZE - 1;
 
-		for (i = clip_index; i < HDR2_EOTF_LUT_SIZE; i++)
-			eo_y_lut_hdr[i] = eo_y_lut_hdr[clip_index];
+		for (i = 0; i < HDR2_EOTF_LUT_SIZE; i++) {
+			if (eo_sel) {
+				if (i < clip_index)
+					eo_y_lut_pq[i] = eo_y_lut_pq_def[i];
+				if (i >= clip_index)
+					eo_y_lut_pq[i] =
+					eo_y_lut_pq_def[clip_index];
+			} else {
+				if (i < clip_index)
+					eo_y_lut_hdr[i] = eo_y_lut_hdr_def[i];
+				if (i >= clip_index)
+					eo_y_lut_hdr[i] =
+					eo_y_lut_hdr_def[clip_index];
+			}
+		}
 		return;
 	}
+	/*force clip end*/
 
 	if (master_info->luminance[0] > 10000)
 		master_info->luminance[0] /= 10000;
@@ -881,47 +919,6 @@ void hdr_highclip_by_luma(
 
 	if (max_luma > 10000)
 		max_luma = 10000;
-
-	if (hdr10_clip_mode == 1) {
-		for (i = HDR2_EOTF_LUT_SIZE - 1; i >= 0; i--) {
-			if ((master_info->luminance[0] == 0) ||
-			    (master_info->present_flag == 0)) {
-				/*default 1000 luminance*/
-				if (oo_y_hdr_sdr_10000[i] < 1200) {
-					clip_index = i + 1;
-					break;
-				}
-			}
-
-			if (oo_y_hdr_sdr_10000[i] < max_luma) {
-				clip_index = i + 1;
-				break;
-			}
-
-			clip_index = HDR2_OOTF_LUT_SIZE - 1;
-		}
-
-		if (clip_index > HDR2_OOTF_LUT_SIZE - 1)
-			clip_index = HDR2_OOTF_LUT_SIZE - 1;
-		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++) {
-			if (i < clip_index)
-				oo_y_lut_hdr_sdr[i] = oo_y_lut_hdr_sdr_def[i];
-			if (i >= clip_index)
-				oo_y_lut_hdr_sdr[i] =
-				oo_y_lut_hdr_sdr_def[clip_index];
-		}
-
-		if (hdr10_pr & 0x1) {
-			pr_info("luma=%d,oo_lut[%d]=%d,clip_margin=%d\n",
-				master_info->luminance[0], clip_index,
-				oo_y_lut_hdr_sdr[clip_index],
-				hdr10_clip_margin);
-			if (hdr10_clip_luma)
-				pr_info("clip_luma = %d\n", hdr10_clip_luma);
-		}
-
-		return;
-	}
 
 	for (i = HDR2_EOTF_LUT_SIZE - 1; i >= 0; i--) {
 		if ((master_info->luminance[0] == 0) ||
@@ -944,10 +941,17 @@ void hdr_highclip_by_luma(
 	if (clip_index > HDR2_EOTF_LUT_SIZE - 1)
 		clip_index = HDR2_EOTF_LUT_SIZE - 1;
 	for (i = 0; i < HDR2_EOTF_LUT_SIZE; i++) {
-		if (i < clip_index)
-			eo_y_lut_hdr[i] = eo_y_lut_hdr_def[i];
-		if (i >= clip_index)
-			eo_y_lut_hdr[i] = eo_y_lut_hdr_def[clip_index];
+		if (eo_sel) {
+			if (i < clip_index)
+				eo_y_lut_pq[i] = eo_y_lut_pq_def[i];
+			if (i >= clip_index)
+				eo_y_lut_pq[i] = eo_y_lut_pq_def[clip_index];
+		} else {
+			if (i < clip_index)
+				eo_y_lut_hdr[i] = eo_y_lut_hdr_def[i];
+			if (i >= clip_index)
+				eo_y_lut_hdr[i] = eo_y_lut_hdr_def[clip_index];
+		}
 	}
 
 	if (hdr10_pr & 0x1) {
@@ -1439,11 +1443,15 @@ void set_hdr_matrix(
 		if ((hdr_mtx_param->p_sel == HDR_SDR) ||
 		    (hdr_mtx_param->p_sel == HDR10P_SDR) ||
 			(hdr_mtx_param->p_sel == HLG_SDR)) {
-			if (hdr_mtx_param->gmt_bit_mode)
+			if (hdr_mtx_param->gmt_bit_mode) {
 				gmut_shift = 8;
-			else
+				/*gamut shift bit for used for enable oo 33bit*/
+				/*after tm2 revb fix 32bit bug*/
+				gmut_shift |= 1 << 4;
+			} else {
 				/* use integer mode for gamut coeff */
 				gmut_shift = 0;
+			}
 		} else
 			/* 2048 as 1.0 for gamut coeff */
 			gmut_shift = 11;
@@ -1510,11 +1518,17 @@ void set_hdr_matrix(
 				- 1;
 			}
 		} else if (hdr_mtx_param->p_sel == HLG_SDR) {
-			/*because input 1/2, shift0/shift1 need change*/
-			adpscl_shift[0] = adp_scal_x_shift - 1;
-			adpscl_shift[1] = OO_NOR -
+			if (hdr_mtx_param->gmt_bit_mode) {
+				adpscl_shift[0] = adp_scal_x_shift;
+				adpscl_shift[1] = OO_NOR -
+				_log2((1 << OO_NOR) / oo_y_lut_hlg_sdr[148]);
+			} else {
+				/*because input 1/2, shift0/shift1 need change*/
+				adpscl_shift[0] = adp_scal_x_shift - 1;
+				adpscl_shift[1] = OO_NOR -
 				_log2((1 << OO_NOR) / oo_y_lut_hlg_sdr[148])
 				- 1;
+			}
 		} else if (hdr_mtx_param->p_sel == HDR10P_SDR) {
 			if (p_hdr10pgen_param)
 				scale_shift = _log2((1 << OO_NOR) /
@@ -2022,9 +2036,11 @@ void get_hist(enum hdr_module_sel module_sel, enum hdr_hist_sel hist_sel)
 				hdr_max_rgb =
 					(i + 1) * 10000 / 128;
 		}
-		for (i = 0; i < 9; i++) {
+		if (percentile[0] == 0)
+			percentile[0] = 1;
+		for (i = 1; i < 9; i++) {
 			if (percentile[i] == 0)
-				percentile[i] = 1;
+				percentile[i] = percentile[i - 1] + 1;
 		}
 		percentile[1] = percentile[8];
 	}
@@ -2299,8 +2315,14 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 			hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
 			hdr_lut_param.ogain_lut[i] = oo_y_lut_hlg_sdr[i];
-			if (i < HDR2_EOTF_LUT_SIZE)
-				hdr_lut_param.eotf_lut[i] = eo_y_lut_hlg[i];
+			if (i < HDR2_EOTF_LUT_SIZE) {
+				if (eo_gmt_bit_mode)
+					hdr_lut_param.eotf_lut[i] =
+					eo_y_lut_hlg[i];
+				else
+					hdr_lut_param.eotf_lut[i] =
+					eo_y_lut_hlg_23[i];
+			}
 			if (i < HDR2_CGAIN_LUT_SIZE)
 				hdr_lut_param.cgain_lut[i] = cgain_lut1[i] - 1;
 		}
@@ -2675,6 +2697,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		}
 		hdr_mtx_param.mtx_on = MTX_ON;
 		hdr_mtx_param.p_sel = hdr_process_select;
+		if (eo_gmt_bit_mode)
+			hdr_mtx_param.gmt_bit_mode = 1;
 	} else if (hdr_process_select == HDR_HLG) {
 		hdr_mtx_param.mtx_only = HDR_ONLY;
 		hdr_mtx_param.mtx_gamut_mode = 1;

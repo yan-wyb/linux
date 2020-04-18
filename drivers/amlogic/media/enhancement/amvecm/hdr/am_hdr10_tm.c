@@ -432,7 +432,7 @@ int hdr10_tm_dynamic_proc(struct vframe_master_display_colour_s *p)
 	primry_maxl = p->luminance[0];
 
 	/*use 95% maxl because of high percert flicker*/
-	maxl = (percentile[7] > primry_maxl) ? primry_maxl : percentile[7];
+	maxl = (percentile[8] > primry_maxl) ? primry_maxl : percentile[8];
 
 	if (hdr_tm_iir)
 		scn_chang_flag = time_iir(&maxl);
