@@ -3532,6 +3532,31 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	}
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	if (is_dolby_vision_enable()) {
+		char *provider_name = NULL;
+
+		if (vd1_path_id == VFM_PATH_PIP) {
+			provider_name = vf_get_provider_name("videopip");
+			while (provider_name) {
+				if (!vf_get_provider_name(provider_name))
+					break;
+				provider_name =
+					vf_get_provider_name(provider_name);
+			}
+			if (provider_name)
+				dolby_vision_set_provider(provider_name);
+		} else {
+			provider_name = vf_get_provider_name("amvideo");
+			while (provider_name) {
+				if (!vf_get_provider_name(provider_name))
+					break;
+				provider_name =
+					vf_get_provider_name(provider_name);
+			}
+			if (provider_name)
+				dolby_vision_set_provider(provider_name);
+		}
+	}
 	if (is_dolby_vision_enable() && dovi_drop_flag) {
 		struct vframe_s *vf = NULL;
 		unsigned int cnt = 10;
@@ -3681,31 +3706,6 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		dolby_vision_check_hlg(vf);
 	}
 
-	if (cur_vd1_path_id != vd1_path_id) {
-		char *provider_name = NULL;
-
-		if (vd1_path_id == VFM_PATH_PIP) {
-			provider_name = vf_get_provider_name(RECEIVERPIP_NAME);
-			while (provider_name) {
-				if (!vf_get_provider_name(provider_name))
-					break;
-				provider_name =
-					vf_get_provider_name(provider_name);
-			}
-			if (provider_name)
-				dolby_vision_set_provider(provider_name);
-		} else {
-			provider_name = vf_get_provider_name(RECEIVER_NAME);
-			while (provider_name) {
-				if (!vf_get_provider_name(provider_name))
-					break;
-				provider_name =
-					vf_get_provider_name(provider_name);
-			}
-			if (provider_name)
-				dolby_vision_set_provider(provider_name);
-		}
-	}
 
 #endif
 

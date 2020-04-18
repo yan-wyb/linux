@@ -168,18 +168,20 @@ int hdr_policy_process(
 			target_format[vd_path] = BT709;
 			target_format[oth_path] = BT709;
 		} else if (vd_path == VD1_PATH &&
-		    is_dolby_vision_enable() &&
-		    !is_dolby_vision_on() &&
-		    (source_format[vd_path]
-		     == HDRTYPE_DOVI ||
-		    ((source_format[vd_path]
-		     == HDRTYPE_HDR10) &&
-		     (dv_hdr_policy & 1)) ||
+			is_dolby_vision_enable() &&
+			!is_dolby_vision_on() &&
+			((get_dv_support_info() & 7) == 7) &&
+			(source_format[vd_path]
+			 == HDRTYPE_DOVI ||
 			((source_format[vd_path]
-		     == HDRTYPE_HLG) &&
-		     (dv_hdr_policy & 2)) ||
-		     source_format[vd_path]
-		     == HDRTYPE_SDR)) {
+			 == HDRTYPE_HDR10) &&
+			 (dv_hdr_policy & 1)) ||
+			((source_format[vd_path]
+			 == HDRTYPE_HLG) &&
+			 (dv_hdr_policy & 2)) ||
+			((source_format[vd_path]
+			 == HDRTYPE_SDR) &&
+			 (dv_hdr_policy & 0x20)))) {
 			/* vd1 follow sink: dv handle sdr/hdr/hlg/dovi */
 			sdr_process_mode[vd_path] = PROC_BYPASS;
 			hdr_process_mode[vd_path] = PROC_BYPASS;
@@ -292,6 +294,7 @@ int hdr_policy_process(
 		} else if (vd_path == VD1_PATH &&
 		    is_dolby_vision_enable() &&
 		    !is_dolby_vision_on() &&
+		    ((get_dv_support_info() & 7) == 7) &&
 		    ((source_format[vd_path]
 		    == HDRTYPE_DOVI) ||
 		    ((source_format[vd_path]

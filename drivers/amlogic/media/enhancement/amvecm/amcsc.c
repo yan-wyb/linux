@@ -447,6 +447,12 @@ enum output_format_e get_force_output(void)
 }
 EXPORT_SYMBOL(get_force_output);
 
+void set_force_output(enum output_format_e output)
+{
+	force_output = output;
+}
+EXPORT_SYMBOL(set_force_output);
+
 static uint hdr_mode = 2; /* 0: hdr->hdr, 1:hdr->sdr, 2:auto */
 module_param(hdr_mode, uint, 0664);
 MODULE_PARM_DESC(hdr_mode, "\n set hdr_mode\n");
@@ -533,8 +539,11 @@ MODULE_PARM_DESC(video_process_status, "\n video_process_status\n");
 void set_hdr_module_status(enum vd_path_e vd_path, int status)
 {
 	video_process_status[vd_path] = status;
-	pr_csc(4, "video_process_status[VD%d] = %d",
-	       vd_path + 1, status);
+	pr_csc(4, "video_process_status[VD%d] = %d, dv %s %s %d\n",
+	       vd_path + 1, status,
+	       is_dolby_vision_enable() ? "en" : "",
+	       is_dolby_vision_on() ? "on" : "",
+	       get_dv_support_info());
 }
 EXPORT_SYMBOL(set_hdr_module_status);
 
@@ -4048,7 +4057,8 @@ int signal_type_changed(struct vframe_s *vf,
 		/*vf->signal_type, signal_type);*/
 	}
 
-	if (p_new && p_cur) {
+	/* only check primary for bt2020 */
+	if (p_new && p_cur && ((signal_type >> 16) & 0xff) == 9) {
 		ret = hdr10_primaries_changed(p_new, p_cur);
 		if (ret)
 			change_flag |= SIG_PRI_INFO;
@@ -7730,6 +7740,7 @@ int amvecm_matrix_process(
 	int sink_changed = 0;
 	bool cap_changed = false;
 	bool send_fake_frame = false;
+	int dv_hdr_policy = 0;
 
 	if ((get_cpu_type() < MESON_CPU_MAJOR_ID_GXTVBB) ||
 	    is_meson_gxl_package_905M2() || (csc_en == 0) || !vinfo)
@@ -7978,25 +7989,34 @@ int amvecm_matrix_process(
 			/* video off */
 			if (is_dolby_vision_enable()) {
 				/* dolby enable */
+				dv_hdr_policy = get_dolby_vision_hdr_policy();
 				pr_csc(8,
-				       "vd%d: %d %d Fake SDR frame%s, dolby on=%d, dolby policy =%d\n",
+				       "vd%d: %d %d Fake SDR frame%s, dv on=%d, policy=%d, hdr policy=0x%x\n",
 				       vd_path + 1,
 				       null_vf_cnt[vd_path],
 				       toggle_frame,
 				       is_video_layer_on(vd_path) ?
 				       " " : ", video off",
 				       is_dolby_vision_on(),
-				       get_dolby_vision_policy());
+				       get_dolby_vision_policy(),
+				       dv_hdr_policy);
 				if (vd_path == VD2_PATH ||
 				    (vd_path == VD1_PATH &&
-				     (get_dolby_vision_policy() !=
-				      DOLBY_VISION_FOLLOW_SINK ||
-				      get_source_type(VD1_PATH) ==
-				      HDRTYPE_HDR10PLUS ||
-				      get_source_type(VD1_PATH)
-					== HDRTYPE_HLG ||
-					get_source_type(VD1_PATH)
-					== HDRTYPE_MVC))) {
+				    (get_source_type(VD1_PATH) ==
+				     HDRTYPE_HDR10PLUS ||
+					 get_source_type(VD1_PATH)
+					 == HDRTYPE_MVC ||
+					 ((get_dv_support_info() & 7)
+					 != 7) ||
+					 (get_source_type(VD1_PATH)
+					  == HDRTYPE_HDR10 &&
+					  !(dv_hdr_policy & 1)) ||
+					 (get_source_type(VD1_PATH)
+					  == HDRTYPE_HLG &&
+					  !(dv_hdr_policy & 2)) ||
+					 (get_source_type(VD1_PATH)
+					  == HDRTYPE_SDR &&
+					  !(dv_hdr_policy & 0x20))))) {
 					/* and VD1 adaptive or VD2 */
 					/* or always hdr hdr+/hlg bypass */
 					/* faked vframe to switch matrix */
