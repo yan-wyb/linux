@@ -4774,6 +4774,12 @@ int vpp_crc_check(u32 vpp_crc_en)
 	return vpp_crc_result;
 }
 
+int get_osd_reverse(void)
+{
+	return (VSYNC_RD_MPEG_REG(VIU_OSD1_BLK0_CFG_W0) >> 28) & 3;
+}
+EXPORT_SYMBOL(get_osd_reverse);
+
 /*********************************************************
  * Film Grain APIs
  *********************************************************/

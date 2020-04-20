@@ -342,6 +342,11 @@ static int last_mode_3d;
 #endif
 
 bool reverse;
+bool get_video_reverse(void)
+{
+	return reverse;
+}
+EXPORT_SYMBOL(get_video_reverse);
 
 const char video_dev_id[] = "amvideo-dev";
 
@@ -2856,10 +2861,14 @@ static void _set_video_window(
 	if (reverse) {
 		temp = parsed[0];
 		temp1 = parsed[1];
-		parsed[0] = info->width - parsed[2] - 1;
-		parsed[1] = info->height - parsed[3] - 1;
-		parsed[2] = info->width - temp - 1;
-		parsed[3] = info->height - temp1 - 1;
+		if (get_osd_reverse() & 1) {
+			parsed[0] = info->width - parsed[2] - 1;
+			parsed[2] = info->width - temp - 1;
+		}
+		if (get_osd_reverse() & 2) {
+			parsed[1] = info->height - parsed[3] - 1;
+			parsed[3] = info->height - temp1 - 1;
+		}
 	}
 #endif
 

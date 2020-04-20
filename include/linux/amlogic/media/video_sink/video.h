@@ -265,4 +265,6 @@ void DI_POST_UPDATE_MC(void);
 extern void videosync_pcrscr_update(s32 inc, u32 base);
 extern void videosync_pcrscr_inc(s32 inc);
 void vsync_notify_videosync(void);
+extern bool get_video_reverse(void);
+extern int get_osd_reverse(void);
 #endif /* VIDEO_H */

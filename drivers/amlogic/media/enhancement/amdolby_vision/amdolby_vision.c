@@ -8765,6 +8765,32 @@ int dolby_vision_parse_metadata(
 				else
 					tv_dovi_setting->core1_reg_lut[1] =
 						0x0000000100000042;
+				if (get_video_reverse() &&
+				((src_format == FORMAT_DOVI) ||
+				(src_format == FORMAT_DOVI_LL))) {
+					uint32_t coeff[3][3];
+					uint64_t *p = &(tv_dovi_setting->
+						core1_reg_lut[9]);
+
+					coeff[0][1] = (p[0] >> 16) & 0xffff;
+					coeff[0][2] = p[1] & 0xffff;
+					coeff[1][1] = p[2] & 0xffff;
+					coeff[1][2] = (p[2] >> 16) & 0xffff;
+					coeff[2][1] = (p[3] >> 16) & 0xffff;
+					coeff[2][2] = p[4] & 0xffff;
+
+					p[0] = (p[0] & 0xffffffff0000ffff) |
+						(coeff[0][2] << 16);
+					p[1] = (p[1] & 0xffffffffffff0000) |
+						coeff[0][1];
+					p[2] = (p[2] & 0xffffffff00000000) |
+						(coeff[1][1] << 16) |
+						coeff[1][2];
+					p[3] = (p[3] & 0xffffffff0000ffff) |
+						(coeff[2][2] << 16);
+					p[4] = (p[4] & 0xffffffffffff0000) |
+						coeff[2][1];
+				}
 			} else {
 				if (src_format == FORMAT_HDR10)
 					tv_dovi_setting->core1_reg_lut[1] =
@@ -9482,6 +9508,9 @@ int dolby_vision_process(
 	int format_changed = 0;
 	bool src_is_42210bit = false;
 	uint8_t core_mask = 0x7;
+	static bool reverse_status;
+	bool reverse = false;
+	bool reverse_changed = false;
 
 	if (!is_meson_box() && !is_meson_txlx() && !is_meson_tm2())
 		return -1;
@@ -9627,10 +9656,13 @@ int dolby_vision_process(
 	}
 
 	video_status = is_video_turn_on(video_on, VD1_PATH);
-	if (video_status == -1)
+	if (video_status == -1) {
 		video_turn_off = true;
-	else if (video_status == 1)
+		pr_dolby_dbg("VD1 video off, video_status -1\n");
+	} else if (video_status == 1) {
+		pr_dolby_dbg("VD1 video on, video_status 1\n");
 		video_turn_off = false;
+	}
 
 	if (dolby_vision_mode != dolby_vision_target_mode)
 		format_changed = 1;
@@ -9650,19 +9682,27 @@ int dolby_vision_process(
 		&current_hdr_cap, &current_sink_available) & 2) ? 1 : 0;
 
 	if (is_meson_tvmode()) {
+		reverse = get_video_reverse();
+		if (reverse != reverse_status) {
+			reverse_status = reverse;
+			reverse_changed = true;
+		}
 		sink_changed = false;
 		graphic_status = 0;
 		dolby_vision_flags &= ~FLAG_FORCE_HDMI_PKT;
-		if (policy_changed || format_changed || video_status == 1)
-			pr_dolby_dbg("tv %s %s %s\n",
+		if (policy_changed || format_changed ||
+			video_status == 1 || reverse_changed)
+			pr_dolby_dbg("tv %s %s %s %s\n",
 				policy_changed ? "policy changed" : "",
 				video_status ? "video_status changed" : "",
-				format_changed ? "format_changed" : "");
+				format_changed ? "format_changed" : "",
+				reverse_changed ? "reverse_changed" : "");
 	}
 
 	if (sink_changed || policy_changed || format_changed ||
 	    (video_status == 1) || (graphic_status & 2) ||
-	    (dolby_vision_flags & FLAG_FORCE_HDMI_PKT) || need_update_cfg) {
+	    (dolby_vision_flags & FLAG_FORCE_HDMI_PKT) ||
+	    need_update_cfg || reverse_changed) {
 		if (debug_dolby & 1)
 			pr_dolby_dbg("sink %s,cap 0x%x,video %s,osd %s,vf %p,toggle %d\n",
 				     current_sink_available ? "on" : "off",
@@ -9699,11 +9739,12 @@ int dolby_vision_process(
 			} else
 				dolby_vision_set_toggle_flag(1);
 		}
-		if (dolby_vision_flags & FLAG_TOGGLE_FRAME) {
-			if (debug_dolby & 1)
-				pr_dolby_dbg("update when video off\n");
+		if ((dolby_vision_flags & FLAG_TOGGLE_FRAME) ||
+		((video_status == -1) && dolby_vision_core1_on)) {
+			pr_dolby_dbg("update when video off\n");
 			dolby_vision_parse_metadata(
 				NULL, 1, false, false);
+			dolby_vision_set_toggle_flag(1);
 		}
 	}
 
