@@ -785,7 +785,7 @@ static ssize_t tvafereg_store(struct device *dev,
 					      addr, R_APB_REG(addr << 2));
 			tvafe_pr_info("dump ACD reg----\n");
 			for (addr = ACD_BASE_ADD;
-				addr <= (ACD_BASE_ADD + 0xa5); addr++)
+				addr <= (ACD_BASE_ADD + 0xc2); addr++)
 				tvafe_pr_info("APB[0x%04x]=0x%08x\n",
 					      addr, R_APB_REG(addr << 2));
 			tvafe_pr_info("dump CVD2 reg----\n");

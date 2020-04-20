@@ -257,10 +257,13 @@ static const unsigned int tvafe_pq_reg_trust_table[][2] = {
 	{ACD_REG_56,                        0x00f00000},
 	{ACD_REG_57,                        0x03ff81ff},
 	{ACD_REG_58,                        0x8fffffff},
+	{ACD_REG_5B,                        0x3ff7ffff},
 	{ACD_REG_64,                        0xffffffff},
 	{ACD_REG_65,                        0xffffffff},
 	{ACD_REG_66,                        0x80000ff0},
 	{ACD_REG_6F,                        0xffffffff},
+	{ACD_REG_74,                        0xffffffff},
+	{ACD_REG_75,                        0x000000ff},
 	{ACD_REG_86,                        0xc0000000},
 	{ACD_REG_89,                        0x803ff3ff},
 	{ACD_REG_8A,                        0x03ff1fff},
@@ -269,6 +272,8 @@ static const unsigned int tvafe_pq_reg_trust_table[][2] = {
 	{ACD_REG_94,                        0xffffffff},
 	{ACD_REG_95,                        0xffffffff},
 	{ACD_REG_96,                        0xffffffff},
+	{ACD_REG_AE,                        0x00000001},
+	{ACD_REG_AF,                        0x1f1f0000},
 
 	{0xffffffff,                        0x00000000}, /* ending */
 };
