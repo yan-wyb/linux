@@ -18,6 +18,7 @@
 /dts-v1/;
 
 #include "mesontm2_revb.dtsi"
+#include "mesontm2_drm.dtsi"
 #include "partition_sbr_gva.dtsi"
 
 / {
@@ -528,6 +529,10 @@
 		dev_name = "aml_amdolby_vision_driver";
 		status = "okay";
 		tv_mode = <0>;/*1:enabel ;0:disable*/
+	};
+
+	meson-fb {
+		status = "disable";
 	};
 
 	vdin@0 {
@@ -1970,3 +1975,16 @@
 	status = "okay";
 };
 
+&drm_vpu {
+	status = "okay";
+	logo_addr = "0x7f800000";
+};
+
+&drm_amhdmitx {
+	status = "okay";
+	hdcp = "okay";
+};
+
+&drm_lcd {
+	status = "disable";
+};
