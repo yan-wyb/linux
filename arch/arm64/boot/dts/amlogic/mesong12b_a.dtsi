@@ -1157,7 +1157,7 @@
 	};
 
 	aocec: aocec {
-		compatible = "amlogic, aocec-g12a";
+		compatible = "amlogic, aocec-g12b";
 		device_name = "aocec";
 		status = "okay";
 		vendor_name = "Amlogic"; /* Max Chars: 8     */
@@ -1169,7 +1169,7 @@
 		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
 		port_num = <1>;
 		output = <1>;
-		ee_cec;
+		/*ee_cec;*/
 		arc_port_mask = <0x2>;
 		interrupts = <0 203 1
 					0 199 1>;	/*0:snps 1:ts*/
