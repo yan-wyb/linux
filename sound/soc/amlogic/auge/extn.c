@@ -453,6 +453,9 @@ static int extn_dai_probe(struct snd_soc_dai *cpu_dai)
 	if (p_extn->chipinfo && p_extn->chipinfo->arc_version == TM2)
 		tm2_arc_source_select(SPDIFA_TO_HDMIRX);
 
+	if (get_audioresample(RESAMPLE_A))
+		resample_set(RESAMPLE_A, RATE_48K);
+
 	return 0;
 }
 
@@ -465,9 +468,6 @@ static int extn_dai_startup(
 	struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai)
 {
-	if (get_audioresample(RESAMPLE_A))
-		resample_set(RESAMPLE_A, RATE_48K);
-
 	return 0;
 }
 
