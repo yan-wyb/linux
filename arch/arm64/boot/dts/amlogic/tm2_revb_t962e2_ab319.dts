@@ -1806,6 +1806,15 @@
 	cs-gpios = <&gpio GPIOH_20 0>;
 };
 
+&sspicc1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc1_pins_dv &spicc1_pins_cs_dv>;
+	cs-num = <0>;
+	spi-mode = <0x0>;
+	vmem-bus-num = <0>;
+};
+
 &meson_fb {
 	status = "okay";
 	display_size_default = <1920 1080 1920 2160 32>;

@@ -943,6 +943,16 @@
 				#size-cells = <0>;
 				status = "disabled";
 			};
+
+			sspicc1: sspi@15000 {
+				compatible = "amlogic,slave-spicc";
+				reg = <0x0 0x15000 0x0 0x44>;
+				interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_SPICC1>,
+					 <&clkc CLKID_SPICC1_COMP>;
+				clock-names = "core", "comp";
+				status = "disabled";
+			};
 		};
 
 		aobus: aobus@ff800000 {
@@ -2845,6 +2855,14 @@
 			groups = "spi1_mosi_dv",
 				 "spi1_miso_dv",
 				 "spi1_clk_dv";
+			function = "spi1";
+			drive-strength = <1>;
+		};
+	};
+
+	spicc1_pins_cs_dv: spicc1_pins_cs_dv {
+		mux {
+			groups = "spi1_ss0_dv";
 			function = "spi1";
 			drive-strength = <1>;
 		};
