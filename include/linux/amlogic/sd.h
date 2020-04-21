@@ -584,6 +584,8 @@ struct amlsd_host {
 	struct aml_emmc_adjust emmc_adj;
 	struct aml_emmc_rxclk emmc_rxclk;
 	u32 error_flag;
+	unsigned int reg_bak[20];
+	unsigned int resume_clock;
 	/* pre cmd op */
 	unsigned int (*pre_cmd_op)(struct amlsd_host *host,
 		struct mmc_request *mrq, struct sd_emmc_desc_info *desc);

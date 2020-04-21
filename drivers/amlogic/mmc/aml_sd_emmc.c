@@ -42,6 +42,11 @@
 #include <linux/mmc/emmc_partitions.h>
 #include <linux/amlogic/amlsd.h>
 #include <linux/amlogic/aml_sd_emmc_v3.h>
+#include <linux/amlogic/power_domain.h>
+#include <dt-bindings/power/amlogic,pd.h>
+#include <linux/pm_runtime.h>
+
+#define MMC_PM_TIMEOUT (2000)
 
 struct mmc_host *sdio_host;
 
@@ -3319,6 +3324,14 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		else
 			mmc->ops = &meson_mmc_ops;
 		aml_reg_print(pdata);
+
+		if (aml_card_type_mmc(pdata)) {
+			pm_runtime_set_active(&pdev->dev);
+			pm_runtime_set_autosuspend_delay(&pdev->dev,
+					MMC_PM_TIMEOUT);
+			pm_runtime_use_autosuspend(&pdev->dev);
+			pm_runtime_enable(&pdev->dev);
+		}
 		ret = mmc_add_host(mmc);
 		if (ret) { /* error */
 			pr_err("Failed to add mmc host.\n");
@@ -3415,11 +3428,59 @@ static int meson_mmc_remove(struct platform_device *pdev)
 
 	kfree(host->blk_test);
 	kfree(host->adj_win);
+
+	pm_runtime_disable(&pdev->dev);
 	mmc_free_host(host->mmc);
 	kfree(pdata);
 	kfree(host);
 	return 0;
 }
+
+static int aml_sdio_runtime_suspend(struct device *dev)
+{
+	struct amlsd_host *host = dev_get_drvdata(dev);
+	int i, ret;
+
+	host->resume_clock = clk_get_rate(host->cfg_div_clk);
+
+	ret = clk_set_rate(host->cfg_div_clk, 40000000);
+	if (ret) {
+		dev_err(host->dev, "Unable to set  clk to 40M to ret = %d\n",
+				ret);
+		return ret;
+	}
+
+	for (i = 0; i < 20; i++)
+		host->reg_bak[i] = readl(host->base + (i * 4));
+	power_domain_switch(PM_EMMC_C, PWR_OFF);
+	pinctrl_pm_select_sleep_state(dev);
+
+	return 0;
+}
+
+static int aml_sdio_runtime_resume(struct device *dev)
+{
+	struct amlsd_host *host = dev_get_drvdata(dev);
+	int i, ret;
+
+	power_domain_switch(PM_EMMC_C, PWR_ON);
+	pinctrl_pm_select_default_state(dev);
+	for (i = 0; i < 20; i++)
+		writel(host->reg_bak[i], (host->base + (i * 4)));
+
+	ret = clk_set_rate(host->cfg_div_clk, host->resume_clock);
+	if (ret) {
+		dev_err(host->dev, "Unable to set resume clk ret = %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops sdio_pm_ops = {
+	SET_RUNTIME_PM_OPS(aml_sdio_runtime_suspend,
+			aml_sdio_runtime_resume, NULL)
+};
 
 static struct meson_mmc_data mmc_data_gxbb = {
 	.chip_type = MMC_CHIP_GXBB,
@@ -3807,6 +3868,7 @@ static struct platform_driver meson_mmc_driver = {
 		.name = "meson-aml-mmc",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(meson_mmc_of_match),
+		.pm = &sdio_pm_ops,
 	},
 };
 
