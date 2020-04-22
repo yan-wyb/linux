@@ -260,6 +260,12 @@
  * before the window function, after the de decimation
  */
 #define VDIN_INTF_WIDTHM1   ((0x121c))/* + 0xd0100000) */
+/* before the cut window function, after the de decimation function */
+#define VDIN_WR_MIF_BURST_LAST_SEL_BIT	25
+#define VDIN_WR_MIF_BURST_LAST_SEL_WID	1
+#define VDIN_INTF_WIDTHM1_BIT           0
+#define VDIN_INTF_WIDTHM1_WID           13
+
 /* Bit 15          //default== 0, urgent_ctrl_en */
 /* Bit 14          //default== 0, urgent_wr, if true for write buffer */
 /* Bit 13          //default== 0, out_inv_en */
@@ -1289,12 +1295,6 @@
 #define COM_GCLK_REG_BIT                0
 #define COM_GCLK_REG_WID                1    /* 0: auto,  1: off. Caution !!! */
 
-
-/* #define VDIN_INTF_WIDTHM1                        0x121c */
-/* before the cut window function, after the de decimation function */
-#define VDIN_INTF_WIDTHM1_BIT           0
-#define VDIN_INTF_WIDTHM1_WID           13
-
 /* #define VDIN_LFIFO_URG_CTRL                       0x121e */
 /*Bit 15          default== 0, urgent_ctrl_en
  *Bit 14          default== 0, urgent_wr, if true for write buffer
@@ -1898,10 +1898,6 @@
 #define VDIN_FORCEGOLINE_EN_BIT		28
 #define VDIN_WRREQUEST_EN_BT		8
 #define VDIN_WRCTRLREG_PAUSE_BIT		10
-
-/*#define VDIN_INTF_WIDTHM1*/
-#define VDIN_FIX_NONSTDVSYNC_BIT	24
-#define VDIN_FIX_NONSTDVSYNC_WID	2
 
 /*#define VPU_ARB_URG_CTRL*/
 #define VDIN_LFF_URG_CTRL_BIT	8

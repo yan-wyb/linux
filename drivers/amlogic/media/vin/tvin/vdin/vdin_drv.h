@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0408: dv patch sometime unreg"
+#define VDIN_VER "ver:2020-0424: prevent vdin enter hold status"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -78,7 +78,6 @@ enum vdin_irq_flg_e {
 	VDIN_IRQ_FLG_NO_WR_FE,
 	VDIN_IRQ_FLG_NO_NEXT_FE,
 };
-
 
 /* for config hw function support */
 struct match_data_s {

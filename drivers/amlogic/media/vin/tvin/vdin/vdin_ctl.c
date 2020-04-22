@@ -1239,12 +1239,25 @@ void vdin_set_decimation(struct vdin_dev_s *devp)
 	return;
 }
 
-
 void vdin_fix_nonstd_vsync(struct vdin_dev_s *devp)
 {
 	unsigned int offset = devp->addr_offset;
-	wr_bits(offset, VDIN_INTF_WIDTHM1, 3,
-		VDIN_FIX_NONSTDVSYNC_BIT, VDIN_FIX_NONSTDVSYNC_WID);
+
+	/* prevent vdin enter hold status by mass vsync from hdmi rx
+	 * phenomenon: not wr any data to DDR, picture stuck
+	 */
+	if (devp->dtdata->hw_ver == VDIN_HW_TM2_B) {
+		wr_bits(offset, VDIN_WR_URGENT_CTRL, 1,
+			WR_DONE_LAST_SEL_BIT, WR_DONE_LAST_SEL_WID);
+	} else if (devp->dtdata->hw_ver == VDIN_HW_ORG) {
+		/* tm2 revA is 0x12be[9]*/
+		if (is_meson_tm2_cpu())
+			wr_bits(offset, 0x12be, 1, 9, 1);
+		else /* others are 0x121c[25] */
+			wr_bits(offset, VDIN_INTF_WIDTHM1, 1,
+				VDIN_WR_MIF_BURST_LAST_SEL_BIT,
+				VDIN_WR_MIF_BURST_LAST_SEL_WID);
+	}
 }
 
 /*this function will set the bellow parameters of devp:
@@ -3352,11 +3365,6 @@ void vdin_set_default_regmap(struct vdin_dev_s *devp)
 	/* [12: 0] input_win.ve               = 0 */
 	wr(offset, VDIN_WIN_V_START_END, 0x00000000);
 
-	/* prevent vdin enter hold status by mass vsync from hdmi rx
-	 * phenomenon: not wr any data to DDR, pic stuck
-	 */
-	wr_bits(offset, VDIN_WR_URGENT_CTRL, 1,
-		WR_DONE_LAST_SEL_BIT, WR_DONE_LAST_SEL_WID);
 	/*hw verify:de-tunnel 444 to 422 12bit*/
 	if (devp->dtdata->ipt444_to_422_12bit)
 		vdin_dolby_de_tunnel_to_12bit(devp, false);
