@@ -6747,6 +6747,10 @@ static enum hdr_type_e get_source_type(enum vd_path_e vd_path)
 		if (sink_support_hdr10_plus(get_current_vinfo()) &&
 		    (vd_path == VD1_PATH))
 			return HDRTYPE_HDR10PLUS;
+		else if (!sink_support_hdr10_plus(get_current_vinfo()) &&
+		    !sink_support_hdr(get_current_vinfo()) &&
+			!is_dolby_vision_enable())
+			return HDRTYPE_HDR10PLUS;
 		else
 			return HDRTYPE_HDR10;
 	} else if (signal_transfer_characteristic == 16)

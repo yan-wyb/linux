@@ -2890,9 +2890,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 
 	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param, NULL);
 
-	if (!
-	    (hdr_process_select == HDR_SDR ||
-	    hdr_process_select == HDR10P_SDR))
+	if (hdr_process_select != HDR10P_SDR)
 		set_ootf_lut(module_sel, &hdr_lut_param);
 
 	set_oetf_lut(module_sel, &hdr_lut_param);
