@@ -28,8 +28,9 @@
 #include "nr_drv.h"
 #include "../di_local/di_local.h"
 
+#ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 #define DI_FILM_GRAIN
-
+#endif
 /*trigger_pre_di_process param*/
 #define TRIGGER_PRE_BY_PUT			'p'
 #define TRIGGER_PRE_BY_DE_IRQ		'i'

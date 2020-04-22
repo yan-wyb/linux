@@ -35,10 +35,8 @@
 #include "register_nr4.h"
 #include "nr_drv.h"
 
-#ifdef DI_FILM_GRAIN
 #ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 #include <linux/amlogic/media/lut_dma/lut_dma.h>
-#endif
 #endif
 
 #ifdef DET3D
@@ -305,7 +303,7 @@ void di_fgrain_config(struct DI_MIF_s *mif_setting,
 		#endif
 	}
 
-	if (vf->bitdepth & BITDEPTH_Y8)
+	if (vf->bitdepth == BITDEPTH_Y8)
 		setting->bitdepth = 0;
 	else if (vf->bitdepth & BITDEPTH_Y10)
 		setting->bitdepth = 1;
