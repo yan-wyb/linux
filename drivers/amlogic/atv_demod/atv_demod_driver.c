@@ -56,7 +56,8 @@
 /* 2020/04/23 --- V2.21 --- Fix pal-n config. */
 /*                          Fix r842 stable delay when scanning. */
 /*                          Fix visual carrier if amp when playing. */
-#define AMLATVDEMOD_VER "V2.21"
+/* 2020/04/30 --- V2.22 --- Add demod power control in suspend and resume. */
+#define AMLATVDEMOD_VER "V2.22"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 

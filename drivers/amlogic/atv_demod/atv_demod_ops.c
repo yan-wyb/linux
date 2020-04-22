@@ -139,6 +139,8 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 	int err_code = 0;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
+	atvdemod_power_switch(true);
+
 	if (amlatvdemod_devp->pin_name != NULL) {
 		amlatvdemod_devp->agc_pin =
 			devm_pinctrl_get_select(amlatvdemod_devp->dev,
@@ -211,6 +213,8 @@ int atv_demod_leave_mode(struct dvb_frontend *fe)
 	amlatvdemod_devp->std = 0;
 	amlatvdemod_devp->audmode = 0;
 	amlatvdemod_devp->sound_mode = 0xFF;
+
+	atvdemod_power_switch(false);
 
 	pr_info("%s: OK.\n", __func__);
 
