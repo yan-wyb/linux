@@ -13550,7 +13550,7 @@ F: arch/arm/include/asm/kasan.h
 F: arch/arm/mm/kasan_init.c
 
 HDMITX OUTPUT DRIVER
-M:      Zongdong Jiao <zongdong.jiao@amlogic.com>
+M:  Zongdong Jiao <zongdong.jiao@amlogic.com>
 M:	Zhengrong Zhu <zhengrong.zhu@amlogic.com>
 S:	Maintained
 F:	drivers/amlogic/media/vout/hdmitx/

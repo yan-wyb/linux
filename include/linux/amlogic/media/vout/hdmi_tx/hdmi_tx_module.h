@@ -19,6 +19,7 @@
 #define _HDMI_TX_MODULE_H
 #include "hdmi_info_global.h"
 #include "hdmi_config.h"
+#include "hdmi_tx_notify.h"
 #include <linux/wait.h>
 #include <linux/clk.h>
 #include <linux/cdev.h>
@@ -764,17 +765,10 @@ extern int hdmi_set_3d(struct hdmitx_dev *hdmitx_device, int type,
 extern int hdmitx_set_audio(struct hdmitx_dev *hdmitx_device,
 	struct hdmitx_audpara *audio_param);
 
-/* for notify to cec */
-#define HDMITX_PLUG			1
-#define HDMITX_UNPLUG			2
-#define HDMITX_PHY_ADDR_VALID		3
 
 #ifdef CONFIG_AMLOGIC_HDMITX
 extern struct hdmitx_dev *get_hdmitx_device(void);
 extern int get_hpd_state(void);
-extern int hdmitx_event_notifier_regist(struct notifier_block *nb);
-extern int hdmitx_event_notifier_unregist(struct notifier_block *nb);
-extern void hdmitx_event_notify(unsigned long state, void *arg);
 extern void hdmitx_hdcp_status(int hdmi_authenticated);
 #else
 static inline struct hdmitx_dev *get_hdmitx_device(void)

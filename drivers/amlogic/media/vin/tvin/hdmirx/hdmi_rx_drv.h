@@ -33,21 +33,12 @@
 //#include "hdmi_rx_pktinfo.h"
 #include "hdmi_rx_edid.h"
 
-
+/* Decrease emp buffer size to 2k */
 #define RX_VER0 "ver.2020/03/05"
-/*
- *
- *
- *
- *
- */
+/* Add bandgap enable and reset handle for tl1/tm2 */
 #define RX_VER1 "ver.2019/11/22"
-/*
- *
- *
- *
- */
-#define RX_VER2 "ver.2020/04/16"
+/* notify RX by TX to update EDID from sink and mix with audio */
+#define RX_VER2 "ver.2020/04/27"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -81,7 +72,7 @@
 
 
 #define PFIFO_SIZE 160
-
+#define HDCP14_KEY_SIZE 368
 enum chip_id_e {
 	CHIP_ID_GXTVBB,
 	CHIP_ID_TXL,
@@ -481,6 +472,9 @@ struct rx_s {
 	uint32_t arc_port;
 	enum edid_ver_e edid_ver;
 	bool arc_5vsts;
+#ifdef CONFIG_AMLOGIC_HDMITX
+	struct notifier_block tx_notify;
+#endif
 };
 
 struct _hdcp_ksv {

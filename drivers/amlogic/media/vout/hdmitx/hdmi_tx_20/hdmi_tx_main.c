@@ -46,6 +46,7 @@
 #include <linux/reboot.h>
 #include <linux/extcon.h>
 #include <linux/i2c.h>
+#include <linux/string.h>
 
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/vout/vinfo.h>
@@ -57,6 +58,7 @@
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_ddc.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
 #include <linux/amlogic/media/vout/hdmi_tx/hdmi_config.h>
+#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_notify.h>
 #include "hw/tvenc_conf.h"
 #include "hw/common.h"
 #include "hw/hw_clk.h"
@@ -129,10 +131,10 @@ struct extcon_dev *hdmitx_extcon_cedst;
  */
 int hdr_status_pos;
 
-static inline void hdmitx_notify_hpd(int hpd)
+static inline void hdmitx_notify_hpd(int hpd, void *p)
 {
 	if (hpd)
-		hdmitx_event_notify(HDMITX_PLUG, NULL);
+		hdmitx_event_notify(HDMITX_PLUG, p);
 	else
 		hdmitx_event_notify(HDMITX_UNPLUG, NULL);
 }
@@ -207,11 +209,13 @@ static void hdmitx_late_resume(struct early_suspend *h)
 		hdmitx_device.already_used = 1;
 
 	pr_info("hdmitx hpd state: %d\n", hdmitx_device.hpd_state);
-	hdmitx_notify_hpd(hdmitx_device.hpd_state);
 
 	/*force to get EDID after resume for Amplifer Power case*/
 	if (hdmitx_device.hpd_state)
 		hdmitx_get_edid(phdmi);
+	hdmitx_notify_hpd(hdmitx_device.hpd_state,
+			  hdmitx_device.edid_parsing ?
+			  hdmitx_device.edid_ptr : NULL);
 
 	hdmitx_device.hwop.cntlconfig(&hdmitx_device,
 		CONF_AUDIO_MUTE_OP, AUDIO_MUTE);
@@ -4049,16 +4053,38 @@ static ssize_t show_fake_plug(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d", hdmitx_device.hpd_state);
 }
 
+static unsigned char fake_edid[1024];
 static ssize_t store_fake_plug(struct device *dev,
 			       struct device_attribute *attr,
 			       const char *buf, size_t count)
 {
 	struct hdmitx_dev *hdev = &hdmitx_device;
+	char hex[] = "FF";
+	unsigned int res;
+	int i;
 
-	pr_info("hdmitx: fake plug %s\n", buf);
+	pr_info("fake plug %d:%s\n", count, buf);
 
-	if (strncmp(buf, "1", 1) == 0)
+	if (strncmp(buf, "1", 1) == 0) {
 		hdev->hpd_state = 1;
+		memset(fake_edid, 0, 1024);
+		if (count >= 256 + 2) {
+			for (i = 0; i < (count - 2) / 2; i++) {
+				hex[0] = buf[2 + i * 2];
+				hex[1] = buf[3 + i * 2];
+				if (!kstrtouint(hex, 16, &res)) {
+					fake_edid[i] = res & 0xff;
+				} else {
+					pr_info("wrong edid %d:%s\n", i, hex);
+					memset(fake_edid, 0, 1024);
+					return count;
+				}
+			}
+			hdmitx_get_edid(hdev);
+			edidinfo_attach_to_vinfo(hdev);
+			hdmitx_notify_hpd(hdev->hpd_state, hdev->EDID_buf);
+		}
+	}
 
 	if (strncmp(buf, "0", 1) == 0)
 		hdev->hpd_state = 0;
@@ -5110,6 +5136,7 @@ unsigned int hdmitx_check_edid_all_zeros(unsigned char *buf)
 
 static void hdmitx_get_edid(struct hdmitx_dev *hdev)
 {
+	unsigned int num;
 	mutex_lock(&getedid_mutex);
 	/* TODO hdmitx_edid_ram_buffer_clear(hdev); */
 	hdev->hwop.cntlddc(hdev, DDC_RESET_EDID, 0);
@@ -5117,6 +5144,14 @@ static void hdmitx_get_edid(struct hdmitx_dev *hdev)
 	/* start reading edid frist time */
 	hdev->hwop.cntlddc(hdev, DDC_EDID_READ_DATA, 0);
 	hdev->hwop.cntlddc(hdev, DDC_EDID_GET_DATA, 0);
+	if (fake_edid[0] == 0 && fake_edid[1] == 0xff) {
+		if (fake_edid[0x7e] < 4)
+			num = (fake_edid[0x7e] + 1) * 0x80;
+		else
+			num = 0x100;
+		pr_info("load fake edid %d\n", num);
+		memcpy(hdev->EDID_buf, fake_edid, num);
+	}
 	if (hdmitx_check_edid_all_zeros(hdev->EDID_buf)) {
 		hdev->hwop.cntlddc(hdev, DDC_GLITCH_FILTER_RESET, 0);
 		hdev->hwop.cntlddc(hdev, DDC_EDID_READ_DATA, 0);
@@ -5224,7 +5259,9 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	if (info && (info->mode == VMODE_HDMI))
 		hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
 	hdev->hpd_state = 1;
-	hdmitx_notify_hpd(hdev->hpd_state);
+	hdmitx_notify_hpd(hdev->hpd_state,
+			  hdev->edid_parsing ?
+			  hdev->edid_ptr : NULL);
 
 	extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI, 1);
 	extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI, 1);
@@ -5289,7 +5326,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdmi_physcial_size_update(hdev);
 	hdmitx_edid_ram_buffer_clear(hdev);
 	hdev->hpd_state = 0;
-	hdmitx_notify_hpd(hdev->hpd_state);
+	hdmitx_notify_hpd(hdev->hpd_state, NULL);
 	extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI, 0);
 	extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI, 0);
 	mutex_unlock(&setclk_mutex);
@@ -5337,7 +5374,7 @@ static int hdmi_task_handle(void *data)
 	hdmitx_extcon_hdmi->state = !!(hdmitx_device->hwop.cntlmisc(
 		hdmitx_device, MISC_HPD_GPI_ST, 0));
 	hdmitx_device->hpd_state = hdmitx_extcon_hdmi->state;
-	hdmitx_notify_hpd(hdmitx_device->hpd_state);
+	hdmitx_notify_hpd(hdmitx_device->hpd_state, NULL);
 	if (hdmitx_device->hpd_state)
 		hdmitx_device->already_used = 1;
 
@@ -5525,7 +5562,9 @@ int hdmitx_event_notifier_regist(struct notifier_block *nb)
 	ret = blocking_notifier_chain_register(&hdmitx_event_notify_list, nb);
 	/* update status when register */
 	if (!ret && nb->notifier_call) {
-		hdmitx_notify_hpd(hdmitx_device.hpd_state);
+		hdmitx_notify_hpd(hdmitx_device.hpd_state,
+				  hdmitx_device.edid_parsing ?
+				  hdmitx_device.edid_ptr : NULL);
 		if (hdmitx_device.physical_addr != 0xffff)
 			hdmitx_event_notify(HDMITX_PHY_ADDR_VALID,
 					    &hdmitx_device.physical_addr);
