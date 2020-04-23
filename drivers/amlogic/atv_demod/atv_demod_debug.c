@@ -37,7 +37,6 @@
 /* name, mode, parent, type, value */
 /* u32, bool, u64 type add here for debugfs */
 #define DEBUG_FS_CREATE_NODES(dentry)\
-{\
 	DEBUGFS_CREATE_NODE(reg_23cf, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(btsc_sap_mode, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(afc_limit, 0640, dentry, u32)\
@@ -105,13 +104,11 @@
 	DEBUGFS_CREATE_NODE(atv_audio_overmodulated_cnt, 0640, dentry, u32)\
 	DEBUGFS_CREATE_NODE(support_secam_l, 0640, dentry, bool)\
 	DEBUGFS_CREATE_NODE(atvdemod_horiz_freq_det_en, 0640, dentry, bool)\
-}
 
 
 /* name, mode, parent, data, fops, type */
 /* int type add here for debugfs */
 #define DEBUG_FS_CREATE_FILES(dentry, fops)\
-{\
 	DEBUGFS_CREATE_FILE(non_std_thld_4c_h, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(non_std_thld_4c_l, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(non_std_thld_54_h, 0640, dentry, fops, int)\
@@ -123,7 +120,6 @@
 	DEBUGFS_CREATE_FILE(afc_default, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(snr_threshold, 0640, dentry, fops, int)\
 	DEBUGFS_CREATE_FILE(snr_val, 0640, dentry, fops, int)\
-}
 
 
 #if defined(AML_ATVDEMOD_DEBUGFS)

@@ -224,8 +224,15 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 	u32 if_info[2] = { 0 };
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 	struct atv_demod_parameters *p = &priv->atvdemod_param;
+	struct analog_parameters ptuner = { 0 };
 
 	priv->standby = true;
+
+	/* tuner config, no need cvbs format, just audio mode. */
+	ptuner.frequency = params->frequency;
+	ptuner.mode = params->mode;
+	ptuner.audmode = params->audmode;
+	ptuner.std = (params->std & 0xFF000000) | ptuner.audmode;
 
 	/* afc tune disable,must cancel wq before set tuner freq*/
 	if (priv->afc.pause)
@@ -235,7 +242,7 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		priv->monitor.pause(&priv->monitor);
 
 	if (fe->ops.tuner_ops.set_analog_params)
-		ret = fe->ops.tuner_ops.set_analog_params(fe, params);
+		ret = fe->ops.tuner_ops.set_analog_params(fe, &ptuner);
 
 	if (fe->ops.tuner_ops.get_if_frequency)
 		ret = fe->ops.tuner_ops.get_if_frequency(fe, if_info);
@@ -738,7 +745,7 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 			usleep_range(30 * 1000, 30 * 1000 + 100);
 		} else if (tuner_id == AM_TUNER_R840 ||
 				tuner_id == AM_TUNER_R842) {
-			usleep_range(10 * 1000, 10 * 1000 + 100);
+			usleep_range(40 * 1000, 40 * 1000 + 100);
 			fe->ops.tuner_ops.get_status(fe, (u32 *)&tuner_state);
 		} else {
 			/* AM_TUNER_SI2151 and AM_TUNER_SI2159 */
@@ -864,6 +871,9 @@ static int atvdemod_fe_afc_closer(struct v4l2_frontend *v4l2_fe, int minafcfreq,
 
 			if (tuner_id == AM_TUNER_MXL661)
 				usleep_range(30 * 1000, 30 * 1000 + 100);
+			else if (tuner_id == AM_TUNER_R840 ||
+					tuner_id == AM_TUNER_R842)
+				usleep_range(40 * 1000, 40 * 1000 + 100);
 			else
 				usleep_range(10 * 1000, 10 * 1000 + 100);
 
@@ -958,6 +968,9 @@ static int atvdemod_fe_afc_closer(struct v4l2_frontend *v4l2_fe, int minafcfreq,
 
 			if (tuner_id == AM_TUNER_MXL661)
 				usleep_range(30 * 1000, 30 * 1000 + 100);
+			else if (tuner_id == AM_TUNER_R840 ||
+					tuner_id == AM_TUNER_R842)
+				usleep_range(40 * 1000, 40 * 1000 + 100);
 			else
 				usleep_range(10 * 1000, 10 * 1000 + 100);
 		}

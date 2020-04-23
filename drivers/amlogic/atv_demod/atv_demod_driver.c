@@ -53,7 +53,10 @@
 /* 2020/01/06 --- V2.18 --- Optimize MTS(Multi-channel sound) control flow. */
 /* 2020/01/08 --- V2.19 --- Fix afc frequency offset. */
 /* 2020/03/24 --- V2.20 --- Fix ntsc(443)-bg/dk/i no audio output. */
-#define AMLATVDEMOD_VER "V2.20"
+/* 2020/04/23 --- V2.21 --- Fix pal-n config. */
+/*                          Fix r842 stable delay when scanning. */
+/*                          Fix visual carrier if amp when playing. */
+#define AMLATVDEMOD_VER "V2.21"
 
 struct aml_atvdemod_device *amlatvdemod_devp;
 
@@ -385,8 +388,8 @@ static ssize_t aml_atvdemod_store(struct class *class,
 
 		for (blk = 0; blk <= APB_BLOCK_ADDR_TOP; ++blk) {
 			for (reg = 0; reg < 0x40; ++reg) {
-				val = atv_dmd_rd_long(blk, reg);
-				pr_err("[0x%04x] = 0x%x.\n",
+				val = atv_dmd_rd_long(blk, reg << 2);
+				pr_err("[0x%04x] = 0x%X\n",
 						(blk << 8) + (reg << 2), val);
 			}
 		}
@@ -396,7 +399,7 @@ static ssize_t aml_atvdemod_store(struct class *class,
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
 			for (reg = 0; reg <= 0x1ff; ++reg) {
 				val = adec_rd_reg(reg);
-				pr_err("[0x%04x] = 0x%x.\n", (reg << 2), val);
+				pr_err("[0x%04x] = 0x%X\n", reg << 2, val);
 			}
 		}
 	} else
