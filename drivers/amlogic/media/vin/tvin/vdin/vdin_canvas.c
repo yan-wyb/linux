@@ -170,8 +170,9 @@ void vdin_canvas_start_config(struct vdin_dev_s *devp)
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
 	if (devp->force_yuv444_malloc == 1) {
+		/* 4k is not support 10 bit mode in order to save memory */
 		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
-			(devp->full_pack != VDIN_422_FULL_PK_EN))
+			!vdin_is_4k(devp))
 			devp->canvas_w = devp->h_active *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		else
@@ -334,8 +335,9 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
 	if (devp->force_yuv444_malloc == 1) {
-		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) /*&&*/
-			/*(devp->color_depth_mode != VDIN_422_FULL_PK_EN)*/)
+		/* 4k is not support 10 bit mode in order to save memory */
+		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) &&
+		    !vdin_is_4k(devp))
 			devp->canvas_w = h_active *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		else
@@ -477,6 +479,12 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		max_buffer_num += devp->vfp->skip_vf_num;
 	if (max_buffer_num > max_buf_num)
 		max_buffer_num = max_buf_num;
+
+	/* if vfmem_cfg_num define in dts, use dts's setting */
+	if (devp->frame_buff_num >= min_buf_num &&
+	    devp->frame_buff_num <= max_buf_num)
+		max_buffer_num = devp->frame_buff_num;
+
 	devp->vfmem_max_cnt = devp->canvas_max_num = max_buffer_num;
 
 	if ((devp->cma_config_en == 0) ||
@@ -495,6 +503,7 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		h_size = max_buf_width;
 		v_size = max_buf_height;
 	}
+
 	if ((devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_RGB) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
@@ -502,8 +511,9 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
 		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_BRG) ||
 		(devp->force_yuv444_malloc == 1)) {
-		if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH)/* &&*/
-			/*(devp->color_depth_mode != VDIN_422_FULL_PK_EN)*/) {
+		/* 4k is not support 10 bit mode in order to save memory */
+		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH &&
+		    !vdin_is_4k(devp)) {
 			h_size = roundup(h_size *
 				VDIN_YUV444_10BIT_PER_PIXEL_BYTE,
 				devp->canvas_align);
@@ -610,10 +620,10 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 	mem_size += devp->vfmem_size_small * max_buffer_num;
 	mem_size = roundup(mem_size, PAGE_SIZE);
 
-
 	if (mem_size > devp->cma_mem_size) {
+		pr_err("\nvdin%d cma_mem_size (%d, %d) is not enough!!!\n",
+		       devp->index, mem_size, devp->cma_mem_size);
 		mem_size = devp->cma_mem_size;
-		pr_err("\nvdin%d cma_mem_size is not enough!!!\n", devp->index);
 		devp->cma_mem_alloc = 0;
 		return 1;
 	}

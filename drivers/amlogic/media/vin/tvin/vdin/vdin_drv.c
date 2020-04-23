@@ -567,9 +567,10 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		sm_ops->get_sig_property(devp->frontend, &devp->prop);
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 			vdin_check_hdmi_hdr(devp);
+
 		devp->dv.dv_flag = devp->prop.dolby_vision;
 		pr_info("%s dv:%d hdr:%d signal_type:0x%x\n", __func__,
-			devp->dv.dv_flag, devp->prop.vdin_hdr_Flag,
+			devp->dv.dv_flag, devp->prop.vdin_hdr_flag,
 			devp->parm.info.signal_type);
 		memcpy(&devp->pre_prop, &devp->prop,
 			sizeof(struct tvin_sig_property_s));
@@ -1790,7 +1791,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 		prop = &devp->prop;
 		pre_prop = &devp->pre_prop;
 		if ((prop->color_format != pre_prop->color_format) ||
-			(prop->vdin_hdr_Flag != pre_prop->vdin_hdr_Flag) ||
+			(prop->vdin_hdr_flag != pre_prop->vdin_hdr_flag) ||
 			(prop->color_fmt_range != pre_prop->color_fmt_range)) {
 			vdin_set_matrix(devp);
 			vdin_drop_frame_info(devp, "color fmt chg");
@@ -1812,7 +1813,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 			vdin_drop_frame_info(devp, "dest fmt chg");
 		}
 		pre_prop->color_format = prop->color_format;
-		pre_prop->vdin_hdr_Flag = prop->vdin_hdr_Flag;
+		pre_prop->vdin_hdr_flag = prop->vdin_hdr_flag;
 		pre_prop->color_fmt_range = prop->color_fmt_range;
 		pre_prop->dest_cfmt = prop->dest_cfmt;
 		devp->ignore_frames = 0;
@@ -3597,6 +3598,13 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2))
 		vdevp->double_wr_cfg = of_property_read_bool(pdev->dev.of_node,
 			"double_write_en");
+
+	ret = of_property_read_u32(pdev->dev.of_node, "frame_buff_num",
+				   &vdevp->frame_buff_num);
+	if (ret)
+		vdevp->frame_buff_num = 0;
+	else
+		pr_info("frame_buff_num = %d\n", vdevp->frame_buff_num);
 
 	/* init vdin parameters */
 	vdevp->flags = VDIN_FLAG_NULL;

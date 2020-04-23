@@ -858,7 +858,7 @@ void vdin_prob_set_xy(unsigned int offset,
 			format_convert_matrix1,
 			devp->parm.port,
 			devp->prop.color_fmt_range,
-			devp->prop.vdin_hdr_Flag,
+			devp->prop.vdin_hdr_flag,
 			devp->color_range_mode);
 	if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
 		is_meson_sm1_cpu() || is_meson_tm2_cpu())
@@ -867,7 +867,7 @@ void vdin_prob_set_xy(unsigned int offset,
 			devp->format_convert,
 			devp->parm.port,
 			devp->prop.color_fmt_range,
-			devp->prop.vdin_hdr_Flag,
+			devp->prop.vdin_hdr_flag,
 			devp->color_range_mode);
 	else
 		devp->csc_idx = vdin_set_color_matrix0(devp->addr_offset,
@@ -875,7 +875,7 @@ void vdin_prob_set_xy(unsigned int offset,
 			format_convert_matrix0,
 			devp->parm.port,
 			devp->prop.color_fmt_range,
-			devp->prop.vdin_hdr_Flag,
+			devp->prop.vdin_hdr_flag,
 			devp->color_range_mode);
 #endif
 
@@ -1976,7 +1976,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		else
 			devp->csc_idx = vdin_set_color_matrix0(
@@ -1985,7 +1985,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		if (vdin_is_dolby_signal_in(devp) ||
@@ -2004,7 +2004,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				format_convert_matrix1,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
 			is_meson_sm1_cpu() || is_meson_tm2_cpu())
@@ -2014,7 +2014,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		else
 			devp->csc_idx = vdin_set_color_matrix0(
@@ -2023,7 +2023,7 @@ void vdin_set_matrix(struct vdin_dev_s *devp)
 				format_convert_matrix0,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		if (devp->parm.info.fmt == TVIN_SIG_FMT_CVBS_SECAM)
 			wr_bits(offset, VDIN_MATRIX_CTRL, 0,
@@ -2055,7 +2055,7 @@ void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char id,
 				devp->format_convert,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		else
 			devp->csc_idx = vdin_set_color_matrix0(
@@ -2063,7 +2063,7 @@ void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char id,
 				devp->fmt_info_p, csc,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		break;
 	case 1:
@@ -2072,7 +2072,7 @@ void vdin_set_matrixs(struct vdin_dev_s *devp, unsigned char id,
 				devp->fmt_info_p, csc,
 				devp->parm.port,
 				devp->prop.color_fmt_range,
-				devp->prop.vdin_hdr_Flag | devp->dv.dv_flag,
+				devp->prop.vdin_hdr_flag | devp->dv.dv_flag,
 				devp->color_range_mode);
 		break;
 	default:
@@ -4039,6 +4039,7 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 	unsigned int offset = devp->addr_offset;
 	unsigned int set_width = 0;
 	unsigned int port;
+	enum vdin_color_deeps_e bit_dep;
 
 	/* yuv 422 full pack check */
 	if (devp->color_depth_support &
@@ -4062,106 +4063,79 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp)
 
 	switch (devp->color_depth_config & 0xff) {
 	case COLOR_DEEPS_8BIT:
-		devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
-		wr_bits(offset, VDIN_WR_CTRL2, 0,
-			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+		bit_dep = VDIN_COLOR_DEEPS_8BIT;
 		break;
 	case COLOR_DEEPS_10BIT:
-		devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
-		wr_bits(offset, VDIN_WR_CTRL2, 1,
-			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+		bit_dep = VDIN_COLOR_DEEPS_10BIT;
 		break;
-	/*
-	 * vdin not support 12bit now, when rx submit is 12bit,
-	 *	vdin config it as 10bit , 12 to 10
+	/* vdin not support 12bit now, when rx submit is 12bit,
+	 * vdin config it as 10bit , 12 to 10
 	 */
 	case COLOR_DEEPS_12BIT:
-		devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
-		wr_bits(offset, VDIN_WR_CTRL2, 1,
-			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+		bit_dep = VDIN_COLOR_DEEPS_10BIT;
 		break;
 	case COLOR_DEEPS_AUTO:
 		/* vdin_bit_depth is set to 0 by defaut, in this case,
-		devp->source_bitdepth is controlled by colordepth
-		change default to 10bit for 8in8out detail maybe lost
+		 * devp->source_bitdepth is controlled by colordepth
+		 * change default to 10bit for 8in8out detail maybe lost
 		 */
-		if ((devp->prop.color_format == TVIN_RGB444) ||
-			(devp->prop.color_format == TVIN_YUV444) ||
-			(devp->prop.color_format == TVIN_BGGR) ||
-			(devp->prop.color_format == TVIN_RGGB) ||
-			(devp->prop.color_format == TVIN_GBRG) ||
-			(devp->prop.color_format == TVIN_GRBG)) {
-			devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
-			wr_bits(offset, VDIN_WR_CTRL2, 0,
-				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+		if (vdin_is_convert_to_444(devp->format_convert) &&
+		    vdin_is_4k(devp)) {
+			bit_dep = VDIN_COLOR_DEEPS_8BIT;
 		} else if (devp->prop.colordepth == VDIN_COLOR_DEEPS_8BIT) {
 			/* hdmi YUV422, 8 or 10 bit valid is unknown*/
 			/* so need vdin 10bit to frame buffer*/
 			port = devp->parm.port;
-			if (((port >= TVIN_PORT_HDMI0) &&
-				(port <= TVIN_PORT_HDMI7)) &&
-				(devp->prop.color_format == TVIN_YUV422) &&
-				(devp->color_depth_support &
-				VDIN_WR_COLOR_DEPTH_10BIT)) {
+			if ((port >= TVIN_PORT_HDMI0) &&
+			    (port <= TVIN_PORT_HDMI7)) {
+				if (((devp->prop.color_format == TVIN_YUV422) &&
+				     (devp->color_depth_support &
+				     VDIN_WR_COLOR_DEPTH_10BIT)) ||
+				    devp->prop.vdin_hdr_flag)
+					bit_dep = VDIN_COLOR_DEEPS_10BIT;
+				else
+					bit_dep = VDIN_COLOR_DEEPS_8BIT;
+
 				if (vdin_is_dolby_tunnel_444_input(devp)) {
-					/*8bit mode*/
-					devp->source_bitdepth =
-						VDIN_COLOR_DEEPS_8BIT;
-					wr_bits(offset, VDIN_WR_CTRL2, 0,
-						VDIN_WR_10BIT_MODE_BIT,
-						VDIN_WR_10BIT_MODE_WID);
-				} else {
-					/*10 bit mode*/
-					devp->source_bitdepth =
-						VDIN_COLOR_DEEPS_10BIT;
-					wr_bits(offset, VDIN_WR_CTRL2, 1,
-						VDIN_WR_10BIT_MODE_BIT,
-						VDIN_WR_10BIT_MODE_WID);
+					bit_dep = VDIN_COLOR_DEEPS_8BIT;
 				}
 			} else {
-				/*8bit mode*/
-				devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
-				wr_bits(offset, VDIN_WR_CTRL2, 0,
-					VDIN_WR_10BIT_MODE_BIT,
-					VDIN_WR_10BIT_MODE_WID);
+				bit_dep = VDIN_COLOR_DEEPS_8BIT;
 			}
 		} else if ((devp->color_depth_support &
 			VDIN_WR_COLOR_DEPTH_10BIT)
 			&& ((devp->prop.colordepth == VDIN_COLOR_DEEPS_10BIT) ||
 			(devp->prop.colordepth == VDIN_COLOR_DEEPS_12BIT))) {
 			if (set_width == VDIN_COLOR_DEEPS_8BIT) {
-				devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
-				wr_bits(offset, VDIN_WR_CTRL2, 0,
-					VDIN_WR_10BIT_MODE_BIT,
-					VDIN_WR_10BIT_MODE_WID);
+				bit_dep = VDIN_COLOR_DEEPS_8BIT;
 			} else {
-				devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
-				wr_bits(offset, VDIN_WR_CTRL2, 1,
-					VDIN_WR_10BIT_MODE_BIT,
-					VDIN_WR_10BIT_MODE_WID);
+				bit_dep = VDIN_COLOR_DEEPS_10BIT;
 			}
 		} else {
-			devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
-			wr_bits(offset, VDIN_WR_CTRL2, 0,
-				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+			bit_dep = VDIN_COLOR_DEEPS_8BIT;
 		}
 
 		/*hw verify:de-tunnel 444 to 422 12bit*/
 		if (devp->dtdata->ipt444_to_422_12bit &&
 		    vdin_cfg_444_to_422_wmif_en) {
 			/*devp->source_bitdepth = VDIN_COLOR_DEEPS_12BIT;*/
-			devp->source_bitdepth = VDIN_COLOR_DEEPS_10BIT;
-			wr_bits(offset, VDIN_WR_CTRL2, MIF_10BIT,
-				VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+			bit_dep = VDIN_COLOR_DEEPS_10BIT;
 			vdin_dolby_de_tunnel_to_12bit(devp, true);
 		}
+
 		break;
 	default:
-		devp->source_bitdepth = VDIN_COLOR_DEEPS_8BIT;
-		wr_bits(offset, VDIN_WR_CTRL2, 0,
-			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+		bit_dep = VDIN_COLOR_DEEPS_8BIT;
 		break;
 	}
+
+	devp->source_bitdepth = bit_dep;
+	if (devp->source_bitdepth == VDIN_COLOR_DEEPS_8BIT)
+		wr_bits(offset, VDIN_WR_CTRL2, 0,
+			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
+	else if (devp->source_bitdepth == VDIN_COLOR_DEEPS_10BIT)
+		wr_bits(offset, VDIN_WR_CTRL2, 1,
+			VDIN_WR_10BIT_MODE_BIT, VDIN_WR_10BIT_MODE_WID);
 
 	/* only support 8bit mode at vpp side when double wr */
 	if (!vdin_is_support_10bit_for_dw(devp))
@@ -4277,6 +4251,35 @@ void vdin_force_gofiled(struct vdin_dev_s *devp)
 	unsigned int offset = devp->addr_offset;
 	wr_bits(offset, VDIN_COM_CTRL0, 1, 28, 1);
 	wr_bits(offset, VDIN_COM_CTRL0, 0, 28, 1);
+}
+
+bool vdin_is_convert_to_444(u32 format_convert)
+{
+	if ((format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444) ||
+	    (format_convert == VDIN_FORMAT_CONVERT_YUV_RGB) ||
+	    (format_convert == VDIN_FORMAT_CONVERT_YUV_GBR) ||
+	    (format_convert == VDIN_FORMAT_CONVERT_YUV_BRG) ||
+	    (format_convert == VDIN_FORMAT_CONVERT_RGB_YUV444) ||
+	    (format_convert == VDIN_FORMAT_CONVERT_RGB_RGB))
+		return true;
+	else
+		return false;
+}
+
+bool vdin_is_4k(struct vdin_dev_s *devp)
+{
+	if (devp->h_active >= 3800 && devp->v_active >= 2100)
+		return true;
+	else
+		return false;
+}
+
+bool vdin_is_hdr_signal_in(struct vdin_dev_s *devp)
+{
+	if (devp->prop.hdr_info.hdr_state == HDR_STATE_GET)
+		return true;
+	else
+		return false;
 }
 
 bool vdin_is_dolby_signal_in(struct vdin_dev_s *devp)
@@ -4871,6 +4874,16 @@ void vdin_dolby_de_tunnel_to_12bit(struct vdin_dev_s *devp,
 		wr(offset, VDIN_RO_WRMIF_STATUS, data32);
 }
 
+static int vdin_get_max_buf(struct vdin_dev_s *devp)
+{
+	if (!devp) {
+		pr_err("devp is NULL\n");
+		return -1;
+	}
+
+	return devp->frame_buff_num;
+}
+
 int vdin_event_cb(int type, void *data, void *op_arg)
 {
 	unsigned long flags;
@@ -4964,7 +4977,10 @@ int vdin_event_cb(int type, void *data, void *op_arg)
 			pr_info("%s(type 0x%x vdin%d) afbce_mode: %d, vpp_cnt: %d\n",
 				__func__, type, devp->index,
 				devp->afbce_mode, *cnt);
+	} else if (type & VFRAME_EVENT_RECEIVER_BUF_COUNT) {
+		*(int *)data = vdin_get_max_buf(devp);
 	}
+
 	return 0;
 }
 
@@ -5059,7 +5075,7 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 
 	if (devp->prop.hdr_info.hdr_state == HDR_STATE_GET) {
 		if (vdin_hdr_sei_error_check(devp) == 1) {
-			devp->prop.vdin_hdr_Flag = false;
+			devp->prop.vdin_hdr_flag = false;
 			vf_dp->present_flag = false;
 			vf->signal_type &= ~(1 << 29);
 			vf->signal_type &= ~(1 << 25);
@@ -5124,11 +5140,11 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 					(vf->signal_type & (~0xFF00)));
 			}
 
-			devp->prop.vdin_hdr_Flag = true;
+			devp->prop.vdin_hdr_flag = true;
 		}
 			devp->prop.hdr_info.hdr_state = HDR_STATE_SET;
 	} else if (devp->prop.hdr_info.hdr_state == HDR_STATE_NULL) {
-		devp->prop.vdin_hdr_Flag = false;
+		devp->prop.vdin_hdr_flag = false;
 		vf_dp->present_flag = false;
 		vf->signal_type &= ~(1 << 29);
 		vf->signal_type &= ~(1 << 25);
@@ -5162,14 +5178,14 @@ void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
 		else
 			devp->dv.chg_cnt = 0;
 
-		if (devp->prop.vdin_hdr_Flag != devp->pre_prop.vdin_hdr_Flag)
+		if (devp->prop.vdin_hdr_flag != devp->pre_prop.vdin_hdr_flag)
 			devp->prop.hdr_info.hdr_check_cnt++;
 		else
 			devp->prop.hdr_info.hdr_check_cnt = 0;
 
 		if (vdin_isr_monitor)
 			pr_info("dv:%d, hdr:%d\n", devp->prop.dolby_vision,
-				devp->prop.vdin_hdr_Flag);
+				devp->prop.vdin_hdr_flag);
 	}
 
 	if (color_range_force)
@@ -5182,15 +5198,10 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 	struct tvin_state_machine_ops_s *sm_ops;
 	enum tvin_port_e port = TVIN_PORT_NULL;
 	struct tvin_sig_property_s *prop;
-	/*enum tvin_color_fmt_e color_format;*/
 
 	if (!devp)
 		return;
 
-	if (devp->color_depth_config & COLOR_DEEPS_MANUAL)
-		return;
-
-	devp->color_depth_config = COLOR_DEEPS_AUTO;
 	port = devp->parm.port;
 	if ((port < TVIN_PORT_HDMI0) || (port > TVIN_PORT_HDMI7))
 		return;
@@ -5203,25 +5214,7 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 				devp->index,
 				devp->prop.hdr_info.hdr_data.eotf,
 				devp->prop.hdr_info.hdr_state);
-		if (devp->prop.hdr_info.hdr_state == HDR_STATE_GET) {
-			devp->prop.vdin_hdr_Flag = true;
-			if (vdin_is_dolby_tunnel_444_input(devp))
-				return;
-
-			if ((devp->prop.hdr_info.hdr_data.eotf ==
-					EOTF_HDR) ||
-				(devp->prop.hdr_info.hdr_data.eotf ==
-					EOTF_SMPTE_ST_2048) ||
-				(devp->prop.hdr_info.hdr_data.eotf ==
-					EOTF_HLG)) {
-				devp->color_depth_config =
-					COLOR_DEEPS_10BIT;
-				pr_info("vdin is hdr mode,force 10bit\n");
-			}
-		} else {
-			devp->prop.vdin_hdr_Flag = false;
-		}
-		/*devp->prop.hdr_info.hdr_data.eotf = 0;*/
+		devp->prop.vdin_hdr_flag = vdin_is_hdr_signal_in(devp);
 	}
 }
 

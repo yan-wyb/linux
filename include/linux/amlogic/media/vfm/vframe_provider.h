@@ -34,13 +34,14 @@ struct vframe_states {
 #define VFRAME_EVENT_RECEIVER_PUT               0x02
 #define VFRAME_EVENT_RECEIVER_FRAME_WAIT        0x04
 #define VFRAME_EVENT_RECEIVER_POS_CHANGED       0x08
-#define VFRAME_EVENT_RECEIVER_PARAM_SET			0x10
-#define VFRAME_EVENT_RECEIVER_RESET				0x20
-#define VFRAME_EVENT_RECEIVER_FORCE_UNREG			0x40
-#define VFRAME_EVENT_RECEIVER_GET_AUX_DATA			0x80
-#define VFRAME_EVENT_RECEIVER_DISP_MODE				0x100
-#define VFRAME_EVENT_RECEIVER_DOLBY_BYPASS_EL		0x200
-#define VFRAME_EVENT_RECEIVER_NEED_NO_COMP		0x400
+#define VFRAME_EVENT_RECEIVER_PARAM_SET		0x10
+#define VFRAME_EVENT_RECEIVER_RESET		0x20
+#define VFRAME_EVENT_RECEIVER_FORCE_UNREG	0x40
+#define VFRAME_EVENT_RECEIVER_GET_AUX_DATA	0x80
+#define VFRAME_EVENT_RECEIVER_DISP_MODE		0x100
+#define VFRAME_EVENT_RECEIVER_DOLBY_BYPASS_EL	0x200
+#define VFRAME_EVENT_RECEIVER_NEED_NO_COMP	0x400
+#define VFRAME_EVENT_RECEIVER_BUF_COUNT		0x800
 
 	/* for VFRAME_EVENT_RECEIVER_GET_AUX_DATA*/
 struct provider_aux_req_s {
@@ -54,6 +55,7 @@ struct provider_aux_req_s {
 	int low_latency;
 	struct tvin_dv_vsif_s dv_vsif;/*dolby vsi info*/
 };
+
 struct provider_disp_mode_req_s {
 	/*input*/
 	struct vframe_s *vf;

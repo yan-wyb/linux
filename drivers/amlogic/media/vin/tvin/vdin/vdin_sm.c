@@ -221,8 +221,8 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		/*cur_dest_color_fmt = prop->dest_cfmt;*/
 		/*pre_dest_color_fmt = pre_prop->dest_cfmt;*/
 
-		vdin_hdr_flag = prop->vdin_hdr_Flag;
-		pre_vdin_hdr_flag = pre_prop->vdin_hdr_Flag;
+		vdin_hdr_flag = prop->vdin_hdr_flag;
+		pre_vdin_hdr_flag = pre_prop->vdin_hdr_flag;
 		if (vdin_hdr_flag != pre_vdin_hdr_flag) {
 			if (prop->hdr_info.hdr_check_cnt >=
 			    vdin_hdr_chg_cnt) {
@@ -236,7 +236,7 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 						__func__,
 						signal_chg, pre_vdin_hdr_flag,
 						vdin_hdr_flag);
-				pre_prop->vdin_hdr_Flag = prop->vdin_hdr_Flag;
+				pre_prop->vdin_hdr_flag = prop->vdin_hdr_flag;
 			}
 		}
 
@@ -379,7 +379,7 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 	/* check HDR/HLG begin */
 	if (prop->hdr_info.hdr_state == HDR_STATE_GET) {
 		if (vdin_hdr_sei_error_check(devp) == 1) {
-			devp->prop.vdin_hdr_Flag = false;
+			devp->prop.vdin_hdr_flag = false;
 			signal_type &= ~(1 << 29);
 			signal_type &= ~(1 << 25);
 			/* default is bt709,if change need sync */
@@ -387,7 +387,7 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 				       (signal_type & (~0xFF0000)));
 			signal_type = ((1 << 8) | (signal_type & (~0xFF00)));
 		} else {
-			devp->prop.vdin_hdr_Flag = true;
+			devp->prop.vdin_hdr_flag = true;
 			if ((prop->hdr_info.hdr_data.eotf ==
 			    EOTF_SMPTE_ST_2048) ||
 			    (prop->hdr_info.hdr_data.eotf == EOTF_HDR)) {
@@ -420,7 +420,7 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 			}
 		}
 	} else if (prop->hdr_info.hdr_state == HDR_STATE_NULL) {
-		devp->prop.vdin_hdr_Flag = false;
+		devp->prop.vdin_hdr_flag = false;
 		signal_type &= ~(1 << 29);
 		signal_type &= ~(1 << 25);
 		signal_type |= (0 << 25);/* 0:limit */
@@ -432,7 +432,7 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 
 	/* check HDR 10+ begin */
 	if (prop->hdr10p_info.hdr10p_on) {
-		devp->prop.vdin_hdr_Flag = true;
+		devp->prop.vdin_hdr_flag = true;
 
 		signal_type |= (1 << 29);/* present_flag */
 		signal_type |= (0 << 25);/* 0:limited */

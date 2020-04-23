@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0428: remove free_irq from tvstop command"
+#define VDIN_VER "ver:2020-0507: increase buf to 10"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -127,7 +127,6 @@ struct match_data_s {
 #define VDIN_BYPASS_STOP_CHECK          0x00000001
 #define VDIN_BYPASS_CYC_CHECK           0x00000002
 #define VDIN_BYPASS_VGA_CHECK           0x00000008
-#define VDIN_CANVAS_MAX_CNT	10
 
 /*values of vdin game mode process flag */
 /*enable*/
@@ -394,6 +393,7 @@ struct vdin_dev_s {
 	unsigned int vfmem_size;
 	unsigned int vfmem_size_small;/* double write use */
 	unsigned int vfmem_max_cnt;
+	unsigned int frame_buff_num;
 
 	unsigned int h_active;
 	unsigned int v_active;

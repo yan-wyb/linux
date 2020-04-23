@@ -228,6 +228,7 @@ void vdin_set_mif_onoff(struct vdin_dev_s *devp, unsigned int rdma_enable);
 void vdin_vs_proc_monitor(struct vdin_dev_s *devp);
 enum tvin_color_fmt_range_e tvin_get_force_fmt_range(
 	enum tvin_color_fmt_e color_fmt);
-
+bool vdin_is_convert_to_444(u32 format_convert);
+bool vdin_is_4k(struct vdin_dev_s *devp);
 #endif
 
