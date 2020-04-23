@@ -2063,7 +2063,16 @@ static bool is_meson_txlx_stbmode(void)
 
 static bool is_meson_tm2(void)
 {
-	if (dv_meson_dev.cpu_id == _CPU_MAJOR_ID_TM2)
+	if (dv_meson_dev.cpu_id == _CPU_MAJOR_ID_TM2 ||
+		dv_meson_dev.cpu_id == _CPU_MAJOR_ID_TM2_REVB)
+		return true;
+	else
+		return false;
+}
+
+static bool is_meson_tm2_revb(void)
+{
+	if (dv_meson_dev.cpu_id == _CPU_MAJOR_ID_TM2_REVB)
 		return true;
 	else
 		return false;
@@ -2714,11 +2723,27 @@ static int tv_dolby_core1_set(
 	if (is_meson_tm2()) {
 		/* mempd for ipcore */
 		if (is_meson_tm2_stbmode()) {
-			switch_vpu_mem_pd_vmod(VPU_DOLBY0, VPU_MEM_POWER_DOWN);
+			if (get_vpu_mem_pd_vmod(VPU_DOLBY0) ==
+			    VPU_MEM_POWER_ON)
+				dv_mem_power_off(VPU_DOLBY0);
 			VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7, 0x1ef, 4, 9);
+			if (is_meson_tm2_revb()) {
+				/* comp off, mempd off */
+				VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7,
+						     0xf, 14, 4);
+			}
 		} else {
-			switch_vpu_mem_pd_vmod(VPU_DOLBY0, VPU_MEM_POWER_ON);
+			if (get_vpu_mem_pd_vmod(VPU_DOLBY0) ==
+				VPU_MEM_POWER_DOWN ||
+				get_dv_mem_power_flag(VPU_DOLBY0) ==
+				VPU_MEM_POWER_DOWN)
+				dv_mem_power_on(VPU_DOLBY0);
 			VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7, 0, 4, 9);
+			if (is_meson_tm2_revb()) {
+				/* comp on, mempd on */
+				VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7,
+						     0, 14, 4);
+			}
 		}
 	}
 	WRITE_VPP_DV_REG(
@@ -2763,11 +2788,6 @@ static int tv_dolby_core1_set(
 		VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL6, 0, 29, 1);
 	/* input 12 or 10 bit */
 	VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7, 12, 0, 4);
-
-	if (is_meson_rev_b() && is_meson_tm2()) {
-		/* comp on, mempd on */
-		VSYNC_WR_DV_REG_BITS(DOLBY_TV_SWAP_CTRL7, 0, 14, 4);
-	}
 
 	if (el_enable && (dolby_vision_mask & 1))
 		VSYNC_WR_DV_REG_BITS(
@@ -3033,11 +3053,15 @@ static int dolby_core1_set(
 	}
 
 	if (is_meson_tm2_stbmode() || is_meson_g12()) {
-		switch_vpu_mem_pd_vmod(
-			VPU_DOLBY1A, VPU_MEM_POWER_ON);
-		switch_vpu_mem_pd_vmod(
-			VPU_PRIME_DOLBY_RAM,
-			VPU_MEM_POWER_ON);
+		if (get_vpu_mem_pd_vmod(VPU_DOLBY1A) == VPU_MEM_POWER_DOWN ||
+			get_dv_mem_power_flag(VPU_DOLBY1A) ==
+			VPU_MEM_POWER_DOWN)
+			dv_mem_power_on(VPU_DOLBY1A);
+		if (get_vpu_mem_pd_vmod(VPU_PRIME_DOLBY_RAM) ==
+			VPU_MEM_POWER_DOWN ||
+			get_dv_mem_power_flag(VPU_PRIME_DOLBY_RAM) ==
+			VPU_MEM_POWER_DOWN)
+			dv_mem_power_on(VPU_PRIME_DOLBY_RAM);
 	}
 	VSYNC_WR_DV_REG(DOLBY_CORE1_CLKGATE_CTRL, 0);
 	/* VSYNC_WR_DV_REG(DOLBY_CORE1_SWAP_CTRL0, 0); */
@@ -3053,8 +3077,10 @@ static int dolby_core1_set(
 	VSYNC_WR_DV_REG(DOLBY_CORE1_REG_START + 2, 1);
 
 	if (dolby_copy_core1s0) {
-		switch_vpu_mem_pd_vmod(
-			VPU_DOLBY1B, VPU_MEM_POWER_ON);
+		if (get_vpu_mem_pd_vmod(VPU_DOLBY1B) == VPU_MEM_POWER_DOWN ||
+			get_dv_mem_power_flag(VPU_DOLBY1B) ==
+			VPU_MEM_POWER_DOWN)
+			dv_mem_power_on(VPU_DOLBY1B);
 		VSYNC_WR_DV_REG(DOLBY_CORE1_1_CLKGATE_CTRL, 0);
 		/* VSYNC_WR_DV_REG(DOLBY_CORE1_SWAP_CTRL0, 0); */
 		VSYNC_WR_DV_REG(DOLBY_CORE1_1_SWAP_CTRL1,
@@ -3355,9 +3381,11 @@ static int dolby_core2_set(
 
 	if (stb_core_setting_update_flag & FLAG_CHANGE_TC2)
 		set_lut = true;
-	if (is_meson_tm2_stbmode() || is_meson_g12())
-		switch_vpu_mem_pd_vmod(
-			VPU_DOLBY2, VPU_MEM_POWER_ON);
+	if (is_meson_tm2_stbmode() || is_meson_g12()) {
+		if (get_vpu_mem_pd_vmod(VPU_DOLBY2) == VPU_MEM_POWER_DOWN ||
+			get_dv_mem_power_flag(VPU_DOLBY2) == VPU_MEM_POWER_DOWN)
+			dv_mem_power_on(VPU_DOLBY2);
+	}
 
 	VSYNC_WR_DV_REG(DOLBY_CORE2A_CLKGATE_CTRL, 0);
 	VSYNC_WR_DV_REG(DOLBY_CORE2A_SWAP_CTRL0, 0);
@@ -3658,9 +3686,14 @@ static int dolby_core3_set(
 		enable_rgb_to_yuv_matrix_for_dvll(
 			1, &p_core3_dm_regs[18], 12);
 #endif
-	if (is_meson_tm2_stbmode() || is_meson_g12())
-		switch_vpu_mem_pd_vmod(
-			VPU_DOLBY_CORE3, VPU_MEM_POWER_ON);
+	if (is_meson_tm2_stbmode() || is_meson_g12()) {
+		if (get_vpu_mem_pd_vmod(VPU_DOLBY_CORE3) ==
+			VPU_MEM_POWER_DOWN ||
+			get_dv_mem_power_flag(VPU_DOLBY_CORE3) ==
+			VPU_MEM_POWER_DOWN)
+			dv_mem_power_on(VPU_DOLBY_CORE3);
+	}
+
 	VSYNC_WR_DV_REG(DOLBY_CORE3_CLKGATE_CTRL, 0);
 	VSYNC_WR_DV_REG(DOLBY_CORE3_SWAP_CTRL1,
 		((hsize + htotal_add) << 16)
@@ -4329,9 +4362,7 @@ void enable_dolby_vision(int enable)
 						VSYNC_WR_DV_REG(
 							DOLBY_TV_CLKGATE_CTRL,
 							0x55555555);
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY0,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY0);
 						dolby_vision_core1_on = false;
 					}
 				}
@@ -4526,12 +4557,9 @@ void enable_dolby_vision(int enable)
 							DOLBY_PATH_CTRL,
 							1,
 							0, 1); /* core1 off */
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY1A,
-							VPU_MEM_POWER_DOWN);
-						switch_vpu_mem_pd_vmod(
-							VPU_PRIME_DOLBY_RAM,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY1A);
+						dv_mem_power_off(
+							VPU_PRIME_DOLBY_RAM);
 						VSYNC_WR_DV_REG(
 						DOLBY_CORE1_CLKGATE_CTRL,
 							0x55555455);
@@ -4573,12 +4601,9 @@ void enable_dolby_vision(int enable)
 							DOLBY_PATH_CTRL,
 							3,
 							0, 2); /* core1 off */
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY1A,
-							VPU_MEM_POWER_DOWN);
-						switch_vpu_mem_pd_vmod(
-							VPU_PRIME_DOLBY_RAM,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY1A);
+						dv_mem_power_off(
+							VPU_PRIME_DOLBY_RAM);
 						VSYNC_WR_DV_REG(
 						DOLBY_CORE1_CLKGATE_CTRL,
 							0x55555455);
@@ -4590,12 +4615,9 @@ void enable_dolby_vision(int enable)
 							DOLBY_PATH_CTRL,
 							3,
 							0, 2); /* core1 off */
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY1A,
-							VPU_MEM_POWER_DOWN);
-						switch_vpu_mem_pd_vmod(
-							VPU_PRIME_DOLBY_RAM,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY1A);
+						dv_mem_power_off(
+							VPU_PRIME_DOLBY_RAM);
 						VSYNC_WR_DV_REG(
 						DOLBY_CORE1_CLKGATE_CTRL,
 							0x55555455);
@@ -4770,12 +4792,9 @@ void enable_dolby_vision(int enable)
 						VSYNC_WR_DV_REG_BITS(
 							DOLBY_PATH_CTRL,
 							3, 0, 2);
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY1A,
-							VPU_MEM_POWER_DOWN);
-						switch_vpu_mem_pd_vmod(
-							VPU_PRIME_DOLBY_RAM,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY1A);
+						dv_mem_power_off(
+							VPU_PRIME_DOLBY_RAM);
 						VSYNC_WR_DV_REG(
 						DOLBY_CORE1_CLKGATE_CTRL,
 							0x55555455);
@@ -4817,20 +4836,14 @@ void enable_dolby_vision(int enable)
 					VSYNC_WR_DV_REG_BITS(
 						DOLBY_PATH_CTRL,
 						3, 0, 2);
-					switch_vpu_mem_pd_vmod(
-						VPU_DOLBY1A,
-						VPU_MEM_POWER_DOWN);
-					switch_vpu_mem_pd_vmod(
-						VPU_PRIME_DOLBY_RAM,
-						VPU_MEM_POWER_DOWN);
+					dv_mem_power_off(VPU_DOLBY1A);
+					dv_mem_power_off(VPU_PRIME_DOLBY_RAM);
 					VSYNC_WR_DV_REG(
 						DOLBY_CORE1_CLKGATE_CTRL,
 						0x55555455);
 					if (is_meson_tm2_stbmode()) {
 						/* core1b */
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY1B,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY1B);
 						VSYNC_WR_DV_REG(
 						DOLBY_CORE1_1_CLKGATE_CTRL,
 							0x55555455);
@@ -4841,10 +4854,14 @@ void enable_dolby_vision(int enable)
 						VSYNC_WR_DV_REG(
 							DOLBY_TV_CLKGATE_CTRL,
 							0x55555455);
-						switch_vpu_mem_pd_vmod(
-							VPU_DOLBY0,
-							VPU_MEM_POWER_DOWN);
+						dv_mem_power_off(VPU_DOLBY0);
 					}
+					/*revb comp off, mempd off */
+					if (is_meson_tm2_stbmode() &&
+					    is_meson_tm2_revb())
+						VSYNC_WR_DV_REG_BITS(
+							DOLBY_TV_SWAP_CTRL7,
+							0xf, 14, 4);
 					hdr_vd1_off();
 				} else if (is_meson_tm2_tvmode()) {
 					/* disable coretv */
@@ -4856,12 +4873,15 @@ void enable_dolby_vision(int enable)
 					VSYNC_WR_DV_REG_BITS(
 						DOLBY_TV_SWAP_CTRL7,
 						0x1ef, 4, 9);
+					/*revb comp off, mempd off */
+					if (is_meson_tm2_revb())
+						VSYNC_WR_DV_REG_BITS(
+							DOLBY_TV_SWAP_CTRL7,
+							0xf, 14, 4);
 					VSYNC_WR_DV_REG(
 						DOLBY_TV_CLKGATE_CTRL,
 						0x55555455);
-					switch_vpu_mem_pd_vmod(
-						VPU_DOLBY0,
-						VPU_MEM_POWER_DOWN);
+					dv_mem_power_off(VPU_DOLBY0);
 				} else
 					VSYNC_WR_DV_REG_BITS(
 						VIU_MISC_CTRL1,
@@ -4894,12 +4914,16 @@ void enable_dolby_vision(int enable)
 					VSYNC_WR_DV_REG_BITS(
 						DOLBY_TV_SWAP_CTRL7,
 						0x1ef, 4, 9);
+					if (is_meson_tm2_revb()) {
+						/* comp off, mempd off */
+						VSYNC_WR_DV_REG_BITS(
+						DOLBY_TV_SWAP_CTRL7,
+						0xf, 14, 4);
+					}
 					VSYNC_WR_DV_REG(
 						DOLBY_TV_CLKGATE_CTRL,
 						0x55555555);
-					switch_vpu_mem_pd_vmod(
-						VPU_DOLBY0,
-						VPU_MEM_POWER_DOWN);
+					dv_mem_power_off(VPU_DOLBY0);
 				}
 #ifdef V1_5
 #ifdef V1_6_1
@@ -4985,46 +5009,40 @@ void enable_dolby_vision(int enable)
 				VSYNC_WR_DV_REG(
 					DOLBY_CORE1_CLKGATE_CTRL,
 					0x55555455);
-				switch_vpu_mem_pd_vmod(
-					VPU_DOLBY1A,
-					VPU_MEM_POWER_DOWN);
-				switch_vpu_mem_pd_vmod(
-					VPU_PRIME_DOLBY_RAM,
-					VPU_MEM_POWER_DOWN);
+				dv_mem_power_off(VPU_DOLBY1A);
+				dv_mem_power_off(VPU_PRIME_DOLBY_RAM);
 				/* core2 */
 				VSYNC_WR_DV_REG(
 					DOLBY_CORE2A_CLKGATE_CTRL,
 					0x55555555);
-				switch_vpu_mem_pd_vmod(
-					VPU_DOLBY2,
-					VPU_MEM_POWER_DOWN);
+				dv_mem_power_off(VPU_DOLBY2);
 				/* core3 */
 				VSYNC_WR_DV_REG(
 					DOLBY_CORE3_CLKGATE_CTRL,
 					0x55555555);
-				switch_vpu_mem_pd_vmod(
-					VPU_DOLBY_CORE3,
-					VPU_MEM_POWER_DOWN);
+				dv_mem_power_off(VPU_DOLBY_CORE3);
 				if (is_meson_tm2_stbmode()) {
 					/* core1b */
 					VSYNC_WR_DV_REG(
 						DOLBY_CORE1_1_CLKGATE_CTRL,
 						0x55555555);
-					switch_vpu_mem_pd_vmod(
-						VPU_DOLBY1B,
-						VPU_MEM_POWER_DOWN);
+					dv_mem_power_off(VPU_DOLBY1B);
 					/* tv core */
 					VSYNC_WR_DV_REG(DOLBY_TV_AXI2DMA_CTRL0,
 						0x01000042);
 					VSYNC_WR_DV_REG_BITS(
 						DOLBY_TV_SWAP_CTRL7,
 						0x1ef, 4, 9);
+					if (is_meson_tm2_revb()) {
+						/* comp off, mempd off */
+						VSYNC_WR_DV_REG_BITS
+						(DOLBY_TV_SWAP_CTRL7,
+						0xf, 14, 4);
+					}
 					VSYNC_WR_DV_REG(
 						DOLBY_TV_CLKGATE_CTRL,
 						0x55555555);
-					switch_vpu_mem_pd_vmod(
-						VPU_DOLBY0,
-						VPU_MEM_POWER_DOWN);
+					dv_mem_power_off(VPU_DOLBY0);
 				}
 #ifdef V2_4
 				if (p_funcs_stb) /* destroy ctx */
@@ -12009,26 +12027,18 @@ unsigned int dolby_vision_check_enable(void)
 			dolby_vision_target_mode = dolby_vision_mode;
 		} else {
 			/* core1a */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY1A,
-				VPU_MEM_POWER_DOWN);
-			switch_vpu_mem_pd_vmod(
-				VPU_PRIME_DOLBY_RAM,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY1A);
+			dv_mem_power_off(VPU_PRIME_DOLBY_RAM);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE1_CLKGATE_CTRL,
 				0x55555455);
 			/* core2 */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY2,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY2);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE2A_CLKGATE_CTRL,
 				0x55555555);
 			/* core3 */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY_CORE3,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY_CORE3);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE3_CLKGATE_CTRL,
 				0x55555555);
@@ -12037,33 +12047,23 @@ unsigned int dolby_vision_check_enable(void)
 	} else if (is_meson_tm2()) {
 		if (!dolby_vision_on_in_uboot) {
 			/* core1a */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY1A,
-				VPU_MEM_POWER_DOWN);
-			switch_vpu_mem_pd_vmod(
-				VPU_PRIME_DOLBY_RAM,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY1A);
+			dv_mem_power_off(VPU_PRIME_DOLBY_RAM);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE1_CLKGATE_CTRL,
 				0x55555455);
 			/* core1b */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY1B,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY1B);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE1_1_CLKGATE_CTRL,
 				0x55555455);
 			/* core2 */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY2,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY2);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE2A_CLKGATE_CTRL,
 				0x55555555);
 			/* core3 */
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY_CORE3,
-				VPU_MEM_POWER_DOWN);
+			dv_mem_power_off(VPU_DOLBY_CORE3);
 			VSYNC_WR_DV_REG(
 				DOLBY_CORE3_CLKGATE_CTRL,
 				0x55555555);
@@ -12073,9 +12073,12 @@ unsigned int dolby_vision_check_enable(void)
 			VSYNC_WR_DV_REG_BITS(
 				DOLBY_TV_SWAP_CTRL7,
 				0x1ef, 4, 9);
-			switch_vpu_mem_pd_vmod(
-				VPU_DOLBY0,
-				VPU_MEM_POWER_DOWN);
+			if (is_meson_tm2_revb()) {
+				/* comp off, mempd off */
+				VSYNC_WR_DV_REG_BITS(
+					DOLBY_TV_SWAP_CTRL7, 0xf, 14, 4);
+			}
+			dv_mem_power_off(VPU_DOLBY0);
 			VSYNC_WR_DV_REG(
 				DOLBY_TV_CLKGATE_CTRL,
 				0x55555555);
@@ -12325,6 +12328,9 @@ static struct dv_device_data_s dolby_vision_tm2 = {
 	.cpu_id = _CPU_MAJOR_ID_TM2,
 };
 
+static struct dv_device_data_s dolby_vision_tm2_revb = {
+	.cpu_id = _CPU_MAJOR_ID_TM2_REVB,
+};
 
 static const struct of_device_id amlogic_dolby_vision_match[] = {
 	{
@@ -12350,6 +12356,10 @@ static const struct of_device_id amlogic_dolby_vision_match[] = {
 	{
 		.compatible = "amlogic, dolby_vision_tm2",
 		.data = &dolby_vision_tm2,
+	},
+	{
+		.compatible = "amlogic, dolby_vision_tm2_revb",
+		.data = &dolby_vision_tm2_revb,
 	},
 	{},
 };
