@@ -1674,7 +1674,3 @@
 		};
 	};
 };
-
-&dummy_venc {
-	status = "okay";
-};
