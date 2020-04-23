@@ -1706,6 +1706,7 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 					READ_MPEG_REG(SCR_HIU));
 
 				timestamp_vpts_set(vf->pts);
+				timestamp_vpts_set_u64(vf->pts_us64);
 				last_frame_duration = vf->duration;
 			} else if (last_frame_duration) {
 				amlog_mask(
@@ -1718,12 +1719,15 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 
 				timestamp_vpts_inc(
 					DUR2PTS(last_frame_duration));
+				timestamp_vpts_inc_u64(
+					DUR2PTS(last_frame_duration));
 
 				vpts_remainder +=
 					DUR2PTS_RM(last_frame_duration);
 				if (vpts_remainder >= 0xf) {
 					vpts_remainder -= 0xf;
 					timestamp_vpts_inc(-1);
+					timestamp_vpts_inc_u64(-1);
 				}
 			}
 			if (vf->type & VIDTYPE_COMPRESS) {
@@ -1822,6 +1826,7 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 				vf->pts, timestamp_pcrscr_get(),
 				READ_MPEG_REG(SCR_HIU));
 				timestamp_vpts_set(vf->pts);
+				timestamp_vpts_set_u64(vf->pts_us64);
 		} else if (cur_dispbuf) {
 			amlog_mask(
 				LOG_MASK_TIMESTAMP,
@@ -1833,12 +1838,15 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 
 			timestamp_vpts_inc(
 				DUR2PTS(cur_dispbuf->duration));
+			timestamp_vpts_inc_u64(
+				DUR2PTS(cur_dispbuf->duration));
 
 			vpts_remainder +=
 				DUR2PTS_RM(cur_dispbuf->duration);
 			if (vpts_remainder >= 0xf) {
 				vpts_remainder -= 0xf;
 				timestamp_vpts_inc(-1);
+				timestamp_vpts_inc_u64(-1);
 			}
 		}
 		vf->type_backup = vf->type;
@@ -2539,6 +2547,7 @@ static inline bool video_vf_dirty_put(struct vframe_s *vf)
 			vf->pts, timestamp_pcrscr_get(),
 			READ_MPEG_REG(SCR_HIU));
 			timestamp_vpts_set(vf->pts);
+			timestamp_vpts_set_u64(vf->pts_us64);
 		} else if (cur_dispbuf) {
 			amlog_mask(LOG_MASK_TIMESTAMP,
 			"vpts inc:0x%x,scr: 0x%x, abs_scr: 0x%x\n",
@@ -2548,12 +2557,15 @@ static inline bool video_vf_dirty_put(struct vframe_s *vf)
 			READ_MPEG_REG(SCR_HIU));
 			timestamp_vpts_inc(
 				DUR2PTS(cur_dispbuf->duration));
+			timestamp_vpts_inc_u64(
+				DUR2PTS(cur_dispbuf->duration));
 
 			vpts_remainder +=
 				DUR2PTS_RM(cur_dispbuf->duration);
 			if (vpts_remainder >= 0xf) {
 				vpts_remainder -= 0xf;
 				timestamp_vpts_inc(-1);
+				timestamp_vpts_inc_u64(-1);
 			}
 		}
 	}
@@ -2909,6 +2921,8 @@ int hdmi_in_start_check(struct vframe_s *vf)
 {
 	int expire;
 	int vsync_duration = 0;
+	u64 pts;
+	u64 us;
 
 	if (hdmin_delay_start == 0)
 		return 0;
@@ -2956,6 +2970,11 @@ int hdmi_in_start_check(struct vframe_s *vf)
 
 	/*reset vpts = pcr will lead vpts_expire delay two vsync*/
 	timestamp_vpts_set(timestamp_pcrscr_get() - 2 * DUR2PTS(vf->duration));
+	pts = (u64)timestamp_pcrscr_get();
+	pts = pts - (2 * DUR2PTS(vf->duration));
+	us = div64_u64(pts * 100, 9);
+	timestamp_vpts_set_u64(us);
+
 	return 0;
 }
 

@@ -828,6 +828,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		tsync_stat = TSYNC_STAT_PCRSCR_SETUP_NONE;
 		tsync_set_av_state(0, 3);
 		timestamp_vpts_set(0);
+		timestamp_vpts_set_u64(0);
 		timestamp_pcrscr_set(0);
 		timestamp_pcrscr_enable(0);
 		timestamp_firstvpts_set(0);
@@ -1589,6 +1590,15 @@ static ssize_t show_vpts(struct class *class,
 	return sprintf(buf, "0x%x\n", timestamp_vpts_get());
 }
 
+static ssize_t show_vpts_u64(struct class *class,
+			     struct class_attribute *attr, char *buf)
+{
+	u64 pts_val;
+
+	pts_val = div64_u64(timestamp_vpts_get_u64() * 9, 100);
+	return sprintf(buf, "0x%llx\n", pts_val);
+}
+
 static ssize_t store_vpts(struct class *class,
 		struct class_attribute *attr,
 		const char *buf, size_t size)
@@ -1616,6 +1626,15 @@ static ssize_t show_apts(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
 	return sprintf(buf, "0x%x\n", timestamp_apts_get());
+}
+
+static ssize_t show_apts_u64(struct class *class,
+			     struct class_attribute *attr, char *buf)
+{
+	u64 pts_val;
+
+	pts_val = div64_u64(timestamp_apts_get_u64() * 9, 100);
+	return sprintf(buf, "0x%llx\n", pts_val);
 }
 
 static ssize_t store_apts(struct class *class,
@@ -1667,6 +1686,15 @@ static ssize_t show_pcrscr(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
 	return sprintf(buf, "0x%x\n", timestamp_pcrscr_get());
+}
+
+static ssize_t show_pcrscr_u64(struct class *class,
+			       struct class_attribute *attr, char *buf)
+{
+	u64 pts_val;
+
+	pts_val = div64_u64(timestamp_pcrscr_get_u64() * 9, 100);
+	return sprintf(buf, "0x%llx\n", pts_val);
 }
 
 static ssize_t show_aptscheckin_flag(struct class *class,
@@ -2147,11 +2175,14 @@ static ssize_t store_startsync_mode(struct class *class,
 
 static struct class_attribute tsync_class_attrs[] = {
 	__ATTR(pts_video, 0664, show_vpts, store_vpts),
+	__ATTR(pts_video_u64, 0664, show_vpts_u64, NULL),
 	__ATTR(pts_audio, 0664, show_apts, store_apts),
+	__ATTR(pts_audio_u64, 0664, show_apts_u64, NULL),
 	__ATTR(dobly_av_sync, 0664, dobly_show_sync,
 	dobly_store_sync),
 	__ATTR(pts_pcrscr, 0664, show_pcrscr,
 	store_pcrscr),
+	__ATTR(pts_pcrscr_u64, 0664, show_pcrscr_u64, NULL),
 	__ATTR(apts_checkin_flag, 0664, show_aptscheckin_flag, NULL),
 	__ATTR(event, 0664, NULL, store_event),
 	__ATTR(mode, 0664, show_mode, store_mode),
@@ -2228,6 +2259,7 @@ int tsync_store_fun(const char *trigger, int id, const char *buf, int size)
 	case 19:return store_startsync_mode(NULL, NULL, buf, size);
 	case 20:return store_firstapts(NULL, NULL, buf, size);
 	case 21:return -1;
+	case 22:return -1;
 	default:
 		ret = -1;
 	}
@@ -2314,6 +2346,15 @@ int tsync_show_fun(const char *trigger, int id, char *sbuf, int size)
 	case 21:
 		ret = show_checkin_firstvpts(NULL, NULL, buf);
 		break;
+	case 22:
+		ret = show_vpts_u64(NULL, NULL, buf);
+		break;
+	case 23:
+		ret = show_apts_u64(NULL, NULL, buf);
+		break;
+	case 24:
+		ret = show_pcrscr_u64(NULL, NULL, buf);
+		break;
 	default:
 		ret = -1;
 	}
@@ -2350,6 +2391,9 @@ static struct mconfig tsync_configs[] = {
 	MC_FUN_ID("startsync_mode", tsync_show_fun, tsync_store_fun, 19),
 	MC_FUN_ID("firstapts", tsync_show_fun, tsync_store_fun, 20),
 	MC_FUN_ID("checkin_firstvpts", tsync_show_fun, NULL, 21),
+	MC_FUN_ID("pts_video_u64", tsync_show_fun, NULL, 22),
+	MC_FUN_ID("pts_audio_u64", tsync_show_fun, NULL, 23),
+	MC_FUN_ID("pts_pcrscr_u64", tsync_show_fun, NULL, 24),
 };
 
 
@@ -2367,6 +2411,7 @@ static int __init tsync_module_init(void)
 	/* init audio pts to -1, others to 0 */
 	timestamp_apts_set(-1);
 	timestamp_vpts_set(0);
+	timestamp_vpts_set_u64(0);
 	timestamp_pcrscr_set(0);
 
 	init_timer(&tsync_pcr_recover_timer);

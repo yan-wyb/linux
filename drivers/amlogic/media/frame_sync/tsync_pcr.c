@@ -1004,6 +1004,7 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 		timestamp_checkin_firstvpts_set(0);
 		timestamp_checkin_firstapts_set(0);
 		timestamp_vpts_set(0);
+		timestamp_vpts_set_u64(0);
 		/* tsync_pcr_debug_pcrscr=100; */
 		tsync_set_av_state(0, 3);
 		tsync_pcr_vpause_flag = 0;
@@ -1449,6 +1450,7 @@ void tsync_pcr_stop(void)
 	timestamp_checkin_firstvpts_set(0);
 	timestamp_checkin_firstapts_set(0);
 	timestamp_vpts_set(0);
+	timestamp_vpts_set_u64(0);
 	timestamp_pcrscr_set(0);
 	timestamp_apts_set(0);
 	timestamp_checkin_firstapts_set(0);
@@ -1873,6 +1875,7 @@ int tsync_pcr_init(void)
 	/* init audio pts to -1, others to 0 */
 	timestamp_apts_set(-1);
 	timestamp_vpts_set(0);
+	timestamp_vpts_set_u64(0);
 	timestamp_pcrscr_set(0);
 	wait_pcr_count = 0;
 	tsync_pcr_debug = 0;

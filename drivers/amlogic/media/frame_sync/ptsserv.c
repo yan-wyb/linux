@@ -475,8 +475,8 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 		if (tsync_get_debug_pts_checkin()) {
 			if (tsync_get_debug_vpts()
 				&& (type == PTS_TYPE_VIDEO)) {
-				pr_info("check in vpts <0x%x:0x%x>,",
-						offset, val);
+				pr_info("check in vpts <0x%x:0x%x>",
+					offset, val);
 				pr_info("current vpts 0x%x\n",
 						timestamp_vpts_get());
 			}
@@ -532,15 +532,20 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 
 		if (pTable->status == PTS_LOADING) {
 			if (tsync_get_debug_vpts() && (type == PTS_TYPE_VIDEO))
-				pr_info("init vpts[%d] at 0x%x\n", type, val);
+				pr_info("init vpts[%d] at 0x%x,0x%llx\n",
+					type, val, rec->pts_uS64);
 
 			if (tsync_get_debug_apts() && (type == PTS_TYPE_AUDIO))
-				pr_info("init apts[%d] at 0x%x\n", type, val);
+				pr_info("init apts[%d] at 0x%x\n",
+					type, val);
 
-			if (type == PTS_TYPE_VIDEO && !tsync_get_tunnel_mode())
+			if (type == PTS_TYPE_VIDEO && !
+			tsync_get_tunnel_mode()) {
 				timestamp_vpts_set(val);
-			else if (type == PTS_TYPE_AUDIO)
+				timestamp_vpts_set_u64(rec->pts_uS64);
+			} else if (type == PTS_TYPE_AUDIO) {
 				timestamp_apts_set(val);
+			}
 
 			pTable->status = PTS_RUNNING;
 		}
@@ -595,6 +600,28 @@ int pts_checkin_wrptr(u8 type, u32 ptr, u32 val)
 			val);
 }
 EXPORT_SYMBOL(pts_checkin_wrptr);
+
+int pts_checkin_wrptr_pts33(u8 type, u32 ptr, u64 pts_val)
+{
+	u32 offset, cur_offset = 0, page = 0, page_no;
+	u64 us;
+
+	if (type >= PTS_TYPE_MAX)
+		return -EINVAL;
+
+	offset = ptr - pts_table[type].buf_start;
+	get_wrpage_offset(type, &page, &cur_offset);
+
+	page_no = (offset > cur_offset) ? (page - 1) : page;
+
+	us = div64_u64(pts_val * 100, 9);
+
+	return pts_checkin_offset_inline(type,
+			pts_table[type].buf_size * page_no + offset,
+			(u32)pts_val,
+			us);
+}
+EXPORT_SYMBOL(pts_checkin_wrptr_pts33);
 
 int pts_checkin(u8 type, u32 val)
 {
@@ -1442,6 +1469,7 @@ int pts_start(u8 type)
 							- pTable->buf_start;
 #endif
 			timestamp_vpts_set(0);
+			timestamp_vpts_set_u64(0);
 			timestamp_pcrscr_set(0);
 			/* video always need the pcrscr,*/
 			/*Clear it to use later */
@@ -1475,6 +1503,7 @@ int pts_start(u8 type)
 				 */
 				/* BUG_ON(pTable->buf_size <= 0x10000); */
 				timestamp_vpts_set(0);
+				timestamp_vpts_set_u64(0);
 				timestamp_pcrscr_set(0);
 				/* video always need the pcrscr, */
 				/*Clear it to use later*/
