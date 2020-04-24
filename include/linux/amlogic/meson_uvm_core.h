@@ -38,6 +38,7 @@ enum uvm_alloc_flag {
 	UVM_IMM_ALLOC,
 	UVM_DELAY_ALLOC,
 	UVM_FAKE_ALLOC,
+	UVM_SECURE_ALLOC,
 };
 
 /**

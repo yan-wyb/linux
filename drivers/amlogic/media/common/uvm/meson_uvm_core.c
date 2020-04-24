@@ -86,6 +86,9 @@ static struct sg_table *meson_uvm_map_dma_buf(
 
 	UVM_PRINTK(1, "meson_uvm_map_dma_buf called, %s.\n", current->comm);
 
+	if (ua->flags & BIT(UVM_SECURE_ALLOC))
+		return sgt;
+
 	if (ua->flags & BIT(UVM_FAKE_ALLOC)) {
 		dma_map_page(attachment->dev, sg_page(sgt->sgl), 0,
 				UVM_FAKE_SIZE, direction);
@@ -111,6 +114,10 @@ static void meson_uvm_unmap_dma_buf(struct dma_buf_attachment *attachment,
 	ua = handle->ua;
 
 	UVM_PRINTK(1, "meson_uvm_unmap_dma_buf called, %s.\n", current->comm);
+
+	if (ua->flags & BIT(UVM_SECURE_ALLOC))
+		return;
+
 	if (ua->flags & BIT(UVM_FAKE_ALLOC))
 		dma_unmap_page(attachment->dev, sgt->sgl->dma_address,
 			UVM_FAKE_SIZE, direction);

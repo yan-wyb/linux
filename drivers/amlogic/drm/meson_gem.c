@@ -625,6 +625,10 @@ struct dma_buf *am_meson_drm_gem_prime_export(struct drm_device *dev,
 
 			if (meson_gem_obj->is_afbc)
 				info.flags |= BIT(UVM_FAKE_ALLOC);
+
+			if (meson_gem_obj->is_secure)
+				info.flags |= BIT(UVM_SECURE_ALLOC);
+
 			info.obj = &meson_gem_obj->ubo;
 			info.free = am_meson_drm_gem_unref_uvm;
 			dmabuf_bind_uvm_alloc(dmabuf, &info);
