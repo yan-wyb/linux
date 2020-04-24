@@ -1415,8 +1415,9 @@ static const char * const tsin_b_groups[] = {
 };
 
 static const char * const tsin_c_groups[] = {
-	"tsin_c_valid", "tsin_c_sop", "tsin_c_din0",
-	"tsin_c_clk",
+	"tsin_c_valid_h", "tsin_c_sop_h", "tsin_c_din0_h",
+	"tsin_c_clk_h",
+
 	"tsin_c_din0_z", "tsin_c_din1_z", "tsin_c_din2_z", "tsin_c_din3_z",
 	"tsin_c_din4_z", "tsin_c_din5_z", "tsin_c_din6_z", "tsin_c_din7_z",
 	"tsin_c_clk_z", "tsin_c_sop_z", "tsin_c_valid_z",
