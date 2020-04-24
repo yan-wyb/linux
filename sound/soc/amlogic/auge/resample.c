@@ -264,6 +264,9 @@ static void new_resample_timer_callback(unsigned long data)
 	int ADJ_diff = (int)new_resample_read(p_resample->id,
 					      AUDIO_RSAMP_RO_ADJ_DIFF_BAK);
 
+	if (p_resample->timer_running == false)
+		return;
+
 	if (ADJ_diff > 100 || ADJ_diff < -100) {
 		pr_debug("reset resample ADJ: [%d]\n", ADJ_diff);
 		new_resample_update_bits(p_resample->id,
@@ -310,8 +313,12 @@ int resample_set(enum resample_idx id, enum samplerate_index index)
 	if (index == RATE_OFF) {
 		if (p_resample->chipinfo->resample_version == 1) {
 			new_resample_enable(p_resample->id, false);
-			del_timer_sync(&p_resample->timer);
-			p_resample->timer_running = false;
+
+			/* delete the timer when resample is disable */
+			if (p_resample->timer_running) {
+				p_resample->timer_running = false;
+				del_timer(&p_resample->timer);
+			}
 		} else if (p_resample->chipinfo->resample_version == 0) {
 			resample_enable(p_resample->id, false);
 		}
@@ -582,8 +589,6 @@ static int new_resample_init(struct audioresample *p_resample)
 		new_resampleB_set_format(p_resample->id,
 					 p_resample->capture_sample_rate);
 	}
-
-	init_timer(&p_resample->timer);
 
 	return 0;
 }
