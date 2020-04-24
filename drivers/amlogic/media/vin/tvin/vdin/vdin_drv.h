@@ -118,10 +118,10 @@ struct match_data_s {
 #define VDIN_FLAG_V4L2_DEBUG            0x00020000
 /*flag for isr req&free*/
 #define VDIN_FLAG_ISR_REQ               0x00040000
-/* flag for rdma done */
-#define VDIN_FLAG_RDMA_DONE             0x00080000
-
 #define VDIN_FLAG_ISR_EN		0x00100000
+
+/* flag for rdma done in isr*/
+#define VDIN_FLAG_RDMA_DONE             0x00080000
 
 /*values of vdin isr bypass check flag */
 #define VDIN_BYPASS_STOP_CHECK          0x00000001
@@ -383,6 +383,7 @@ struct vdin_dev_s {
 	char name[15];
 	/* bit0 TVIN_PARM_FLAG_CAP bit31: TVIN_PARM_FLAG_WORK_ON */
 	unsigned int flags;
+	unsigned int flags_isr;
 	unsigned int index;
 	unsigned int vdin_max_pixelclk;
 
