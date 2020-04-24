@@ -346,6 +346,13 @@ struct emp_info {
 	unsigned int size;
 };
 
+struct nn_value_t {
+	int maxclass;
+	int maxprob;
+};
+
+#define AI_PQ_TOP 5
+
 struct vframe_s {
 	u32 index;
 	u32 index_disp;
@@ -483,6 +490,7 @@ struct vframe_s {
 
 	/*for double write VP9/AV1 vf*/
 	void *mem_dw_handle;
+	struct nn_value_t nn_value[AI_PQ_TOP];
 } /*vframe_t */;
 
 #if 0

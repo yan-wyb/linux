@@ -53,6 +53,7 @@
 #include <trace/events/meson_atrace.h>
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
+#include "vpp_pq.h"
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #endif
 #include <linux/amlogic/media/utils/vdec_reg.h>
@@ -111,7 +112,7 @@ u32 osd_vpp_misc_mask;
 bool update_osd_vpp_misc;
 u32 osd_preblend_en;
 int video_vsync = -ENXIO;
-
+static struct ai_scenes_pq vpp_scenes[AI_SCENES_MAX];
 static u32 cur_omx_index;
 
 struct video_frame_detect_s {
@@ -3591,6 +3592,10 @@ static s32 primary_render_frame(struct video_layer_s *layer)
 	return 1;
 }
 
+static int ai_pq_disable;
+static int ai_pq_debug;
+static int ai_pq_value = -1;
+
 #ifdef FIQ_VSYNC
 void vsync_fisr_in(void)
 #else
@@ -3620,6 +3625,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	s32 vd2_path_id = glayer_info[1].display_path_id;
 	int axis[4];
 	int crop[4];
+	int pq_process_debug[3];
 
 	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
 		return IRQ_HANDLED;
@@ -4884,6 +4890,12 @@ exit:
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	cur_rdma_buf = cur_dispbuf;
 	pip_rdma_buf = cur_pipbuf;
+	if (cur_dispbuf) {
+		pq_process_debug[0] = ai_pq_value;
+		pq_process_debug[1] = ai_pq_disable;
+		pq_process_debug[2] = ai_pq_debug;
+		vf_pq_process(cur_dispbuf, vpp_scenes, pq_process_debug);
+	}
 	/* vsync_rdma_config(); */
 	vsync_rdma_process();
 	if (debug_flag & DEBUG_FLAG_PRINT_RDMA) {
@@ -9330,6 +9342,88 @@ static ssize_t film_grain_store(
 	return strnlen(buf, count);
 }
 
+/*
+ * default setting scenes is 23
+ */
+static ssize_t pq_default_show(struct class *cla,
+			       struct class_attribute *attr, char *buf)
+{
+	ssize_t count;
+	int i = 0;
+	char end[4] = "\n";
+	char temp[20] = "default scene pq:";
+
+	count = sprintf(buf, "%s", temp);
+	while (i < SCENES_VALUE)
+		count += sprintf(buf + count, " %d",
+				 vpp_scenes[AI_SCENES_MAX - 1].pq_values[i++]);
+	count += sprintf(buf + count, " %s", end);
+	return count;
+}
+
+static ssize_t pq_default_store(struct class *cla,
+				struct class_attribute *attr,
+				const char *buf, size_t count)
+{
+	int i = 0;
+	int parsed[SCENES_VALUE];
+
+	if (likely(parse_para(buf, SCENES_VALUE, parsed) == SCENES_VALUE)) {
+		vpp_scenes[AI_SCENES_MAX - 1].pq_scenes = DEFAUT_SETTING;
+		while (i < SCENES_VALUE) {
+			vpp_scenes[AI_SCENES_MAX - 1].pq_values[i] = parsed[i];
+			i++;
+		}
+	}
+	i = 0;
+	pr_info("the default scene pq param: ");
+	while (i < SCENES_VALUE)
+		pr_info("%d ", vpp_scenes[AI_SCENES_MAX - 1].pq_values[i++]);
+	pr_info("\n");
+
+	return strnlen(buf, count);
+}
+
+static ssize_t pq_data_store(struct class *cla,
+			     struct class_attribute *attr,
+			     const char *buf, size_t count)
+
+{
+	int parsed[4];
+	ssize_t buflen;
+	int ret;
+
+	buflen = strlen(buf);
+	if (buflen <= 0)
+		return 0;
+
+	ret = parse_para(buf, 4, parsed);
+	if (ret == 4 && parsed[0]) {
+		if (parsed[1] < AI_SCENES_MAX && parsed[1] >= 0 &&
+		    parsed[2] < SCENES_VALUE && parsed[2] >= 0 &&
+		    parsed[3] >= 0) {
+			vpp_scenes[parsed[1]].pq_scenes = parsed[1];
+			vpp_scenes[parsed[1]].pq_values[parsed[2]] = parsed[3];
+
+		} else {
+			pr_info("the 2nd param: 0~23,the 3rd param: 0~9,the 4th param: >=0\n");
+		}
+	} else if (ret == 3 && parsed[0] == 0) {
+		if (parsed[1] < AI_SCENES_MAX && parsed[1] >= 0 &&
+		    parsed[2] < SCENES_VALUE && parsed[2] >= 0)
+			pr_info("pq value: %d\n",
+				vpp_scenes[parsed[1]].pq_values[parsed[2]]);
+		else
+			pr_info("the 2nd param: 0~23,the 3rd param: 0~9\n");
+	} else {
+		if (parsed[0] == 0)
+			pr_info("1st param 0 is to read pq value,need set 3 param\n");
+		else
+			pr_info("1st param 1 is to set pq value,need set 4 param\n");
+	}
+	return strnlen(buf, count);
+}
+
 static struct class_attribute amvideo_class_attrs[] = {
 	__ATTR(axis,
 	       0664,
@@ -9571,6 +9665,11 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       film_grain_show,
 	       film_grain_store),
+	__ATTR(pq_default,
+	       0664,
+	       pq_default_show,
+	       pq_default_store),
+	__ATTR_WO(pq_data),
 	__ATTR_NULL
 };
 
@@ -9918,6 +10017,7 @@ bool is_meson_tm2_revb(void)
 static int amvideom_probe(struct platform_device *pdev)
 {
 	int ret = 0;
+	int i, j;
 
 	if (pdev->dev.of_node) {
 		const struct of_device_id *match;
@@ -9962,6 +10062,11 @@ static int amvideom_probe(struct platform_device *pdev)
 	register_early_suspend(&video_early_suspend_handler);
 #endif
 	video_keeper_init();
+	for (i = 0; i < AI_SCENES_MAX; i++) {
+		vpp_scenes[i].pq_scenes = i;
+		for (j = 0; j < SCENES_VALUE; j++)
+			vpp_scenes[i].pq_values[j] = vpp_pq_data[i][j];
+	}
 	return ret;
 }
 
@@ -10343,6 +10448,15 @@ module_param(stop_update, uint, 0664);
 
 MODULE_PARM_DESC(pts_rollback_threshold, "\n pts_rollback_threshold\n");
 module_param(pts_rollback_threshold, uint, 0664);
+
+MODULE_PARM_DESC(ai_pq_disable, "\n ai_pq_disable\n");
+module_param(ai_pq_disable, uint, 0664);
+
+MODULE_PARM_DESC(ai_pq_debug, "\n ai_pq_debug\n");
+module_param(ai_pq_debug, uint, 0664);
+
+MODULE_PARM_DESC(ai_pq_value, "\n ai_pq_value\n");
+module_param(ai_pq_value, uint, 0664);
 
 MODULE_DESCRIPTION("AMLOGIC video output driver");
 MODULE_LICENSE("GPL");

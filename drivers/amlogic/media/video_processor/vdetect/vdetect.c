@@ -314,8 +314,15 @@ static struct vframe_s *vdetect_vf_get(void *op_arg)
 {
 	struct vframe_s *vf;
 	struct vdetect_dev *dev = (struct vdetect_dev *)op_arg;
+	int i = 0;
 
 	vf = vf_get(dev->recv_name);
+	if (vf) {
+		for (i = 0; i < AI_PQ_TOP; i++) {
+			vf->nn_value[i].maxclass = dev->nn_value[i].maxclass;
+			vf->nn_value[i].maxprob = dev->nn_value[i].maxprob;
+		}
+	}
 	if (atomic_read(&dev->vdect_status) != VDETECT_PREPARE)
 		dev->last_vf = vf;
 
@@ -922,7 +929,8 @@ static int vdetect_thread(void *data)
 
 	sched_setscheduler(current, SCHED_FIFO, &param);
 	allow_signal(SIGTERM);
-	pr_info("start %s thread.\n", dev->recv_name);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "start %s thread.\n", dev->recv_name);
 
 	while (down_interruptible(&dev->thread_sem) == 0) {
 		if (atomic_read(&dev->is_playing) == 0) {
@@ -934,7 +942,8 @@ static int vdetect_thread(void *data)
 		    dev->begin_time.tv_usec == 0)
 			do_gettimeofday(&dev->begin_time);
 		if (kthread_should_stop()) {
-			pr_info("%s kthread stop 1.\n", dev->recv_name);
+			vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+				      "%s kthread stop 1.\n", dev->recv_name);
 			break;
 		}
 
@@ -945,23 +954,27 @@ static int vdetect_thread(void *data)
 			      "%s task_running = %d\n", dev->recv_name,
 			      dev->dma_q.task_running);
 		if (!dev->dma_q.task_running) {
-			pr_info("%s here break.\n", dev->recv_name);
+			vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+				      "%s here break.\n", dev->recv_name);
 			break;
 		}
 		vdetect_fill_buffer(dev);
 		if (kthread_should_stop()) {
-			pr_info("%s kthread stop 2.\n", dev->recv_name);
+			vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+				      "%s kthread stop 2.\n", dev->recv_name);
 			break;
 		}
 		vdetect_print(dev->inst, PRINT_THREADINFO,
 			      "%s_thread while 1 .\n", dev->recv_name);
 	}
 	while (!kthread_should_stop()) {
-		pr_info("%s_thread while 2 .\n", dev->recv_name);
+		vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+			      "%s_thread while 2 .\n", dev->recv_name);
 		usleep_range(9000, 10000);
 	}
 		/*msleep(10);*/
-	pr_info("thread: exit\n");
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "thread: exit\n");
 	return ret;
 }
 
@@ -983,13 +996,16 @@ static int buffer_setup(struct videobuf_queue *vq, unsigned int *count,
 		height = ((height + 15) >> 4) << 4;
 
 	*size = (dev->width * height * dev->fmt->depth) >> 3;
-	pr_info("%s, width=%d, height=%d\n", __func__, dev->width, height);
+	vdetect_print(dev->inst, PRINT_BUFFERINFO,
+		      "%s, width=%d, height=%d\n",
+		      __func__, dev->width, height);
 	if (*count == 0)
 		*count = 32;
 
 	while (*size * *count > vid_limit * 1024 * 1024)
 		(*count)--;
-	pr_info("%s, count=%d, size=%d\n", __func__, *count, *size);
+	vdetect_print(dev->inst, PRINT_BUFFERINFO,
+		      "%s, count=%d, size=%d\n", __func__, *count, *size);
 
 	return 0;
 }
@@ -1046,8 +1062,9 @@ static int buffer_prepare(struct videobuf_queue *vq,
 	vbuf = (void *)videobuf_to_res(&buf->vb);
 	if (buf->vb.state == VIDEOBUF_NEEDS_INIT) {
 		rc = videobuf_iolock(vq, &buf->vb, NULL);
-		pr_info("%s addr: 0x%lx, i: %d, magic:%d", __func__,
-			(unsigned long)vbuf, buf->vb.i, buf->vb.magic);
+		vdetect_print(dev->inst, PRINT_BUFFERINFO,
+			      "%s addr: 0x%lx, i: %d, magic:%d", __func__,
+			      (unsigned long)vbuf, buf->vb.i, buf->vb.magic);
 		if (rc < 0) {
 			vdetect_print(dev->inst, PRINT_ERROR,
 				      "%s line: %d\n", __func__, __LINE__);
@@ -1139,6 +1156,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 {
 	struct vdetect_dev *dev = (struct vdetect_dev *)private_data;
 	struct vframe_states states;
+	int i = 0;
 
 	switch (type) {
 	case VFRAME_EVENT_PROVIDER_VFRAME_READY:
@@ -1162,6 +1180,10 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 	case VFRAME_EVENT_PROVIDER_REG:
 		vf_reg_provider(&dev->prov);
 		vdetect_print(dev->inst, PRINT_PATHINFO, "reg\n");
+		for (i = 0; i < AI_PQ_TOP; i++) {
+			dev->nn_value[i].maxclass = 0;
+			dev->nn_value[i].maxprob = 0;
+		}
 		break;
 	case VFRAME_EVENT_PROVIDER_UNREG:
 		mutex_lock(&dev->vf_mutex);
@@ -1469,28 +1491,29 @@ static int vidioc_s_parm(struct file *file, void *priv,
 			 struct v4l2_streamparm *parms)
 {
 	struct vdetect_dev *dev = NULL;
-	int result[5][2], i, j;
+	int i, j;
 
 	dev = video_drvdata(file);
 
 	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
 		      "%s line: %d\n", __func__, __LINE__);
 	if (parms->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
-		for (i = 0; i < 5; i++) {
+		for (i = 0; i < AI_PQ_TOP; i++) {
 			j = 4 * i;
-			result[i][0] = parms->parm.raw_data[j];
-			result[i][1] = parms->parm.raw_data[j + 1]
+			dev->nn_value[i].maxclass = parms->parm.raw_data[j];
+			dev->nn_value[i].maxprob = parms->parm.raw_data[j + 1]
 				+ (parms->parm.raw_data[j + 2] << 8)
 				+ (parms->parm.raw_data[j + 3] << 16);
 		}
 	}
-	for (i = 0; i < 5; i++) {
+	for (i = 0; i < AI_PQ_TOP; i++) {
 		vdetect_print(dev->inst, PRINT_CAPTUREINFO,
-			      "vnn result: %s\n",
-			      result_vnn[result[i][0]]);
+			      "top %d, vnn result: %s\n",
+			      i,
+			      result_vnn[dev->nn_value[i].maxclass]);
 		vdetect_print(dev->inst, PRINT_CAPTUREINFO,
 			      "probability: %d\n",
-			      result[i][1]);
+			      dev->nn_value[i].maxprob);
 	}
 	return 0;
 }
@@ -1525,7 +1548,8 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 
 	dev = video_drvdata(file);
 	dma_q = &dev->dma_q;
-	pr_info("%s begin vdetect.%d\n", __func__, dev->inst);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "%s begin vdetect.%d\n", __func__, dev->inst);
 	if ((dev->type != V4L2_BUF_TYPE_VIDEO_CAPTURE) || (i != dev->type))
 		return -EINVAL;
 	ret = videobuf_streamon(&dev->vbuf_queue);
@@ -1557,7 +1581,8 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 			dma_q->task_running = 0;
 			dma_q->kthread = NULL;
 			mutex_unlock(&dev->vdetect_mutex);
-			pr_info("start thread error.....\n");
+			vdetect_print(dev->inst, PRINT_ERROR,
+				      "start thread error.....\n");
 			return PTR_ERR(dma_q->kthread);
 		}
 		mutex_unlock(&dev->vdetect_mutex);
@@ -1567,7 +1592,8 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 		vdetect_print(dev->inst, PRINT_THREADINFO,
 			      "%s thread start successful!\n", __func__);
 	}
-	pr_info("%s end vdetect.%d\n", __func__, dev->inst);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "%s end vdetect.%d\n", __func__, dev->inst);
 	return 0;
 }
 
@@ -1578,7 +1604,8 @@ static int vidioc_streamoff(struct file *file,
 	struct vdetect_dev *dev = NULL;
 
 	dev = video_drvdata(file);
-	pr_info("%s begin line %d\n", __func__, __LINE__);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "%s begin line %d\n", __func__, __LINE__);
 	if ((dev->type != V4L2_BUF_TYPE_VIDEO_CAPTURE) || (i != dev->type))
 		return -EINVAL;
 	ret = videobuf_streamoff(&dev->vbuf_queue);
@@ -1621,7 +1648,8 @@ static int vidioc_streamoff(struct file *file,
 		vdetect_print(dev->inst, PRINT_THREADINFO,
 			      "finish stop %s thread\n", dev->recv_name);
 	}
-	pr_info("%s end line %d\n", __func__, __LINE__);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "%s end line %d\n", __func__, __LINE__);
 
 	return 0;
 }
@@ -1699,7 +1727,8 @@ static int vidioc_open(struct file *file)
 				&dev->slock, dev->type, V4L2_FIELD_INTERLACED,
 				sizeof(struct vdetect_buffer), (void *)res,
 				NULL);
-	pr_info("%s vdetect.%d\n", __func__, dev->inst);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "%s vdetect.%d\n", __func__, dev->inst);
 	return 0;
 }
 
@@ -1742,7 +1771,8 @@ static int vidioc_close(struct file *file)
 
 	dev = video_drvdata(file);
 	dma_q = &dev->dma_q;
-	pr_info("%s vdetect.%d\n", __func__, dev->inst);
+	vdetect_print(dev->inst, PRINT_CAPTUREINFO,
+		      "%s vdetect.%d\n", __func__, dev->inst);
 	atomic_set(&dev->vdect_status, VDETECT_INIT);
 	if (dma_q->kthread)
 		vidioc_streamoff(file, (void *)dev, dev->type);

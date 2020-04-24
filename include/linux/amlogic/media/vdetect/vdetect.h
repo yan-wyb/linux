@@ -114,6 +114,7 @@ struct vdetect_dev {
 	struct vframe_provider_s prov;
 	char recv_name[RECEIVER_NAME_SIZE];
 	char prov_name[PROVIDER_NAME_SIZE];
+	struct nn_value_t nn_value[AI_PQ_TOP];
 };
 
 int vdetect_assign_map(char **receiver_name, int *inst);

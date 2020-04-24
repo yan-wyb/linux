@@ -15343,3 +15343,8 @@ F:  include/linux/amlogic/media/vdetect/vdetect.h
 AMLOGIC VIDEO DRIVER
 M:  Pengcheng Chen <pengcheng.chen@amlogic.com>
 F:  drivers/amlogic/media/video_sink/video_trace.h
+
+AMLOGIC VPP AIPQ
+M:	Renjiang Han <renjiang.han@amlogic.com>
+F:  drivers/amlogic/media/video_sink/vpp_pq_process.c
+F:  drivers/amlogic/media/video_sink/vpp_pq.h
