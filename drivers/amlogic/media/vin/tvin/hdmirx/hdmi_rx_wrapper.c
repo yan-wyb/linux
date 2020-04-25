@@ -70,7 +70,7 @@ static int hpd_wait_cnt;
 static int hpd_wait_max = 40;
 
 static int sig_unstable_cnt;
-static int sig_unstable_max = 40;/* 80 */
+static int sig_unstable_max = 20;
 
 bool vic_check_en;
 bool dvi_check_en;
@@ -88,7 +88,7 @@ int it_content;
 
 /* timing diff offset */
 static int diff_pixel_th = 2;
-static int diff_line_th = 10;
+static int diff_line_th = 2;
 static int diff_frame_th = 40; /* (25hz-24hz)/2 = 50/100 */
 static int err_dbg_cnt;
 static int err_dbg_cnt_max = 500;
@@ -202,7 +202,9 @@ static bool hdcp22_stop_auth_enable;
 static bool hdcp22_esm_reset2_enable;
 int sm_pause;
 int pre_port = 0xff;
-static int hdcp_none_wait_max = 50;/* 100 */
+/* waiting time cannot be reduced */
+/* it will cause hdcp1.4 cts fail */
+static int hdcp_none_wait_max = 100;
 static int esd_phy_rst_cnt;
 static int esd_phy_rst_max;
 static int cec_dev_info;
@@ -780,10 +782,12 @@ enum tvin_sig_fmt_e hdmirx_hw_get_fmt(void)
 	enum tvin_sig_fmt_e fmt = TVIN_SIG_FMT_NULL;
 	enum hdmi_vic_e vic = HDMI_UNKNOWN;
 
-	if (fmt_vic_abnormal())
-		vic = rx.pre.hw_vic;
-	else
-		vic = rx.pre.sw_vic;
+	/*
+	 * if (fmt_vic_abnormal())
+	 *	vic = rx.pre.hw_vic;
+	 * else
+	 */
+	vic = rx.pre.sw_vic;
 	if (force_vic)
 		vic = force_vic;
 
@@ -2193,7 +2197,7 @@ void rx_5v_monitor(void)
 			set_fsm_state(FSM_5V_LOST);
 			rx.err_code = ERR_5V_LOST;
 			vic_check_en = false;
-			dvi_check_en = true;
+			/* dvi_check_en = true; */
 		}
 	}
 	rx.cur_5v_sts = (pwr_sts >> rx.port) & 1;
@@ -2487,6 +2491,7 @@ void rx_main_state_machine(void)
 		if (rx_is_timing_stable()) {
 			if (++sig_stable_cnt >= sig_stable_max) {
 				get_timing_fmt();
+				sig_unstable_cnt = 0;
 				if (is_unnormal_format(sig_stable_cnt))
 					break;
 				/* if format vic is abnormal, do hw
@@ -2539,6 +2544,7 @@ void rx_main_state_machine(void)
 				rx_monitor_error_cnt_start();
 				#endif
 				sig_stable_err_cnt = 0;
+                         	esd_phy_rst_cnt = 0;
 			}
 		} else {
 			sig_stable_cnt = 0;
@@ -2549,9 +2555,11 @@ void rx_main_state_machine(void)
 			if (rx.err_rec_mode == ERR_REC_EQ_RETRY) {
 				rx.state = FSM_WAIT_CLK_STABLE;
 				rx.phy.cablesel++;
-				rx_pr("cablesel1=%d\n", rx.phy.cablesel);
-				rx.err_rec_mode = ERR_REC_HPD_RST;
-				rx_set_eq_run_state(E_EQ_START);
+				if (esd_phy_rst_cnt++ >= esd_phy_rst_max) {
+					rx.err_rec_mode = ERR_REC_HPD_RST;
+					rx_set_eq_run_state(E_EQ_START);
+                                  	esd_phy_rst_cnt = 0;
+				}
 			} else if (rx.err_rec_mode == ERR_REC_HPD_RST) {
 				rx_set_cur_hpd(0, 2);
 				rx.phy.cable_clk = 0;
@@ -2584,6 +2592,7 @@ void rx_main_state_machine(void)
 				rx_aud_pll_ctl(0);
 				/* need to clr to none, for dishNXT box */
 				rx.hdcp.hdcp_version = HDCP_VER_NONE;
+				rx_sw_reset(2);
 				rx.state = FSM_WAIT_CLK_STABLE;
 				vic_check_en = false;
 				rx.skip = 0;

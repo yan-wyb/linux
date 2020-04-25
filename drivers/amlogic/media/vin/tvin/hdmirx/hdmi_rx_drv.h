@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 /* Decrease emp buffer size to 2k */
-#define RX_VER0 "ver.2020/03/05"
+#define RX_VER0 "ver.2020/05/07"
 /* Add bandgap enable and reset handle for tl1/tm2 */
 #define RX_VER1 "ver.2019/11/22"
 /* notify RX by TX to update EDID from sink and mix with audio */
