@@ -226,6 +226,8 @@ void vdin_dolby_de_tunnel_to_12bit(struct vdin_dev_s *devp,
 void vdin_wr_frame_en(unsigned int ch, unsigned int onoff);
 void vdin_set_mif_onoff(struct vdin_dev_s *devp, unsigned int rdma_enable);
 void vdin_vs_proc_monitor(struct vdin_dev_s *devp);
+enum tvin_color_fmt_range_e tvin_get_force_fmt_range(
+	enum tvin_color_fmt_e color_fmt);
 
 #endif
 

@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0424: prevent vdin enter hold status"
+#define VDIN_VER "ver:2020-0427: full limit switch issue"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -617,6 +617,7 @@ u32 vlock_get_phase_en(void);
 
 extern struct vdin_dev_s *vdin_get_dev(unsigned int index);
 extern void vdin_mif_config_init(struct vdin_dev_s *devp);
+extern void vdin_drop_frame_info(struct vdin_dev_s *devp, char *info);
 
 #endif /* __TVIN_VDIN_DRV_H */
 

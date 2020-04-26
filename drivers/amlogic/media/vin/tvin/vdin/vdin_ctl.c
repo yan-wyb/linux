@@ -5162,6 +5162,10 @@ void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
 			pr_info("dv:%d, hdr:%d\n", devp->prop.dolby_vision,
 				devp->prop.vdin_hdr_Flag);
 	}
+
+	if (color_range_force)
+		devp->prop.color_fmt_range =
+		tvin_get_force_fmt_range(devp->prop.color_format);
 }
 
 void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
