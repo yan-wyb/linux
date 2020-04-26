@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0427: full limit switch issue"
+#define VDIN_VER "ver:2020-0428: remove free_irq from tvstop command"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2

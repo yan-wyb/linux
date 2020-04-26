@@ -1681,6 +1681,15 @@ static ssize_t vdin_attr_store(struct device *dev,
 		} else if (parm[1] != NULL) {
 			vdin_dump_mem(parm[1], devp);
 		}
+	} else if  (!strcmp(parm[0], "request_irq")) {
+		snprintf(devp->irq_name, sizeof(devp->irq_name),
+				"vdin%d-irq", devp->index);
+		pr_info("vdin work in normal mode\n");
+		ret = request_irq(devp->irq, vdin_isr, IRQF_SHARED,
+				devp->irq_name, (void *)devp);
+	} else if  (!strcmp(parm[0], "free_irq")) {
+		free_irq(devp->irq, (void *)devp);
+		pr_info("free irq\n");
 	} else if (!strcmp(parm[0], "tvstart")) {
 		unsigned int port = 0, fmt = 0;
 
@@ -1803,8 +1812,8 @@ start_chk:
 		vdin_close_fe(devp);
 		/* devp->flags &= (~VDIN_FLAG_FS_OPENED); */
 		devp->flags &= (~VDIN_FLAG_DEC_STARTED);
-		/* free irq */
-		free_irq(devp->irq, (void *)devp);
+		/* free irq, free when close device */
+		/* free_irq(devp->irq, (void *)devp); */
 
 		if (vdin_dbg_en)
 			pr_info("%s vdin.%d free_irq\n", __func__,
