@@ -38,7 +38,6 @@
 #include <linux/interrupt.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/page_trace.h>
-#include <linux/arm-smccc.h>
 #include <linux/amlogic/dmc_monitor.h>
 #include <linux/amlogic/ddr_port.h>
 
@@ -72,24 +71,6 @@ static int __init early_dmc_param(char *buf)
 }
 early_param("dmc_monitor", early_dmc_param);
 
-unsigned long dmc_rw(unsigned long addr, unsigned long value, int rw)
-{
-	struct arm_smccc_res smccc;
-
-	if (dmc_mon->io_mem) {
-		if (rw == DMC_WRITE) {
-			writel(value, dmc_mon->io_mem + addr);
-			return 0;
-		} else {
-			return readl(dmc_mon->io_mem + addr);
-		}
-	} else {
-		arm_smccc_smc(DMC_MON_RW, addr + dmc_mon->io_base,
-			      value, rw, 0, 0, 0, 0, &smccc);
-		return smccc.a0;
-	}
-}
-
 void show_violation_mem(unsigned long addr)
 {
 	struct page *page;
@@ -109,6 +90,20 @@ void show_violation_mem(unsigned long addr)
 		page->mapping,
 		(void *)get_page_trace(page));
 	kunmap_atomic(p);
+}
+
+unsigned long dmc_prot_rw(unsigned long addr, unsigned long value, int rw)
+{
+	if (dmc_mon->io_mem) {
+		if (rw == DMC_WRITE) {
+			writel(value, dmc_mon->io_mem + addr);
+			return 0;
+		} else {
+			return readl(dmc_mon->io_mem + addr);
+		}
+	} else {
+		return dmc_rw(addr + dmc_mon->io_base, value, rw);
+	}
 }
 
 static int dev_name_to_id(const char *dev_name)
