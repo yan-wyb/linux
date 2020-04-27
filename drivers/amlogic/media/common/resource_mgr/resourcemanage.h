@@ -31,7 +31,8 @@
 #define AMVIDEO			(BASE_AVAILAB_RES + 1)
 #define PIPVIDEO			(BASE_AVAILAB_RES + 2)
 #define SEC_TVP			(BASE_AVAILAB_RES + 3)
-#define MAX_AVAILAB_RES		(SEC_TVP + 1)
+#define TSPARSER			(BASE_AVAILAB_RES + 4)
+#define MAX_AVAILAB_RES		(TSPARSER + 1)
 
 struct resman_para {
 	int para_in;

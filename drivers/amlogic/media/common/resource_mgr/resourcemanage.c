@@ -67,7 +67,8 @@ static struct video_resource resman_src[MAX_AVAILAB_RES] = {
 		{.res_name = "vfm_default", .max_rescn = 1},
 		{.res_name = "amvideo", .max_rescn = 1},
 		{.res_name = "videopip", .max_rescn = 1},
-		{.res_name = "sec_tvp", .max_rescn = 0}
+		{.res_name = "sec_tvp", .max_rescn = 0},
+		{.res_name = "tsparser", .max_rescn = 1}
 		};
 
 static void all_resource_uninit(void)
@@ -198,11 +199,10 @@ static long resman_ioctl_query(struct file *filp, unsigned long arg)
 		selec_res = resman.para_in;
 		if (selec_res >= BASE_AVAILAB_RES &&
 			selec_res < MAX_AVAILAB_RES) {
-			size += sprintf(usage + size, "%s:%d",
+			size += sprintf(usage + size, "%s:%d:%d",
 				resman_src[selec_res].res_name,
-				resman_src[selec_res].max_rescn > 0 ?
-				resman_src[selec_res].max_rescn -
-				resman_src[selec_res].res_count : -1);
+				resman_src[selec_res].max_rescn,
+				resman_src[selec_res].res_count);
 
 			if (copy_to_user((void *)argp->para_str,
 					usage, sizeof(usage)))
