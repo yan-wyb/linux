@@ -133,6 +133,6 @@ int scpi_get_cpuinfo(enum scpi_get_pfm_type type, u32 *freq, u32 *vol);
 int scpi_init_dsp_cfg0(u32 id, u32 addr, u32 cfg0);
 int scpi_unlock_bl40(void);
 int scpi_send_dsp_cmd(void *data, int size, bool to_dspa, int cmd, int taskid);
-int scpi_req_handle(void *p, u32 size, u32 cmd);
+int scpi_req_handle(void *p, u32 size, u32 cmd, int dspid);
 int scpi_send_bl40(unsigned int cmd, struct bl40_msg_buf *bl40_buf);
 #endif /*_SCPI_PROTOCOL_H_*/

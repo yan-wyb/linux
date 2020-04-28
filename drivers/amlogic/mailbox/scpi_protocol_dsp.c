@@ -186,7 +186,7 @@ int scpi_send_dsp_cmd(void *data, int size, bool to_dspa,
 }
 EXPORT_SYMBOL_GPL(scpi_send_dsp_cmd);
 
-int scpi_req_handle(void *p, u32 size, u32 cmd)
+int scpi_req_handle(void *p, u32 size, u32 cmd, int dspid)
 {
 	int ret = 0;
 

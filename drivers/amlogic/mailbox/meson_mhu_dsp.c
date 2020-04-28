@@ -76,7 +76,7 @@ enum USR_CMD {
  * mbox_chan_report
  * Report receive data
  */
-static void mbox_chan_report(u32 status, void *msg)
+static void mbox_chan_report(u32 status, void *msg, int idx)
 {
 	struct mhu_data_buf *data_buf = (struct mhu_data_buf *)msg;
 	struct mbox_message *message;
@@ -90,6 +90,7 @@ static void mbox_chan_report(u32 status, void *msg)
 	struct device *dev = dsp_scpi_device;
 	char *mbuf_data = NULL;
 	u32 mbuf_size, ret;
+	int dspid;
 
 	spin_lock_irqsave(&dsp_lock, flags);
 	if (list_empty(&mbox_list)) {
@@ -135,7 +136,14 @@ dsp_req:
 	else
 		memcpy(mbuf_data, mbox_data_sync->data, mbuf_size);
 
-	ret = scpi_req_handle(mbuf_data, mbuf_size, status & CMD_MASK);
+	if (BIT(idx) & 0xC)
+		dspid = 0x1;
+	else if (BIT(idx) & 0x3)
+		dspid = 0x0;
+	else
+		dspid = 0x0;
+
+	ret = scpi_req_handle(mbuf_data, mbuf_size, status & CMD_MASK, dspid);
 	if (!ret)
 		dev_err(dev, "scpi request error cmd:%d\n", status & CMD_MASK);
 
@@ -172,7 +180,7 @@ static irqreturn_t mbox_dsp_handler(int irq, void *p)
 			memcpy_fromio(data->rx_buf,
 				      payload + RX_PAYLOAD(idx),
 				      data->rx_size);
-			mbox_chan_report(status, data);
+			mbox_chan_report(status, data, idx);
 			memset(data->rx_buf, 0, data->rx_size);
 		}
 		writel(~0, mbox_base + RX_OFFSET_CLR);
