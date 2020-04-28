@@ -932,6 +932,7 @@ static u32 toggle_same_count;
 static int hdmin_delay_start;
 static int hdmin_delay_start_time;
 static int hdmin_delay_duration;
+static int hdmin_delay_max_ms = 140;
 static int vframe_walk_delay;
 /* video_inuse */
 u32 video_inuse;
@@ -2476,6 +2477,24 @@ static enum vframe_disp_mode_e video_vf_disp_mode_get(struct vframe_s *vf)
 			VFRAME_EVENT_RECEIVER_DISP_MODE, (void *)&req);
 	return req.disp_mode;
 }
+static int video_vdin_buf_info_get(void)
+{
+	char *provider_name = vf_get_provider_name(RECEIVER_NAME);
+	int max_buf_cnt = -1;
+
+	while (provider_name) {
+		if (!vf_get_provider_name(provider_name))
+			break;
+		provider_name =
+			vf_get_provider_name(provider_name);
+	}
+	if (provider_name && (!strcmp(provider_name, "dv_vdin") ||
+		!strcmp(provider_name, "vdin0")))
+		vf_notify_provider_by_name(provider_name,
+			VFRAME_EVENT_RECEIVER_BUF_COUNT, (void *)&max_buf_cnt);
+	return max_buf_cnt;
+}
+
 static inline bool video_vf_dirty_put(struct vframe_s *vf)
 {
 	if (!vf->frame_dirty)
@@ -3765,6 +3784,22 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	toggle_cnt = 0;
 	vsync_count++;
 	timer_count++;
+	if (display_frame_count == 0 && vf &&
+	    (vf->source_type == VFRAME_SOURCE_TYPE_HDMI ||
+	    vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
+		int buf_cnt = video_vdin_buf_info_get();
+
+		if (buf_cnt > 1) {
+			struct vinfo_s *video_info;
+
+			video_info = get_current_vinfo();
+			if (video_info->sync_duration_num > 0)
+				hdmin_delay_max_ms = 1000 *
+				video_info->sync_duration_den /
+				video_info->sync_duration_num
+				* (buf_cnt-1);
+		}
+	}
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
 	vlock_process(vf, cur_frame_par);/*need call every vsync*/
@@ -7752,6 +7787,26 @@ static ssize_t hdmin_delay_start_store(struct class *class,
 	pr_info("[%s] hdmin_delay_start:%d\n", __func__, value);
 	return count;
 }
+static ssize_t hdmin_delay_max_ms_show(struct class *class,
+			struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", hdmin_delay_max_ms);
+}
+
+static ssize_t hdmin_delay_max_ms_store(struct class *class,
+			struct class_attribute *attr,
+			const char *buf, size_t count)
+{
+	int r;
+	int value;
+
+	r = kstrtoint(buf, 0, &value);
+	if (r < 0)
+		return -EINVAL;
+	hdmin_delay_max_ms = value;
+	pr_info("[%s] hdmin_delay_max_ms:%d\n", __func__, value);
+	return count;
+}
 
 static ssize_t hdmin_delay_duration_show(struct class *class,
 			struct class_attribute *attr, char *buf)
@@ -7769,6 +7824,11 @@ static ssize_t hdmin_delay_duration_store(struct class *class,
 	r = kstrtoint(buf, 0, &value);
 	if (r < 0)
 		return -EINVAL;
+	if (value > hdmin_delay_max_ms) {
+		pr_info("hdmin_delay_duration %d limit exceeded, set to %d\n",
+			value, hdmin_delay_max_ms);
+		value = hdmin_delay_max_ms;
+	}
 	hdmin_delay_duration = value;
 	pr_info("[%s] hdmin_delay_duration:%d\n",
 		__func__, hdmin_delay_duration);
@@ -9370,6 +9430,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       hdmin_delay_duration_show,
 	       hdmin_delay_duration_store),
+	__ATTR(hdmin_delay_max_ms,
+	       0664,
+	       hdmin_delay_max_ms_show,
+	       hdmin_delay_max_ms_store),
 	__ATTR(vframe_walk_delay,
 	       0664,
 	       vframe_walk_delay_show, NULL),
