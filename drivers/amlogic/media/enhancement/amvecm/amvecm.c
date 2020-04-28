@@ -265,6 +265,10 @@ static int wb_init_bypass_coef[24] = {
 	0, 0, 0  /* mode, right_shift, clip_en */
 };
 
+#define AIPQ_SCENE_MAX 22
+#define AIPQ_FUNC_MAX 10
+int aipq_ofst_table[AIPQ_SCENE_MAX][AIPQ_FUNC_MAX];
+
 /* vpp brightness/contrast/saturation/hue */
 static int __init amvecm_load_pq_val(char *str)
 {
@@ -1405,6 +1409,21 @@ static void hdr_tone_mapping_get(
 	}
 }
 
+static int parse_aipq_ofst_table(
+	int *table_ptr, unsigned int height, unsigned int width)
+{
+	unsigned int i;
+	unsigned int size = 0;
+
+	size = sizeof(int) * AIPQ_SCENE_MAX * AIPQ_FUNC_MAX;
+	memset(aipq_ofst_table, 0, size);
+	size = width * sizeof(int);
+	for (i = 0; i < height; i++)
+		memcpy(aipq_ofst_table[i], table_ptr + (i * width), size);
+
+	return 0;
+}
+
 static long amvecm_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
@@ -1418,6 +1437,9 @@ static long amvecm_ioctl(struct file *file,
 	unsigned int *hdr_tm = NULL;
 	struct vpp_pq_ctrl_s pq_ctrl;
 	enum meson_cpu_ver_e cpu_ver;
+	struct aipq_load_s aipq_load_table;
+	int *aipq_ofst_ptr = NULL;
+	int size;
 
 	if (debug_amvecm & 2)
 		pr_info("[amvecm..] %s: cmd_nr = 0x%x\n",
@@ -1838,6 +1860,39 @@ static long amvecm_ioctl(struct file *file,
 			pr_amvecm_dbg("cpu version doesn't match\n");
 		}
 		break;
+	case AMVECM_IOC_S_AIPQ_TABLE:
+		if (copy_from_user(
+			&aipq_load_table,
+			(void __user *)arg,
+			sizeof(struct aipq_load_s))) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("aipq load ioc fail\n");
+			break;
+		}
+		if (aipq_load_table.height > AIPQ_SCENE_MAX)
+			aipq_load_table.height = AIPQ_SCENE_MAX;
+		if (aipq_load_table.width > AIPQ_FUNC_MAX)
+			aipq_load_table.width = AIPQ_FUNC_MAX;
+		size = aipq_load_table.height *
+			aipq_load_table.width *
+			sizeof(int);
+		aipq_ofst_ptr = kmalloc(size, GFP_KERNEL);
+		if (!aipq_ofst_ptr) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("aipq offset ptr kmalloc fail!!!\n");
+			break;
+		}
+		argp = (void __user *)aipq_load_table.table_ptr;
+		if (copy_from_user(aipq_ofst_ptr, argp, size)) {
+			ret = -EFAULT;
+			pr_amvecm_dbg("aipq table copy from user fail\n");
+			break;
+		}
+		parse_aipq_ofst_table(
+			aipq_ofst_ptr,
+			aipq_load_table.height,
+			aipq_load_table.width);
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -1846,6 +1901,7 @@ static long amvecm_ioctl(struct file *file,
 		kfree(vpp_pq_load_table);
 
 	kfree(hdr_tm);
+	kfree(aipq_ofst_ptr);
 	return ret;
 }
 #ifdef CONFIG_COMPAT

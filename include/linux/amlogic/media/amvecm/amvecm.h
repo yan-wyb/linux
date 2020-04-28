@@ -179,12 +179,12 @@ struct ve_pq_load_s {
 	enum pq_table_name_e param_id;
 	unsigned int length;
 	union {
-	void *param_ptr;
-	long long param_ptr_len;
+		void *param_ptr;
+		long long param_ptr_len;
 	};
 	union {
-	void *reserved;
-	long long reserved_len;
+		void *reserved;
+		long long reserved_len;
 	};
 };
 
@@ -363,6 +363,59 @@ enum ve_pq_timing_e {
 	TIMING_MAX,
 };
 
+/*overscan:
+ *length 0~31bit :number of crop;
+ *src_timing: bit31: on: load/save all crop
+			  bit31: off: load one according to timing*
+			  bit30: AFD_enable: 1 -> on; 0 -> off*
+			  screen mode: bit24~bit29*
+			  source: bit16~bit23 -> source*
+			  timing: bit0~bit15 -> sd/hd/fhd/uhd*
+ *value1: 0~15bit hs   16~31bit he*
+ *value2: 0~15bit vs   16~31bit ve*
+ */
+struct ve_pq_overscan_s {
+	unsigned int load_flag;
+	unsigned int afd_enable;
+	unsigned int screen_mode;
+	enum ve_source_input_e source;
+	enum ve_pq_timing_e timing;
+	unsigned int hs;
+	unsigned int he;
+	unsigned int vs;
+	unsigned int ve;
+};
+
+extern struct ve_pq_overscan_s overscan_table[TIMING_MAX];
+
+struct aipq_load_s {
+	unsigned int height;
+	unsigned int width;
+	union {
+		void *table_ptr;
+		long long table_len;
+	};
+};
+
+#define AMVECM_IOC_S_AIPQ_TABLE _IOW(_VE_CM, 0x68, struct aipq_load_s)
+
+#define _DI_	'D'
+
+struct am_pq_parm_s {
+	unsigned int table_name;
+	unsigned int table_len;
+	union {
+		void *table_ptr;
+		long long l_table;
+	};
+	union {
+		void *reserved;
+		long long l_reserved;
+	};
+};
+
+#define AMDI_IOC_SET_PQ_PARM  _IOW(_DI_, 0x51, struct am_pq_parm_s)
+
 enum vlock_hw_ver_e {
 	/*gxtvbb*/
 	vlock_hw_org = 0,
@@ -398,67 +451,6 @@ enum vd_path_e {
 	VD_PATH_MAX = 2
 };
 
-/*overscan:
- *length 0~31bit :number of crop;
- *src_timing: bit31: on: load/save all crop
-			  bit31: off: load one according to timing*
-			  bit30: AFD_enable: 1 -> on; 0 -> off*
-			  screen mode: bit24~bit29*
-			  source: bit16~bit23 -> source*
-			  timing: bit0~bit15 -> sd/hd/fhd/uhd*
- *value1: 0~15bit hs   16~31bit he*
- *value2: 0~15bit vs   16~31bit ve*
- */
-struct ve_pq_overscan_s {
-	unsigned int load_flag;
-	unsigned int afd_enable;
-	unsigned int screen_mode;
-	enum ve_source_input_e source;
-	enum ve_pq_timing_e timing;
-	unsigned int hs;
-	unsigned int he;
-	unsigned int vs;
-	unsigned int ve;
-};
-
-extern struct ve_pq_overscan_s overscan_table[TIMING_MAX];
-
-#define _DI_	'D'
-
-struct am_pq_parm_s {
-	unsigned int table_name;
-	unsigned int table_len;
-	union {
-	void *table_ptr;
-	long long l_table;
-	};
-	union {
-	void *reserved;
-	long long l_reserved;
-	};
-};
-
-#define AMDI_IOC_SET_PQ_PARM  _IOW(_DI_, 0x51, struct am_pq_parm_s)
-
-/* #if (MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8) */
-/* #define WRITE_VPP_REG(x,val)*/
-/* WRITE_VCBUS_REG(x,val) */
-/* #define WRITE_VPP_REG_BITS(x,val,start,length)*/
-/* WRITE_VCBUS_REG_BITS(x,val,start,length) */
-/* #define READ_VPP_REG(x)*/
-/* READ_VCBUS_REG(x) */
-/* #define READ_VPP_REG_BITS(x,start,length)*/
-/* READ_VCBUS_REG_BITS(x,start,length) */
-/* #else */
-/* #define WRITE_VPP_REG(x,val)*/
-/* WRITE_CBUS_REG(x,val) */
-/* #define WRITE_VPP_REG_BITS(x,val,start,length)*/
-/* WRITE_CBUS_REG_BITS(x,val,start,length) */
-/* #define READ_VPP_REG(x)*/
-/* READ_CBUS_REG(x) */
-/* #define READ_VPP_REG_BITS(x,start,length)*/
-/* READ_CBUS_REG_BITS(x,start,length) */
-/* #endif */
 
 static inline void WRITE_VPP_REG(uint32_t reg,
 		const uint32_t value)
