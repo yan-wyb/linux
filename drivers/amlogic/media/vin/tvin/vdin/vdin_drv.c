@@ -308,7 +308,7 @@ static void vdin_game_mode_check(struct vdin_dev_s *devp)
 	if ((game_mode == 1) &&
 		(devp->parm.port != TVIN_PORT_CVBS3)) {
 		if (devp->h_active > 720 && ((devp->parm.info.fps == 50) ||
-			(devp->parm.info.fps == 60)))
+			(devp->parm.info.fps == 60))) {
 			if ((is_meson_tl1_cpu() || is_meson_tm2_cpu()) &&
 				(panel_reverse == 0)) {
 				devp->game_mode = (VDIN_GAME_MODE_0 |
@@ -318,8 +318,12 @@ static void vdin_game_mode_check(struct vdin_dev_s *devp)
 				devp->game_mode = (VDIN_GAME_MODE_0 |
 					VDIN_GAME_MODE_1);
 			}
-		else
+		} else if (devp->parm.info.fps == 25 ||
+			   devp->parm.info.fps == 30) {
+			devp->game_mode = (VDIN_GAME_MODE_0 | VDIN_GAME_MODE_1);
+		} else {
 			devp->game_mode = VDIN_GAME_MODE_0;
+		}
 	} else if (game_mode == 2)/*for debug force game mode*/
 		devp->game_mode = (VDIN_GAME_MODE_0 | VDIN_GAME_MODE_1);
 	else if (game_mode == 3)/*for debug force game mode*/
