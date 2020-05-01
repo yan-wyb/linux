@@ -37,8 +37,8 @@
 #define RX_VER0 "ver.2020/05/07"
 /* Add bandgap enable and reset handle for tl1/tm2 */
 #define RX_VER1 "ver.2019/11/22"
-/* notify RX by TX to update EDID from sink and mix with audio */
-#define RX_VER2 "ver.2020/04/27"
+/* enable checksum err filter for packet decoder */
+#define RX_VER2 "ver.2020/05/07"
 
 /*print type*/
 #define	LOG_EN		0x01

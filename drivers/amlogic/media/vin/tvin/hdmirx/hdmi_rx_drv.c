@@ -995,10 +995,12 @@ void hdmirx_get_hdr_info(struct tvin_sig_property_s *prop)
 
 			/* vdin can read current hdr data */
 			prop->hdr_info.hdr_state = HDR_STATE_GET;
-
-			/* Rx can get new hdr data */
-			rx.hdr_info.hdr_state = HDR_STATE_NULL;
 		}
+		/* Rx can get new hdr data now, the hdr data
+		 * is already taken by vdin, no need to
+		 * wait until vdin process this hdr data
+		 */
+		rx.hdr_info.hdr_state = HDR_STATE_NULL;
 		break;
 	default:
 		break;

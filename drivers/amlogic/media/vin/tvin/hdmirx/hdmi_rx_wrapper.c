@@ -472,6 +472,10 @@ static int hdmi_rx_ctrl_irq_handler(void)
 			if (log_level & 0x200)
 				rx_pr("[irq] FIFO MIN\n");
 		}
+		if (rx_get_bits(intr_pedc, GCP_AV_MUTE_CHG) != 0) {
+			if (log_level & 0x100)
+				rx_pr("[irq] GCP_AV_MUTE_CHG\n");
+		}
 
 		if (rx.chip_id >= CHIP_ID_TL1) {
 			if (rx_get_bits(intr_pedc,
