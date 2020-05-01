@@ -32,5 +32,6 @@ extern void video_post_process(
 	enum vpp_matrix_csc_e csc_type,
 	struct vinfo_s *vinfo,
 	enum vd_path_e vd_path,
-	struct vframe_master_display_colour_s *master_info);
+	struct vframe_master_display_colour_s *master_info,
+	enum hdr_type_e *source_type);
 #endif

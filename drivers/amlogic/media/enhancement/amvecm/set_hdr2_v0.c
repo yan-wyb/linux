@@ -333,40 +333,40 @@ int oo_y_lut_hdr_hlg[149] = {
 };
 
 int oo_y_lut_hdr_sdr_def[149] = {
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3034, 2830, 2653,
-	2498, 2240, 2033, 1864, 1722, 1603, 1500, 1411, 1332, 1202,
-	1097, 1011, 939, 878, 825, 779, 739, 671, 616, 570,
-	531, 498, 469, 443, 420, 381, 349, 322, 299, 279,
-	262, 246, 233, 221, 210, 201, 192, 184, 177, 170,
-	164, 158, 153, 148, 143, 139, 135, 131, 128
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1532,
+	1440, 1287, 1165, 1065, 982, 911, 850, 798, 752, 675,
+	613, 563, 520, 484, 454, 427, 403, 364, 332, 306,
+	283, 265, 248, 234, 221, 199, 182, 167, 154, 144,
+	134, 126, 119, 113, 107, 102, 97, 93, 89, 86,
+	82, 79, 77, 74, 72, 69, 67, 65, 64
 };
 
 static int num_hdr_sdr_lut = 149;
 int oo_y_lut_hdr_sdr[149] = {
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200, 3200,
-	3200, 3200, 3200, 3200, 3200, 3200, 3200, 3034, 2830, 2653,
-	2498, 2240, 2033, 1864, 1722, 1603, 1500, 1411, 1332, 1202,
-	1097, 1011, 939, 878, 825, 779, 739, 671, 616, 570,
-	531, 498, 469, 443, 420, 381, 349, 322, 299, 279,
-	262, 246, 233, 221, 210, 201, 192, 184, 177, 170,
-	164, 158, 153, 148, 143, 139, 135, 131, 128
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1532,
+	1440, 1287, 1165, 1065, 982, 911, 850, 798, 752, 675,
+	613, 563, 520, 484, 454, 427, 403, 364, 332, 306,
+	283, 265, 248, 234, 221, 199, 182, 167, 154, 144,
+	134, 126, 119, 113, 107, 102, 97, 93, 89, 86,
+	82, 79, 77, 74, 72, 69, 67, 65, 64
 };
 module_param_array(oo_y_lut_hdr_sdr, int, &num_hdr_sdr_lut, 0664);
 MODULE_PARM_DESC(oo_y_lut_hdr_sdr, "\n num_hdr_sdr_lut\n");
@@ -859,6 +859,29 @@ unsigned int _log2(unsigned int value)
 
 	return ret;
 }
+
+static int prmy_maxl[7] = {
+	1200, 2000, 3000, 5000, 7000, 9000, 10000
+};
+/*1024 as 1.0*/
+static int margin_maxl[7] = {
+	560, 384, 256, 128, 64, 16, 8
+};
+/*eo clip calculate according to luminance*/
+static unsigned int eo_clip_maxl(unsigned int maxl)
+{
+	unsigned int clip_maxl = 0;
+	int i;
+
+	for (i = 0; i < 7; i++) {
+		if (maxl <= prmy_maxl[i]) {
+			clip_maxl = maxl + ((maxl * margin_maxl[i]) >> 10);
+			return clip_maxl;
+		}
+	}
+
+	return clip_maxl;
+}
 /*master_info used to get maxl
  *eo_sel used to sel 23bit eo or 32 bit eo
  */
@@ -914,8 +937,7 @@ void eo_clip_proc(
 	if (master_info->luminance[0] < 100)
 		master_info->luminance[0] = 0;
 
-	max_luma = master_info->luminance[0] +
-		(master_info->luminance[0] * hdr10_clip_margin) / 10;
+	max_luma = eo_clip_maxl(master_info->luminance[0]);
 
 	if (max_luma > 10000)
 		max_luma = 10000;
@@ -3294,7 +3316,7 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 		matrix_pre_offset2 = VPP_VD1_MATRIX_PRE_OFFSET2;
 		matrix_en_ctrl = VPP_VD1_MATRIX_EN_CTRL;
 
-		WRITE_VPP_REG_BITS(VPP_VD1_MATRIX_EN_CTRL, mtx_on, 0, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VD1_MATRIX_EN_CTRL, mtx_on, 0, 1);
 	} else if (mtx_sel == POST2_MTX) {
 		matrix_coef00_01 = VPP_POST2_MATRIX_COEF00_01;
 		matrix_coef02_10 = VPP_POST2_MATRIX_COEF02_10;
@@ -3311,7 +3333,7 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 		matrix_pre_offset2 = VPP_POST2_MATRIX_PRE_OFFSET2;
 		matrix_en_ctrl = VPP_POST2_MATRIX_EN_CTRL;
 
-		WRITE_VPP_REG_BITS(VPP_POST2_MATRIX_EN_CTRL, mtx_on, 0, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_POST2_MATRIX_EN_CTRL, mtx_on, 0, 1);
 	} else if (mtx_sel == POST_MTX) {
 		matrix_coef00_01 = VPP_POST_MATRIX_COEF00_01;
 		matrix_coef02_10 = VPP_POST_MATRIX_COEF02_10;
@@ -3328,7 +3350,7 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 		matrix_pre_offset2 = VPP_POST_MATRIX_PRE_OFFSET2;
 		matrix_en_ctrl = VPP_POST_MATRIX_EN_CTRL;
 
-		WRITE_VPP_REG_BITS(VPP_POST_MATRIX_EN_CTRL, mtx_on, 0, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_POST_MATRIX_EN_CTRL, mtx_on, 0, 1);
 	}
 
 	if (!mtx_on)
@@ -3336,37 +3358,37 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 
 	switch (mtx_csc) {
 	case MATRIX_RGB_YUV709:
-		WRITE_VPP_REG(matrix_coef00_01, 0x00bb0275);
-		WRITE_VPP_REG(matrix_coef02_10, 0x003f1f99);
-		WRITE_VPP_REG(matrix_coef11_12, 0x1ea601c2);
-		WRITE_VPP_REG(matrix_coef20_21, 0x01c21e67);
-		WRITE_VPP_REG(matrix_coef22, 0x00001fd7);
-		WRITE_VPP_REG(matrix_offset0_1, 0x00400200);
-		WRITE_VPP_REG(matrix_offset2, 0x00000200);
-		WRITE_VPP_REG(matrix_pre_offset0_1, 0x0);
-		WRITE_VPP_REG(matrix_pre_offset2, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_coef00_01, 0x00bb0275);
+		VSYNC_WR_MPEG_REG(matrix_coef02_10, 0x003f1f99);
+		VSYNC_WR_MPEG_REG(matrix_coef11_12, 0x1ea601c2);
+		VSYNC_WR_MPEG_REG(matrix_coef20_21, 0x01c21e67);
+		VSYNC_WR_MPEG_REG(matrix_coef22, 0x00001fd7);
+		VSYNC_WR_MPEG_REG(matrix_offset0_1, 0x00400200);
+		VSYNC_WR_MPEG_REG(matrix_offset2, 0x00000200);
+		VSYNC_WR_MPEG_REG(matrix_pre_offset0_1, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_pre_offset2, 0x0);
 		break;
 	case MATRIX_YUV709_RGB:
-		WRITE_VPP_REG(matrix_coef00_01, 0x04A80000);
-		WRITE_VPP_REG(matrix_coef02_10, 0x072C04A8);
-		WRITE_VPP_REG(matrix_coef11_12, 0x1F261DDD);
-		WRITE_VPP_REG(matrix_coef20_21, 0x04A80876);
-		WRITE_VPP_REG(matrix_coef22, 0x0);
-		WRITE_VPP_REG(matrix_offset0_1, 0x0);
-		WRITE_VPP_REG(matrix_offset2, 0x0);
-		WRITE_VPP_REG(matrix_pre_offset0_1, 0x7c00600);
-		WRITE_VPP_REG(matrix_pre_offset2, 0x00000600);
+		VSYNC_WR_MPEG_REG(matrix_coef00_01, 0x04A80000);
+		VSYNC_WR_MPEG_REG(matrix_coef02_10, 0x072C04A8);
+		VSYNC_WR_MPEG_REG(matrix_coef11_12, 0x1F261DDD);
+		VSYNC_WR_MPEG_REG(matrix_coef20_21, 0x04A80876);
+		VSYNC_WR_MPEG_REG(matrix_coef22, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_offset0_1, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_offset2, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_pre_offset0_1, 0x7c00600);
+		VSYNC_WR_MPEG_REG(matrix_pre_offset2, 0x00000600);
 		break;
 	case MATRIX_YUV709F_RGB:/*full to full*/
-		WRITE_VPP_REG(matrix_coef00_01, 0x04000000);
-		WRITE_VPP_REG(matrix_coef02_10, 0x064D0400);
-		WRITE_VPP_REG(matrix_coef11_12, 0x1F411E21);
-		WRITE_VPP_REG(matrix_coef20_21, 0x0400076D);
-		WRITE_VPP_REG(matrix_coef22, 0x0);
-		WRITE_VPP_REG(matrix_offset0_1, 0x0);
-		WRITE_VPP_REG(matrix_offset2, 0x0);
-		WRITE_VPP_REG(matrix_pre_offset0_1, 0x0000600);
-		WRITE_VPP_REG(matrix_pre_offset2, 0x00000600);
+		VSYNC_WR_MPEG_REG(matrix_coef00_01, 0x04000000);
+		VSYNC_WR_MPEG_REG(matrix_coef02_10, 0x064D0400);
+		VSYNC_WR_MPEG_REG(matrix_coef11_12, 0x1F411E21);
+		VSYNC_WR_MPEG_REG(matrix_coef20_21, 0x0400076D);
+		VSYNC_WR_MPEG_REG(matrix_coef22, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_offset0_1, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_offset2, 0x0);
+		VSYNC_WR_MPEG_REG(matrix_pre_offset0_1, 0x0000600);
+		VSYNC_WR_MPEG_REG(matrix_pre_offset2, 0x00000600);
 		break;
 	default:
 		break;

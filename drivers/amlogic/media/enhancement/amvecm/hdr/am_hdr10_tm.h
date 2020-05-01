@@ -24,7 +24,7 @@
 #define OE_X 149
 #define MAX32_BIT 32
 #define MAX_BEIZER_ORDER 10
-#define TM_GAIN_BIT 7
+#define TM_GAIN_BIT 6
 #define MAX_32 0xffffffff
 
 extern unsigned int panell;
