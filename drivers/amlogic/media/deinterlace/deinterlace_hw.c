@@ -763,7 +763,8 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 	ei_hw_init();
 	nr_hw_init();
 	#ifdef DI_FILM_GRAIN
-	di_fgrain_init(FGRAIN_TBL_SIZE);
+	if (di_dbg_cfg & DBG_M_FG)
+		di_fgrain_init(FGRAIN_TBL_SIZE);
 	#endif
 	if (pd_enable)
 		init_field_mode(288);
@@ -793,7 +794,8 @@ void di_hw_uninit(void)
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
 		nr_gate_control(false);
 	#ifdef DI_FILM_GRAIN
-	di_fgrain_uninit();
+	if (di_dbg_cfg & DBG_M_FG)
+		di_fgrain_uninit();
 	#endif
 
 }

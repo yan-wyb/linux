@@ -272,6 +272,9 @@ static void log_buffer_state(unsigned char *tag);
 static unsigned int isbypass_flag = true;
 static unsigned int needbypass_flag = true;
 
+unsigned int di_dbg_cfg = DI_NONE;
+module_param(di_dbg_cfg, uint, 0664);
+
 static const
 struct vframe_receiver_op_s di_vf_receiver = {
 	.event_cb	= di_receiver_event_fun
@@ -3602,7 +3605,7 @@ static void pre_de_process(void)
 	}
 
 	#ifdef DI_FILM_GRAIN
-	if (di_pre_stru.source_change_flag)
+	if (di_pre_stru.source_change_flag && (di_dbg_cfg & DBG_M_FG))
 	di_fgrain_config(&di_pre_stru.di_inp_mif,
 			 &di_pre_stru.fgrain_diset,
 			 di_pre_stru.di_inp_buf->vframe);
@@ -3653,11 +3656,13 @@ static void pre_de_process(void)
 				      di_pre_stru.di_mem_buf_dup_p->vframe,
 				      di_pre_stru.di_wr_buf->vframe);
 	#ifdef DI_FILM_GRAIN
-	if (di_pre_stru.source_change_flag)
-		di_fgrain_setting(&di_pre_stru.fgrain_diset,
-				  di_pre_stru.di_inp_buf->vframe);
+	if (di_dbg_cfg & DBG_M_FG) {
+		if (di_pre_stru.source_change_flag)
+			di_fgrain_setting(&di_pre_stru.fgrain_diset,
+					  di_pre_stru.di_inp_buf->vframe);
 
-	di_fgrain_update_table(di_pre_stru.di_inp_buf->vframe);
+		di_fgrain_update_table(di_pre_stru.di_inp_buf->vframe);
+	}
 	#endif
 	if (mcpre_en) {
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))

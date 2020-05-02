@@ -31,6 +31,48 @@
 #ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 #define DI_FILM_GRAIN
 #endif
+
+/**************************************
+ *
+ * debug config infor
+ *
+ *************************************/
+#define DI_NONE		0x00000000
+#define DI_BIT0		0x00000001
+#define DI_BIT1		0x00000002
+#define DI_BIT2		0x00000004
+#define DI_BIT3		0x00000008
+#define DI_BIT4		0x00000010
+#define DI_BIT5		0x00000020
+#define DI_BIT6		0x00000040
+#define DI_BIT7		0x00000080
+#define DI_BIT8		0x00000100
+#define DI_BIT9		0x00000200
+#define DI_BIT10	0x00000400
+#define DI_BIT11	0x00000800
+#define DI_BIT12	0x00001000
+#define DI_BIT13	0x00002000
+#define DI_BIT14	0x00004000
+#define DI_BIT15	0x00008000
+#define DI_BIT16	0x00010000
+#define DI_BIT17	0x00020000
+#define DI_BIT18	0x00040000
+#define DI_BIT19	0x00080000
+#define DI_BIT20	0x00100000
+#define DI_BIT21	0x00200000
+#define DI_BIT22	0x00400000
+#define DI_BIT23	0x00800000
+#define DI_BIT24	0x01000000
+#define DI_BIT25	0x02000000
+#define DI_BIT26	0x04000000
+#define DI_BIT27	0x08000000
+#define DI_BIT28	0x10000000
+#define DI_BIT29	0x20000000
+#define DI_BIT30	0x40000000
+#define DI_BIT31	0x80000000
+
+#define DBG_M_FG		DI_BIT0	/*do film grain work*/
+
 /*trigger_pre_di_process param*/
 #define TRIGGER_PRE_BY_PUT			'p'
 #define TRIGGER_PRE_BY_DE_IRQ		'i'
@@ -226,6 +268,8 @@ extern bool is_vsync_rdma_enable(void);
 
 #define TABLE_LEN_MAX 10000
 #define TABLE_FLG_END	(0xfffffffe)
+
+extern unsigned int di_dbg_cfg; /* add for debug config */
 
 /******************************************
  * patch for TV-10258 multiwave group issue
