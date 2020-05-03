@@ -1614,6 +1614,7 @@
 		mux { /* GPIOZ_0 */
 			groups = "mclk0_z";
 			function = "mclk0";
+			drive-strength = <1>;
 		};
 	};
 
@@ -1623,6 +1624,7 @@
 				"tdma_fs_z",
 				"tdma_dout0_z";
 			function = "tdma_out";
+			drive-strength = <1>;
 			bias-pull-down;
 		};
 	};
@@ -1632,6 +1634,7 @@
 			groups = "tdma_din0_h",
 			    "tdma_din1_h";
 			function = "tdma_in";
+			drive-strength = <1>;
 		};
 	};
 
@@ -1641,6 +1644,7 @@
 				"tdmc_fs",
 				"tdmc_dout0";
 			function = "tdmc_out";
+			drive-strength = <1>;
 		};
 	};
 
@@ -1648,6 +1652,7 @@
 		mux { /* GPIODV_10 */
 			groups = "tdmc_din1";
 			function = "tdmc_in";
+			drive-strength = <1>;
 		};
 	};
 
