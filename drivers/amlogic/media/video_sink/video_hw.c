@@ -4943,6 +4943,8 @@ EXPORT_SYMBOL(get_osd_reverse);
  * Film Grain APIs
  *********************************************************/
 #define FGRAIN_TBL_SIZE  (498 * 16)
+
+#ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 static void fgrain_set_config(struct fgrain_setting_s *setting)
 {
 	u32 reg_fgrain_glb_en = 1 << 0;
@@ -5063,7 +5065,6 @@ static void fgrain_set_window(u32 layer_id,
 	}
 }
 
-#ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 static int fgrain_init(u8 layer_id, u32 table_size)
 {
 	int ret;
@@ -5137,25 +5138,6 @@ static void fgrain_update_irq_source(u32 layer_id)
 
 	lut_dma_update_irq_source(channel, irq_source);
 }
-#else
-static int fgrain_init(u8 layer_id, u32 table_size)
-{
-	return 0;
-}
-
-static void fgrain_uninit(u8 layer_id)
-{
-}
-
-static int fgrain_write(u32 layer_id, u32 fgs_table_addr)
-{
-	return 0;
-}
-
-static void fgrain_update_irq_source(u32 layer_id)
-{
-}
-#endif
 
 void fgrain_config(u8 layer_id,
 		   struct vpp_frame_par_s *frame_par,
@@ -5250,6 +5232,38 @@ void fgrain_update_table(u8 layer_id,
 		}
 	}
 }
+
+#else
+static int fgrain_init(u8 layer_id, u32 table_size)
+{
+	pr_info("warning: film grain not support!\n");
+	return 0;
+}
+
+static void fgrain_uninit(u8 layer_id)
+{
+}
+
+void fgrain_config(u8 layer_id,
+		   struct vpp_frame_par_s *frame_par,
+		   struct mif_pos_s *mif_setting,
+		   struct fgrain_setting_s *setting,
+		   struct vframe_s *vf)
+{
+}
+
+void fgrain_setting(u8 layer_id,
+		    struct fgrain_setting_s *setting,
+		    struct vframe_s *vf)
+{
+}
+
+void fgrain_update_table(u8 layer_id,
+			 struct vframe_s *vf)
+
+{
+}
+#endif
 
 /*********************************************************
  * Init APIs
