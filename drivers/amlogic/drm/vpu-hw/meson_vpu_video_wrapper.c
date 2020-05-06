@@ -199,6 +199,19 @@ static void video_set_state(struct meson_vpu_block *vblk,
 
 	if (mvvs->is_uvm) {
 		vf = mvvs->vf;
+		vf->axis[0] = mvvs->dst_x;
+		vf->axis[1] = mvvs->dst_y;
+		vf->axis[2] = mvvs->dst_x + mvvs->dst_w - 1;
+		vf->axis[3] = mvvs->dst_y + mvvs->dst_h - 1;
+		vf->crop[0] = mvvs->src_y;/*crop top*/
+		vf->crop[1] = mvvs->src_x;/*crop left*/
+		/*vf->width is from mvvs->src_w which is the
+		 *valid content so the crop of bottom and right
+		 *could be 0
+		 */
+		vf->crop[2] = 0;/*crop bottow*/
+		vf->crop[3] = 0;/*crop right*/
+		vf->flag |= VFRAME_FLAG_VIDEO_DRM;
 		if (!kfifo_put(&video->ready_q, vf))
 			DRM_INFO("ready_q is full!\n");
 	} else {
