@@ -274,8 +274,8 @@ static int am_meson_update_output_state(struct drm_atomic_state *state,
 	return 0;
 }
 
-static int __am_meson_drm_set_config(struct drm_mode_set *set,
-				     struct drm_atomic_state *state)
+int __am_meson_drm_set_config(struct drm_mode_set *set,
+			      struct drm_atomic_state *state)
 {
 	struct drm_crtc_state *crtc_state;
 	struct drm_plane_state *primary_state;

@@ -91,5 +91,6 @@ struct drm_connector *am_meson_hdmi_connector(void);
 int meson_debugfs_init(struct drm_minor *minor);
 void meson_debugfs_cleanup(struct drm_minor *minor);
 #endif
-
+int __am_meson_drm_set_config(struct drm_mode_set *set,
+			      struct drm_atomic_state *state);
 #endif /* __AM_MESON_DRV_H */
