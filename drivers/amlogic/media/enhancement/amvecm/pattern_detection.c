@@ -752,6 +752,14 @@ static int face_hist_checker(struct vframe_s *vf)
 		flag = 1;
 	}
 
+	/* patch */
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+	    !(is_meson_rev_a() && is_meson_tm2_cpu())) {
+		if (vf->source_type == VFRAME_SOURCE_TYPE_CVBS &&
+		    vf->source_mode == VFRAME_SOURCE_MODE_PAL)
+		flag = 0;
+	}
+
 	if (flag <= 0)
 		pr_pattern_detect_dbg(
 			"skin tone pattern is not detected\n");
@@ -920,6 +928,14 @@ static int corn_hist_checker(struct vframe_s *vf)
 		pr_pattern_detect_dbg(
 				"green corn pattern detected\n");
 		flag = 1;
+	}
+
+	/* patch */
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2) &&
+	    !(is_meson_rev_a() && is_meson_tm2_cpu())) {
+		if (vf->source_type == VFRAME_SOURCE_TYPE_CVBS &&
+		    vf->source_mode == VFRAME_SOURCE_MODE_PAL)
+		flag = 0;
 	}
 
 	if (flag <= 0)
