@@ -510,6 +510,7 @@ struct tvin_sig_property_s {
 	struct tvin_latency_s latency;
 	struct tvin_hdr10plus_info_s hdr10p_info;
 	struct tvin_emp_data_s emp_data;
+	unsigned int cnt;
 };
 
 #define TVAFE_VF_POOL_SIZE			6 /* 8 */

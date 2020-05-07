@@ -149,11 +149,11 @@ static int signal_status = TVIN_SIG_STATUS_NULL;
 module_param(signal_status, int, 0664);
 MODULE_PARM_DESC(signal_status, "signal_status");
 
-static unsigned int vdin_dv_chg_cnt = 6;
+static unsigned int vdin_dv_chg_cnt = 2;
 module_param(vdin_dv_chg_cnt, uint, 0664);
 MODULE_PARM_DESC(vdin_dv_chg_cnt, "vdin_dv_chg_cnt");
 
-static unsigned int vdin_hdr_chg_cnt = 6;
+static unsigned int vdin_hdr_chg_cnt = 2;
 module_param(vdin_hdr_chg_cnt, uint, 0664);
 MODULE_PARM_DESC(vdin_hdr_chg_cnt, "vdin_hdr_chg_cnt");
 
@@ -344,7 +344,10 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 	if (!(devp->flags & VDIN_FLAG_ISR_EN) && devp->frontend) {
 		sm_ops = devp->frontend->sm_ops;
 		if (sm_ops && sm_ops->get_sig_property) {
-			sm_ops->get_sig_property(devp->frontend, &devp->prop);
+			if (IS_CVBS_SRC(devp->parm.port) ||
+			    vdin_get_prop_in_sm_en)
+				sm_ops->get_sig_property(devp->frontend,
+					&devp->prop);
 			/*devp->dv.dv_flag = devp->prop.dolby_vision;*/
 		}
 	}
@@ -367,8 +370,14 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 		}
 	}
 	#endif
+
 	if (sm_debug_enable & VDIN_SM_LOG_L_4)
-		pr_info("get dolby_vision=0x%x\n", prop->dolby_vision);
+		pr_info("[sm.%d]dv:%d, hdr state:%d eotf:%d flag:0x%x\n",
+			devp->index,
+			devp->prop.dolby_vision,
+			devp->prop.hdr_info.hdr_state,
+			devp->prop.hdr_info.hdr_data.eotf,
+			devp->prop.vdin_hdr_flag);
 
 	if (devp->prop.dolby_vision)
 		signal_type |= (1 << 30);
@@ -446,11 +455,14 @@ u32 tvin_hdmirx_signal_type_check(struct vdin_dev_s *devp)
 		/* matrix_coefficient */
 		signal_type = ((9 << 0) | (signal_type & (~0xFF)));
 	}
+
+	if (sm_debug_enable & VDIN_SM_LOG_L_4)
+		pr_info("[sm.%d] hdr flag:0x%x signal_type:0x%x\n",
+			devp->index,
+			devp->prop.vdin_hdr_flag, signal_type);
+
 	/* check HDR 10+ end */
 	devp->parm.info.signal_type = signal_type;
-	if (sm_debug_enable & VDIN_SM_LOG_L_4)
-		pr_info("[smr.%d] signal_type 0x%x\n", devp->index,
-			signal_type);
 
 	if (vdin_re_config)
 		return signal_chg;
@@ -606,8 +618,8 @@ void tvin_smr(struct vdin_dev_s *devp)
 						sm_ops->get_sig_property) {
 						info->fmt =
 							sm_ops->get_fmt(fe);
-						sm_ops->get_sig_property(fe,
-							prop);
+						/*sm_ops->get_sig_property(fe,*/
+						/*prop);*/
 						info->cfmt = prop->color_format;
 						memcpy(pre_prop, prop,
 					sizeof(struct tvin_sig_property_s));
@@ -748,8 +760,7 @@ void tvin_smr(struct vdin_dev_s *devp)
 			}
 		}
 		/* dynamic adjust cutwindow for atv test */
-		if ((port >= TVIN_PORT_CVBS0) &&
-			(port <= TVIN_PORT_CVBS3))
+		if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3))
 			vdin_auto_de_handler(devp);
 		if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3) &&
 			devp->auto_ratio_en && sm_ops->get_sig_property)
@@ -796,6 +807,7 @@ void tvin_smr(struct vdin_dev_s *devp)
 					sm_ops->get_fmt(fe);
 				if ((sm_atv_prestable_fmt != stable_fmt) &&
 					(stable_fmt != TVIN_SIG_FMT_NULL)) {
+					/*cvbs in*/
 					sm_ops->get_sig_property(fe, prop);
 					memcpy(pre_prop, prop,
 					sizeof(struct tvin_sig_property_s));

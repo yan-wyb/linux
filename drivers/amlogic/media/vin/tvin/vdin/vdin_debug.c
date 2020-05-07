@@ -863,6 +863,7 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("prop.color_fmt_range	= (%s)%d\n",
 		tvin_trans_color_range_str(devp->prop.color_fmt_range),
 		devp->prop.color_fmt_range);
+	pr_info("prop.cnt = %d\n", devp->prop.cnt);
 	pr_info("format_convert	= %s(%d)\n",
 		vdin_fmt_convert_str(devp->format_convert),
 		devp->format_convert);
@@ -1625,6 +1626,16 @@ static void vdin_dump_regs(struct vdin_dev_s *devp)
 	reg = VDIN_MISC_CTRL;
 	pr_info("0x%04x = 0x%08x\n\n", (reg), R_VCBUS(reg));
 }
+
+void vdin_test_front_end(void)
+{
+	struct tvin_frontend_s *fe = tvin_get_frontend(TVIN_PORT_HDMI0,
+		VDIN_FRONTEND_IDX);
+
+	if (fe->sm_ops && fe->sm_ops->vdin_set_property)
+		fe->sm_ops->vdin_set_property(fe);
+}
+
 /*
 * 1.show the current frame rate
 * echo fps >/sys/class/vdin/vdinx/attr
@@ -2468,7 +2479,8 @@ start_chk:
 			pr_err("miss para, current vframe_wr_en:%d\n",
 			       devp->vframe_wr_en);
 		}
-
+	} else if (!strcmp(parm[0], "frontend")) {
+		vdin_test_front_end();
 	} else {
 		pr_info("unknown command\n");
 	}

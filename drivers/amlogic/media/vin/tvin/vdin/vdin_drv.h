@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0514: fe_lock will locked, sometime cause vdin1 fail"
+#define VDIN_VER "ver:2020-0508: add vdin frontend interface"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
@@ -145,8 +145,15 @@ struct match_data_s {
 #define RDMA_TABLE_SIZE (PAGE_SIZE>>3)
 /* #define VDIN_DEBUG */
 
-#define IS_HDMI_SRC(src) (((src) >= TVIN_PORT_HDMI0) && \
-				((src) <= TVIN_PORT_HDMI7))
+#define IS_HDMI_SRC(src)	\
+		({typeof(src) src_ = src; \
+		 (((src_) >= TVIN_PORT_HDMI0) && \
+		 ((src_) <= TVIN_PORT_HDMI7)); })
+
+#define IS_CVBS_SRC(src)	\
+		({typeof(src) src_ = src; \
+		 (((src_) >= TVIN_PORT_CVBS0) && \
+		 ((src_) <= TVIN_PORT_CVBS3)); })
 
 #define H_SHRINK_TIMES_4k	4
 #define V_SHRINK_TIMES_4k	4
@@ -354,6 +361,7 @@ struct vdin_dev_s {
 	struct tvin_format_s *fmt_info_p;
 	struct vf_pool *vfp;
 	struct tvin_frontend_s *frontend;
+	struct tvin_frontend_s	vdin_frontend;
 	struct tvin_sig_property_s pre_prop;
 	struct tvin_sig_property_s prop;
 	struct vframe_provider_s vprov;
@@ -580,6 +588,10 @@ extern bool enable_reset;
 extern unsigned int dolby_size_byte;
 extern unsigned int dv_dbg_mask;
 extern u32 vdin_cfg_444_to_422_wmif_en;
+extern unsigned int vdin_isr_monitor;
+extern unsigned int vdin_get_prop_in_vs_en;
+extern unsigned int vdin_prop_monitor;
+extern unsigned int vdin_get_prop_in_fe_en;
 
 extern char *vf_get_receiver_name(const char *provider_name);
 extern int start_tvin_service(int no, struct vdin_parm_s *para);

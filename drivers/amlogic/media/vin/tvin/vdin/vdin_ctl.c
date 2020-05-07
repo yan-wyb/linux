@@ -128,6 +128,22 @@ unsigned int vdin_isr_monitor;
 module_param(vdin_isr_monitor, uint, 0664);
 MODULE_PARM_DESC(vdin_isr_monitor, "vdin_isr_monitor");
 
+unsigned int vdin_get_prop_in_vs_en = 1;
+module_param(vdin_get_prop_in_vs_en, uint, 0664);
+MODULE_PARM_DESC(vdin_get_prop_in_vs_en, "vdin_get_prop_in_vs_en");
+
+unsigned int vdin_get_prop_in_sm_en = 1;
+module_param(vdin_get_prop_in_sm_en, uint, 0664);
+MODULE_PARM_DESC(vdin_get_prop_in_sm_en, "vdin_get_prop_in_sm_en");
+
+unsigned int vdin_get_prop_in_fe_en;
+module_param(vdin_get_prop_in_fe_en, uint, 0664);
+MODULE_PARM_DESC(vdin_get_prop_in_fe_en, "vdin_get_prop_in_fe_en");
+
+unsigned int vdin_prop_monitor;
+module_param(vdin_prop_monitor, uint, 0664);
+MODULE_PARM_DESC(vdin_prop_monitor, "vdin_prop_monitor");
+
 static unsigned int vpu_reg_27af = 0x3;
 
 /***************************Local defines**********************************/
@@ -5185,9 +5201,20 @@ void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
 		else
 			devp->prop.hdr_info.hdr_check_cnt = 0;
 
-		if (vdin_isr_monitor)
-			pr_info("dv:%d, hdr:%d\n", devp->prop.dolby_vision,
-				devp->prop.vdin_hdr_flag);
+		if (vdin_isr_monitor & 0x01)
+			pr_info("dv:%d, hdr state:%d eotf:%d flag:%d sty:0x%x\n",
+				devp->prop.dolby_vision,
+				devp->prop.hdr_info.hdr_state,
+				devp->prop.hdr_info.hdr_data.eotf,
+				devp->prop.vdin_hdr_flag,
+				devp->parm.info.signal_type);
+		if (vdin_isr_monitor & 0x02)
+			pr_info("emp size:%d, data:0x%x 0x%x 0x%x 0x%x\n",
+				devp->prop.emp_data.size,
+				devp->prop.emp_data.empbuf[0],
+				devp->prop.emp_data.empbuf[1],
+				devp->prop.emp_data.empbuf[2],
+				devp->prop.emp_data.empbuf[3]);
 	}
 
 	if (color_range_force)
@@ -5212,11 +5239,12 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 	sm_ops = devp->frontend->sm_ops;
 	if (sm_ops->get_sig_property) {
 		sm_ops->get_sig_property(devp->frontend, prop);
-		pr_info("vdin%d hdmi hdr eotf:0x%x, state:%d\n",
-				devp->index,
-				devp->prop.hdr_info.hdr_data.eotf,
-				devp->prop.hdr_info.hdr_state);
 		devp->prop.vdin_hdr_flag = vdin_is_hdr_signal_in(devp);
+		pr_info("vdin%d hdmi hdr eotf:0x%x, state:%d flag:0x%x\n",
+			devp->index,
+			devp->prop.hdr_info.hdr_data.eotf,
+			devp->prop.hdr_info.hdr_state,
+			devp->prop.vdin_hdr_flag);
 	}
 }
 

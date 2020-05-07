@@ -549,7 +549,7 @@ static void vdin_double_write_confirm(struct vdin_dev_s *devp)
  */
 void vdin_start_dec(struct vdin_dev_s *devp)
 {
-	struct tvin_state_machine_ops_s *sm_ops;
+	/*struct tvin_state_machine_ops_s *sm_ops;*/
 
 	/* avoid null pointer oops */
 	if (!devp || !devp->fmt_info_p) {
@@ -566,9 +566,7 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 		return;
 	}
 
-	if (devp->frontend && devp->frontend->sm_ops) {
-		sm_ops = devp->frontend->sm_ops;
-		sm_ops->get_sig_property(devp->frontend, &devp->prop);
+	if (devp->frontend /*&& devp->frontend->sm_ops*/) {
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 			vdin_check_hdmi_hdr(devp);
 
@@ -1600,7 +1598,8 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	sm_ops = devp->frontend->sm_ops;
 
 	if (sm_ops && sm_ops->get_sig_property) {
-		sm_ops->get_sig_property(devp->frontend, &devp->prop);
+		if (vdin_get_prop_in_vs_en)
+			sm_ops->get_sig_property(devp->frontend, &devp->prop);
 		vdin_vs_proc_monitor(devp);
 	}
 	cur_ms = jiffies_to_msecs(jiffies);
@@ -3404,6 +3403,86 @@ void vdin_rm_dev_class_files(struct device *dev)
 	vdin_remove_debug_files(dev);
 }
 
+static int vdin_dec_support(struct tvin_frontend_s *fe, enum tvin_port_e port)
+{
+	/*pr_info("%s\n", __func__);*/
+	if (IS_HDMI_SRC(port))
+		return 0;
+	else
+		return -1;
+}
+
+static int vdin_dec_open(struct tvin_frontend_s *fe, enum tvin_port_e port)
+{
+	/*pr_info("%s\n", __func__);*/
+
+	return 0;
+}
+
+static void vdin_dec_start(struct tvin_frontend_s *fe, enum tvin_sig_fmt_e fmt)
+{
+	/*pr_info("%s\n", __func__);*/
+}
+
+static void vdin_dec_stop(struct tvin_frontend_s *fe, enum tvin_port_e port)
+{
+	/*pr_info("%s\n", __func__);*/
+}
+
+static void vdin_dec_close(struct tvin_frontend_s *fe)
+{
+	/*pr_info("%s\n", __func__);*/
+}
+
+static int vdin_dec_isr(struct tvin_frontend_s *fe, unsigned int hcnt64)
+{
+	/*pr_info("%s\n", __func__);*/
+	return 0;
+}
+
+static bool vdin_set_sig_property(struct tvin_frontend_s *fe)
+{
+	struct vdin_dev_s *devp = container_of(fe, struct vdin_dev_s,
+						vdin_frontend);
+	struct tvin_state_machine_ops_s *sm_ops;
+
+	if (!(devp->flags & VDIN_FLAG_ISR_EN) && vdin_get_prop_in_vs_en)
+		return 1;
+
+	if (!IS_HDMI_SRC(devp->parm.port))
+		return 1;
+
+	if (devp->frontend) {
+		sm_ops = devp->frontend->sm_ops;
+		if (sm_ops && sm_ops->get_sig_property &&
+		    vdin_get_prop_in_fe_en) {
+			sm_ops->get_sig_property(devp->frontend, &devp->prop);
+			devp->dv.dv_flag = devp->prop.dolby_vision;
+			devp->prop.cnt++;
+			if (vdin_prop_monitor)
+				pr_info("%s dv:%d hdr:%d signal_type:0x%x\n",
+					__func__, devp->dv.dv_flag,
+					devp->prop.vdin_hdr_flag,
+					devp->parm.info.signal_type);
+		}
+	}
+
+	return 0;
+}
+
+static struct tvin_decoder_ops_s vdin_dec_ops = {
+	.support            = vdin_dec_support,
+	.open               = vdin_dec_open,
+	.start              = vdin_dec_start,
+	.stop               = vdin_dec_stop,
+	.close              = vdin_dec_close,
+	.decode_isr         = vdin_dec_isr,
+};
+
+static struct tvin_state_machine_ops_s vdin_sm_ops = {
+	.vdin_set_property = vdin_set_sig_property,
+};
+
 static const struct match_data_s vdin_dt_xxx = {
 	.name = "vdin",
 	.hw_ver = VDIN_HW_ORG,
@@ -3640,7 +3719,16 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	spin_lock_init(&vdevp->isr_lock);
 	spin_lock_init(&vdevp->hist_lock);
 	vdevp->frontend = NULL;
-
+	if (vdevp->index == 0) {
+		/* reg tv in frontend */
+		tvin_frontend_init(&vdevp->vdin_frontend,
+				   &vdin_dec_ops,
+				   &vdin_sm_ops,
+				   VDIN_FRONTEND_IDX + vdevp->index);
+		sprintf(vdevp->vdin_frontend.name, "%s", VDIN_DEV_NAME);
+		if (tvin_reg_frontend(&vdevp->vdin_frontend) < 0)
+			pr_info("vdin_frontend reg error!!!\n");
+	}
 	/* vdin_addr_offset */
 	if (vdevp->index == 1) {
 		if (is_meson_gxbb_cpu())
