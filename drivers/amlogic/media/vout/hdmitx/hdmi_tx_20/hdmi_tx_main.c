@@ -4063,12 +4063,12 @@ static ssize_t store_fake_plug(struct device *dev,
 	unsigned int res;
 	int i;
 
-	pr_info("fake plug %d:%s\n", count, buf);
+	pr_info("fake plug:%s\n", buf);
 
 	if (strncmp(buf, "1", 1) == 0) {
 		hdev->hpd_state = 1;
 		memset(fake_edid, 0, 1024);
-		if (count >= 256 + 2) {
+		if ((count >= 256 + 2) && (count <= 2048 + 2)) {
 			for (i = 0; i < (count - 2) / 2; i++) {
 				hex[0] = buf[2 + i * 2];
 				hex[1] = buf[3 + i * 2];
