@@ -663,8 +663,7 @@ void hdmirx_fill_edid_buf(const char *buf, int size)
 #ifdef CONFIG_AMLOGIC_HDMITX
 	if ((edid_from_tx & 1) &&
 	    (size == 2 * EDID_SIZE * PORT_NUM)) {
-		rx_pr("using EDID from TX, blocking user EDID change\n",
-		      size);
+		rx_pr("using EDID from TX, blocking user EDID change\n");
 		for (i = 0; i < 2 * PORT_NUM; i++)
 			memcpy(edid_buf + i * EDID_SIZE,
 			       edid_tx, EDID_SIZE);
