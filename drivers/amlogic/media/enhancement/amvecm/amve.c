@@ -1578,8 +1578,6 @@ void amvecm_fresh_overscan(struct vframe_s *vf)
 
 	if (overscan_disable)
 		return;
-	if (is_dolby_vision_on())
-		return;
 
 	if (overscan_table[0].load_flag) {
 		height = (vf->type & VIDTYPE_COMPRESS) ?

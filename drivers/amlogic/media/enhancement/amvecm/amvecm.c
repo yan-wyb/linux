@@ -1022,7 +1022,30 @@ void amvecm_video_latch(void)
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
 		ve_lc_latch_process();
 }
+static void amvecm_overscan_process(
+	struct vframe_s *vf,
+	struct vframe_s *toggle_vf,
+	int flags,
+	enum vd_path_e vd_path)
+{
+	if (vd_path != VD1_PATH)
+		return;
+	if (flags & CSC_FLAG_CHECK_OUTPUT) {
+		if (toggle_vf)
+			amvecm_fresh_overscan(toggle_vf);
+		else if (vf)
+			amvecm_fresh_overscan(vf);
+		return;
+	}
+	if (!toggle_vf && !vf)
+		amvecm_reset_overscan();
 
+	if (vf)
+		amvecm_fresh_overscan(vf);
+	else
+		amvecm_reset_overscan();
+
+}
 int amvecm_on_vs(
 	struct vframe_s *vf,
 	struct vframe_s *toggle_vf,
@@ -1039,6 +1062,7 @@ int amvecm_on_vs(
 
 	if (probe_ok == 0)
 		return 0;
+	amvecm_overscan_process(vf, toggle_vf, flags, vd_path);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (for_dolby_vision_video_effect() && (vd_path == VD1_PATH))
 		return 0;
@@ -1047,12 +1071,6 @@ int amvecm_on_vs(
 		dnlp_alg_param_init();
 
 	if (flags & CSC_FLAG_CHECK_OUTPUT) {
-		if (vd_path == VD1_PATH) {
-			if (toggle_vf)
-				amvecm_fresh_overscan(toggle_vf);
-			else if (vf)
-				amvecm_fresh_overscan(vf);
-		}
 		/* to test if output will change */
 		return amvecm_matrix_process(
 			toggle_vf, vf, flags, vd_path);
@@ -1077,8 +1095,6 @@ int amvecm_on_vs(
 			refresh_on_vs(vf);
 		}
 	} else {
-		if (vd_path == VD1_PATH)
-			amvecm_reset_overscan();
 		result = amvecm_matrix_process(
 			NULL, NULL, flags, vd_path);
 		if (vd_path == VD1_PATH) {
@@ -1110,10 +1126,6 @@ int amvecm_on_vs(
 
 		vpp_demo_config(vf);
 	}
-	if (vf)
-		amvecm_fresh_overscan(vf);
-	else
-		amvecm_reset_overscan();
 
 	/* pq latch process */
 	amvecm_video_latch();
