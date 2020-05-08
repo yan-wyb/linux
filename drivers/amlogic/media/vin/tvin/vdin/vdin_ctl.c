@@ -2172,9 +2172,11 @@ static inline void vdin_set_hist_mux(struct vdin_dev_s *devp)
 	enum tvin_port_e port = TVIN_PORT_NULL;
 
 	port = devp->parm.port;
-
-	if ((port < TVIN_PORT_HDMI0) || (port > TVIN_PORT_HDMI7))
-		return;
+	/*if ((port < TVIN_PORT_HDMI0) || (port > TVIN_PORT_HDMI7))*/
+	/*	return;*/
+	/* For AV input no correct data, from vlsi fei.jun
+	 * AV, HDMI all set 3
+	 */
 	/* use 11: form matrix1 din */
 	wr_bits(devp->addr_offset, VDIN_HIST_CTRL, 3,
 			HIST_HIST_DIN_SEL_BIT, HIST_HIST_DIN_SEL_WID);

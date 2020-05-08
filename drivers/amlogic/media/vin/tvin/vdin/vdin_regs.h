@@ -1442,7 +1442,7 @@
  *  10: from matrix1 dout, 11: form matrix1 din
  */
 #define HIST_HIST_DIN_SEL_BIT           2
-#define HIST_HIST_DIN_SEL_WID           2
+#define HIST_HIST_DIN_SEL_WID           3
 /* Histgram range: 0: full picture, 1: histgram window
  * defined by VDIN_HIST_H_START_END & VDIN_HIST_V_START_END
  */

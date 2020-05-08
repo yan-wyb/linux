@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0507: increase buf to 10"
+#define VDIN_VER "ver:2020-0508: for AV src get hist data"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
