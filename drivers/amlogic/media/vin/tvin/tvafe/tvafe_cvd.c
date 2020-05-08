@@ -1907,7 +1907,10 @@ static void tvafe_cvd2_auto_de(struct tvafe_cvd2_s *cvd2)
 	lines->val[0] = lines->val[1];
 	lines->val[1] = lines->val[2];
 	lines->val[2] = lines->val[3];
-	lines->val[3] = R_APB_REG(CVD2_REG_E6);
+	if (user_param->cutwin_test_en & 0x2)
+		lines->val[3] = user_param->cutwin_test_vcnt;
+	else
+		lines->val[3] = R_APB_REG(CVD2_REG_E6);
 	for (i = 0; i < 4; i++) {
 		if (l_max < lines->val[i])
 			l_max = lines->val[i];
@@ -1977,7 +1980,10 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 		lines->val[0] = lines->val[1];
 		lines->val[1] = lines->val[2];
 		lines->val[2] = lines->val[3];
-		lines->val[3] = R_APB_REG(CVD2_REG_E6);
+		if (user_param->cutwin_test_en & 0x2)
+			lines->val[3] = user_param->cutwin_test_vcnt;
+		else
+			lines->val[3] = R_APB_REG(CVD2_REG_E6);
 	}
 	for (i = 0; i < 4; i++) {
 		if (l_max < lines->val[i])
@@ -1993,6 +1999,10 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 		l_ave = (l_ave - l_max - l_min + 1) >> 1;
 		if (l_ave > TVAFE_CVD2_AUTO_VS_TH) {
 			cvd2->info.vs_adj_en = 1;
+			if (l_ave & 0x80) /* > std freq */
+				cvd2->info.vs_adj_dir = 0;
+			else /* < std freq */
+				cvd2->info.vs_adj_dir = 1;
 			/*vlsi test result*/
 			/*0x3 for test colobar pattern*/
 			if (cvd2->info.hs_adj_en == 0)
@@ -2020,6 +2030,7 @@ static void tvafe_cvd2_adj_vs(struct tvafe_cvd2_s *cvd2)
 				cvd2->info.vs_adj_level = 0xff;
 		} else {
 			cvd2->info.vs_adj_en = 0;
+			cvd2->info.vs_adj_dir = 0;
 			if (R_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE) != 0xa)
 				W_APB_REG(CVD2_CHROMA_LOOPFILTER_STATE, 0xa);
 
@@ -2318,7 +2329,10 @@ inline void tvafe_cvd2_adj_hs(struct tvafe_cvd2_s *cvd2,
 	cvd2->info.hcnt64[0] = cvd2->info.hcnt64[1];
 	cvd2->info.hcnt64[1] = cvd2->info.hcnt64[2];
 	cvd2->info.hcnt64[2] = cvd2->info.hcnt64[3];
-	cvd2->info.hcnt64[3] = hcnt64;
+	if (user_param->cutwin_test_en & 0x1)
+		cvd2->info.hcnt64[3] = user_param->cutwin_test_hcnt;
+	else
+		cvd2->info.hcnt64[3] = hcnt64;
 	hcnt64_ave = 0;
 	hcnt64_max = 0;
 	hcnt64_min = 0xffffffff;
@@ -2506,7 +2520,10 @@ inline void tvafe_cvd2_adj_hs_ntsc(struct tvafe_cvd2_s *cvd2,
 	cvd2->info.hcnt64[0] = cvd2->info.hcnt64[1];
 	cvd2->info.hcnt64[1] = cvd2->info.hcnt64[2];
 	cvd2->info.hcnt64[2] = cvd2->info.hcnt64[3];
-	cvd2->info.hcnt64[3] = hcnt64;
+	if (user_param->cutwin_test_en & 0x1)
+		cvd2->info.hcnt64[3] = user_param->cutwin_test_hcnt;
+	else
+		cvd2->info.hcnt64[3] = hcnt64;
 	hcnt64_ave = 0;
 	hcnt64_max = 0;
 	hcnt64_min = 0xffffffff;
@@ -2556,8 +2573,8 @@ inline void tvafe_cvd2_adj_cdto(struct tvafe_cvd2_s *cvd2,
 	struct tvafe_user_param_s *user_param = tvafe_get_user_param();
 	unsigned int hcnt64_max = 0, hcnt64_min = 0xffffffff,
 				hcnt64_ave = 0, i = 0;
-	unsigned int cur_cdto = 0, diff = 0;
-	u64 cal_cdto = 0;
+	unsigned int cur_cdto = 0, diff = 0, dest_cdto = 0;
+	unsigned long long cal_cdto = 0;
 
 	if ((user_param->auto_adj_en & TVAFE_AUTO_CDTO) == 0)
 		return;
@@ -2569,7 +2586,10 @@ inline void tvafe_cvd2_adj_cdto(struct tvafe_cvd2_s *cvd2,
 	cvd2->info.hcnt64[0] = cvd2->info.hcnt64[1];
 	cvd2->info.hcnt64[1] = cvd2->info.hcnt64[2];
 	cvd2->info.hcnt64[2] = cvd2->info.hcnt64[3];
-	cvd2->info.hcnt64[3] = hcnt64;
+	if (user_param->cutwin_test_en & 0x1)
+		cvd2->info.hcnt64[3] = user_param->cutwin_test_hcnt;
+	else
+		cvd2->info.hcnt64[3] = hcnt64;
 	for (i = 0; i < 4; i++) {
 		if (hcnt64_max < cvd2->info.hcnt64[i])
 			hcnt64_max = cvd2->info.hcnt64[i];
@@ -2584,33 +2604,51 @@ inline void tvafe_cvd2_adj_cdto(struct tvafe_cvd2_s *cvd2,
 	}
 	if (cvd2->info.hcnt64_cnt == TVAFE_SET_CVBS_CDTO_START) {
 
-		hcnt64_ave = (hcnt64_ave - hcnt64_max -
-					hcnt64_min + 1) >> CDTO_FILTER_FACTOR;
+		hcnt64_ave = (hcnt64_ave - hcnt64_max - hcnt64_min + 1) >> 1;
 		if (hcnt64_ave == 0)  /* to avoid kernel crash */
 			return;
-		cal_cdto = CVD2_CHROMA_DTO_PAL_I;
-		cal_cdto *= HS_CNT_STANDARD;
-		do_div(cal_cdto, hcnt64_ave);
+		if (hcnt64_ave >= HS_CNT_STANDARD)
+			diff = hcnt64_ave - HS_CNT_STANDARD;
+		else
+			diff = HS_CNT_STANDARD - hcnt64_ave;
 
 		cur_cdto = tvafe_cvd2_get_cdto();
-		diff = (unsigned int)abs((signed int)cal_cdto -
-				(signed int)CVD2_CHROMA_DTO_PAL_I);
-
-		if (diff < cdto_adj_th) {
-
+		if (diff < user_param->cdto_adj_hcnt_th) {
 			/* reset cdto to default value */
-			if (cur_cdto != CVD2_CHROMA_DTO_PAL_I)
+			if (cur_cdto != CVD2_CHROMA_DTO_PAL_I) {
 				tvafe_cvd2_cdto_tune(cur_cdto,
 					(unsigned int)CVD2_CHROMA_DTO_PAL_I);
+			}
 			cvd2->info.non_std_worst = 0;
 			return;
 		}
-		cvd2->info.non_std_worst = 1;
 
+		cal_cdto = CVD2_CHROMA_DTO_PAL_I;
+		cal_cdto *= HS_CNT_STANDARD;
+		if (hcnt64_ave <= HS_CNT_STANDARD) { /* positive */
+			cal_cdto *= user_param->cdto_adj_ratio_p;
+			do_div(cal_cdto, (hcnt64_ave * 1000));
+
+			dest_cdto = (unsigned int)cal_cdto;
+			if (dest_cdto >= user_param->cdto_adj_offset_p)
+				dest_cdto -= user_param->cdto_adj_offset_p;
+		} else { /* negative */
+			cal_cdto *= user_param->cdto_adj_ratio_n;
+			do_div(cal_cdto, (hcnt64_ave * 1000));
+
+			dest_cdto = (unsigned int)cal_cdto;
+			if (dest_cdto >= user_param->cdto_adj_offset_n)
+				dest_cdto -= user_param->cdto_adj_offset_n;
+		}
+
+		cvd2->info.non_std_worst = 1;
+		if (cur_cdto == dest_cdto)
+			return;
+		cvd2->info.cdto_value = dest_cdto;
 		if (tvafe_dbg_print & TVAFE_DBG_ISR)
 			tvafe_pr_info("%s: adj cdto from:0x%x to:0x%x\n",
-					__func__, (u32)cur_cdto, (u32)cal_cdto);
-		tvafe_cvd2_cdto_tune(cur_cdto, (unsigned int)cal_cdto);
+					__func__, cur_cdto, dest_cdto);
+		tvafe_cvd2_cdto_tune(cur_cdto, dest_cdto);
 	}
 }
 #endif

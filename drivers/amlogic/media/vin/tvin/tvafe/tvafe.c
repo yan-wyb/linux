@@ -118,7 +118,6 @@ unsigned int av2_plugin_state;
  *bit[4]:nonstd debug print
  */
 unsigned int tvafe_dbg_print;
-unsigned int tvafe_vs_test;
 static enum tvin_sig_fmt_e tvafe_manual_fmt_save;
 bool tvafe_atv_search_channel;
 
@@ -132,7 +131,14 @@ static struct tvafe_user_param_s tvafe_user_param = {
 	/*level4: 48-->62 for ntsc-m*/
 	.cutwindow_val_v = {4, 8, 14, 16, 24},
 	.cutwindow_val_vs_ve = TVAFE_VS_VE_VAL,
+	.cdto_adj_hcnt_th = 0x260,
+	.cdto_adj_ratio_p = 1019, /* val/1000 */
+	.cdto_adj_offset_p = 0xfcc395,
+	.cdto_adj_ratio_n = 1036, /* val/1000 */
+	.cdto_adj_offset_n = 0x1b6b7d0,
 	/* auto_adj_en:
+	 * bit[7]: auto_vs_mode(0=dual side, 1=one side)
+	 * bit[6]: auto_hs_test_mode(0=hs side, 1=he side)
 	 * bit[5]: auto pga
 	 * bit[4]: auto 3d comb
 	 * bit[3]: auto de
@@ -142,6 +148,7 @@ static struct tvafe_user_param_s tvafe_user_param = {
 	 */
 	.auto_adj_en = 0x3e,
 	.vline_chk_cnt = 100, /* 100*10ms */
+
 	.nostd_vs_th = 0x0,
 	.nostd_no_vs_th = 0xf0,
 	.nostd_vs_cntl = 0x1,
@@ -155,6 +162,18 @@ static struct tvafe_user_param_s tvafe_user_param = {
 	.unlock_cnt_max = 3,
 
 	.avout_en = 1,
+
+	/* cutwin_test_en:
+	 * bit[3]: test_vcut
+	 * bit[2]: test_hcut
+	 * bit[1]: test vcnt
+	 * bit[0]: test hcnt
+	 */
+	.cutwin_test_en = 0,
+	.cutwin_test_hcnt = 0,
+	.cutwin_test_vcnt = 0,
+	.cutwin_test_hcut = 0,
+	.cutwin_test_vcut = 0,
 };
 
 struct tvafe_user_param_s *tvafe_get_user_param(void)
@@ -780,7 +799,7 @@ static struct tvin_decoder_ops_s tvafe_dec_ops = {
 /*
  * tvafe signal signal status: signal on/off
  */
-bool tvafe_is_nosig(struct tvin_frontend_s *fe)
+static bool tvafe_is_nosig(struct tvin_frontend_s *fe)
 {
 	bool ret = false;
 	/* Get the per-device structure that contains this frontend */
@@ -900,10 +919,107 @@ enum tvin_sig_fmt_e tvafe_get_fmt(struct tvin_frontend_s *fe)
 	return fmt;
 }
 
+static void tvafe_cutwindow_update(struct tvafe_info_s *tvafe,
+				   struct tvin_sig_property_s *prop)
+{
+	struct tvafe_user_param_s *user_param = &tvafe_user_param;
+	unsigned int hs_adj_val = 0;
+	unsigned int vs_adj_val = 0;
+	unsigned int i;
+
+	if (user_param->cutwin_test_en & 0x8) {
+		vs_adj_val = user_param->cutwin_test_vcut;
+		if (user_param->auto_adj_en & TVAFE_AUTO_VS_MODE) {
+			prop->vs = user_param->cutwin_test_vcut;
+			prop->ve = 0;
+		} else {
+			prop->vs = user_param->cutwin_test_vcut;
+			prop->ve = user_param->cutwin_test_vcut;
+		}
+	} else {
+		if (tvafe->cvd2.info.vs_adj_en) {
+			if (user_param->auto_adj_en & TVAFE_AUTO_VS_MODE) {
+				if (tvafe->cvd2.info.vs_adj_dir) {
+					/* < std freq*/
+					vs_adj_val = 0;
+				} else {/* > std freq*/
+					i = tvafe->cvd2.info.vs_adj_level;
+					if (i < 5) {
+						vs_adj_val =
+						user_param->cutwindow_val_v[i];
+					} else {
+						vs_adj_val = 0;
+					}
+				}
+				prop->vs = vs_adj_val;
+				prop->ve = 0;
+			} else {
+				i = tvafe->cvd2.info.vs_adj_level;
+				if (i < 5) {
+					vs_adj_val =
+						user_param->cutwindow_val_v[i];
+				} else {
+					vs_adj_val = 0;
+				}
+				prop->vs = vs_adj_val;
+				prop->ve = vs_adj_val;
+			}
+		} else {
+			prop->vs = 0;
+			prop->ve = 0;
+		}
+	}
+	if (vs_adj_val != vs_adj_val_pre) {
+		if (tvafe_dbg_print & TVAFE_DBG_NOSTD) {
+			tvafe_pr_info("%s: vs_adj_en:%d, vs_adj_level:%d, vs_adj_val:%d\n",
+				      __func__,
+				      tvafe->cvd2.info.vs_adj_en,
+				      tvafe->cvd2.info.vs_adj_level,
+				      vs_adj_val);
+		}
+		vs_adj_val_pre = vs_adj_val;
+	}
+
+	if (user_param->cutwin_test_en & 0x4) {
+		vs_adj_val = user_param->cutwin_test_hcut;
+		if (user_param->auto_adj_en & TVAFE_AUTO_HS_MODE) {
+			prop->hs = 0;
+			prop->he = user_param->cutwin_test_hcut;
+		} else {
+			prop->hs = user_param->cutwin_test_hcut;
+			prop->he = 0;
+		}
+	} else {
+		if (tvafe->cvd2.info.hs_adj_en) {
+			i = tvafe->cvd2.info.hs_adj_level;
+			if (i < 4) {
+				hs_adj_val = user_param->cutwindow_val_h[i];
+			} else if (i == 4) {
+				hs_adj_val = user_param->cutwindow_val_h[i];
+				prop->vs = user_param->cutwindow_val_vs_ve;
+				prop->ve = user_param->cutwindow_val_vs_ve;
+			} else {
+				 hs_adj_val = 0;
+			}
+
+			if (tvafe->cvd2.info.hs_adj_dir) {
+				prop->hs = 0;
+				prop->he = hs_adj_val;
+			} else {
+				prop->hs = hs_adj_val;
+				prop->he = 0;
+			}
+		} else {
+			prop->hs = 0;
+			prop->he = 0;
+		}
+	}
+}
+
 /*
  * tvafe signal property: 2D/3D, color format, aspect ratio, pixel repeat
  */
-void tvafe_get_sig_property(struct tvin_frontend_s *fe,
+static void tvafe_get_sig_property(struct tvin_frontend_s *fe,
 		struct tvin_sig_property_s *prop)
 {
 	struct tvafe_dev_s *devp = container_of(fe, struct tvafe_dev_s,
@@ -911,9 +1027,6 @@ void tvafe_get_sig_property(struct tvin_frontend_s *fe,
 	struct tvafe_info_s *tvafe = &devp->tvafe;
 	struct tvafe_user_param_s *user_param = &tvafe_user_param;
 	enum tvin_port_e port = tvafe->parm.port;
-	unsigned int hs_adj_val = user_param->cutwindow_val_h[1];
-	unsigned int vs_adj_val = user_param->cutwindow_val_v[1];
-	unsigned int i;
 
 	if (!(devp->flags & TVAFE_FLAG_DEV_OPENED) ||
 		(devp->flags & TVAFE_POWERDOWN_IN_IDLE)) {
@@ -927,65 +1040,8 @@ void tvafe_get_sig_property(struct tvin_frontend_s *fe,
 
 #ifdef TVAFE_CVD2_AUTO_DE_ENABLE
 	if (devp->flags & TVAFE_FLAG_DEV_STARTED) {
-		if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3)) {
-			if (tvafe_vs_test) {
-				vs_adj_val = tvafe_vs_test;
-			} else {
-				if (tvafe->cvd2.info.vs_adj_en) {
-					i = tvafe->cvd2.info.vs_adj_level;
-					if (i < 5) {
-						vs_adj_val =
-						user_param->cutwindow_val_v[i];
-					} else {
-						vs_adj_val = 0;
-					}
-				} else {
-					vs_adj_val = 0;
-				}
-			}
-			prop->vs = vs_adj_val;
-			prop->ve = vs_adj_val;
-			if (vs_adj_val != vs_adj_val_pre) {
-				if (tvafe_dbg_print & TVAFE_DBG_NOSTD) {
-					tvafe_pr_info("%s: vs_adj_en:%d, vs_adj_level:%d, vs_adj_val:%d\n",
-						      __func__,
-						      tvafe->cvd2.
-						      info.vs_adj_en,
-						      tvafe->cvd2.
-						      info.vs_adj_level,
-						      vs_adj_val);
-				}
-				vs_adj_val_pre = vs_adj_val;
-			}
-
-			if (tvafe->cvd2.info.hs_adj_en) {
-				i = tvafe->cvd2.info.hs_adj_level;
-				if (i < 4) {
-					hs_adj_val =
-						user_param->cutwindow_val_h[i];
-				} else if (i == 4) {
-					hs_adj_val =
-						user_param->cutwindow_val_h[i];
-					prop->vs =
-						user_param->cutwindow_val_vs_ve;
-					prop->ve =
-						user_param->cutwindow_val_vs_ve;
-				} else {
-					hs_adj_val = 0;
-				}
-
-				if (tvafe->cvd2.info.hs_adj_dir) {
-					prop->hs = 0;
-					prop->he = hs_adj_val;
-				} else {
-					prop->hs = hs_adj_val;
-					prop->he = 0;
-				}
-			} else {
-				prop->hs = 0;
-				prop->he = 0;
-			}
-		}
+		if ((port >= TVIN_PORT_CVBS0) && (port <= TVIN_PORT_CVBS3))
+			tvafe_cutwindow_update(tvafe, prop);
 	}
 #endif
 	prop->color_fmt_range = TVIN_YUV_LIMIT;

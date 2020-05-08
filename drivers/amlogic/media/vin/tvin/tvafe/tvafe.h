@@ -66,11 +66,18 @@ struct tvafe_info_s {
 #define TVAFE_AUTO_DE      (1 << 3)
 #define TVAFE_AUTO_3DCOMB  (1 << 4)
 #define TVAFE_AUTO_PGA     (1 << 5)
+#define TVAFE_AUTO_HS_MODE (1 << 6)
+#define TVAFE_AUTO_VS_MODE (1 << 7)
 
 struct tvafe_user_param_s {
 	unsigned int cutwindow_val_h[5];
 	unsigned int cutwindow_val_v[5];
 	unsigned int cutwindow_val_vs_ve;
+	unsigned int cdto_adj_hcnt_th;
+	unsigned int cdto_adj_ratio_p;
+	unsigned int cdto_adj_offset_p;
+	unsigned int cdto_adj_ratio_n;
+	unsigned int cdto_adj_offset_n;
 	unsigned int auto_adj_en;
 	unsigned int vline_chk_cnt;
 	unsigned int nostd_vs_th;
@@ -83,6 +90,13 @@ struct tvafe_user_param_s {
 	unsigned int skip_vf_num;
 	unsigned int unlock_cnt_max;
 	unsigned int avout_en;
+
+	/* debug */
+	unsigned int cutwin_test_en;
+	unsigned int cutwin_test_hcnt;
+	unsigned int cutwin_test_vcnt;
+	unsigned int cutwin_test_hcut;
+	unsigned int cutwin_test_vcut;
 };
 
 /* tvafe device structure */
@@ -158,8 +172,6 @@ extern unsigned int force_nostd;
 #define TVAFE_DBG_NOSTD      (1 << 12)
 #define TVAFE_DBG_NOSTD2     (1 << 13)
 extern unsigned int tvafe_dbg_print;
-
-extern unsigned int tvafe_vs_test;
 
 #endif  /* _TVAFE_H */
 

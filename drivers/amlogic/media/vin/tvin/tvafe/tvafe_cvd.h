@@ -135,6 +135,7 @@ struct tvafe_cvd2_info_s {
 	unsigned int hcnt64[4];
 	unsigned int hcnt64_cnt;
 #endif
+	unsigned int cdto_value;
 	unsigned int hs_adj_level;
 	unsigned int vs_adj_level;
 #ifdef TVAFE_SET_CVBS_PGA_EN
@@ -159,6 +160,7 @@ struct tvafe_cvd2_info_s {
 	bool vs_adj_en;
 	/*0:+;1:-*/
 	bool hs_adj_dir;
+	bool vs_adj_dir;
 	unsigned int auto_hs_flag;
 
 	unsigned int h_unlock_cnt;

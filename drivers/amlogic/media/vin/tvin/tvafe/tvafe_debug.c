@@ -108,6 +108,8 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 		cvd2_info->non_std_worst);
 	tvafe_pr_info("tvafe_cvd2_info_s->adc_reload_en:%d\n",
 		cvd2_info->adc_reload_en);
+	tvafe_pr_info("tvafe_cvd2_info_s->cdto_value:%d\n",
+		cvd2_info->cdto_value);
 	tvafe_pr_info("tvafe_cvd2_info_s->hs_adj_en:%d\n",
 		cvd2_info->hs_adj_en);
 	tvafe_pr_info("tvafe_cvd2_info_s->hs_adj_dir:%d\n",
@@ -200,6 +202,13 @@ static void tvafe_state(struct tvafe_dev_s *devp)
 	}
 	tvafe_pr_info("cutwindow_val_vs_ve:%d\n",
 		user_param->cutwindow_val_vs_ve);
+	tvafe_pr_info("cdto_adj_hcnt_th:0x%x\n", user_param->cdto_adj_hcnt_th);
+	tvafe_pr_info("cdto_adj_ratio_p:0x%x\n", user_param->cdto_adj_ratio_p);
+	tvafe_pr_info("cdto_adj_offset_p:0x%x\n",
+		      user_param->cdto_adj_offset_p);
+	tvafe_pr_info("cdto_adj_ratio_n:0x%x\n", user_param->cdto_adj_ratio_n);
+	tvafe_pr_info("cdto_adj_offset_n:0x%x\n",
+		      user_param->cdto_adj_offset_n);
 	tvafe_pr_info("auto_adj_en:0x%x\n", user_param->auto_adj_en);
 	tvafe_pr_info("vline_chk_cnt:%d\n", user_param->vline_chk_cnt);
 	tvafe_pr_info("nostd_vs_th:0x%x\n", user_param->nostd_vs_th);
@@ -483,13 +492,6 @@ static ssize_t tvafe_store(struct device *dev,
 		}
 		pr_info("[tvafe..]%s: avout_en = 0x%x\n",
 			__func__, user_param->avout_en);
-	} else if (!strncmp(buff, "vs_test", strlen("vs_test"))) {
-		if (parm[1]) {
-			if (kstrtouint(parm[1], 16, &tvafe_vs_test) < 0)
-				goto tvafe_store_err;
-		}
-		pr_info("[tvafe..]%s: tvafe_vs_test = 0x%x\n",
-			__func__, tvafe_vs_test);
 	} else if (!strncmp(buff, "search", strlen("search"))) {
 		if (parm[1]) {
 			if (kstrtouint(parm[1], 16, &val) < 0)
@@ -837,14 +839,37 @@ static ssize_t tvafe_cutwindow_show(struct device *dev,
 	return len;
 }
 
+static void tvafe_cutwindow_info_print(void)
+{
+	struct tvafe_user_param_s *user_param = tvafe_get_user_param();
+	char *pr_buf;
+	unsigned int pr_len;
+	int i;
+
+	pr_buf = kzalloc(sizeof(char) * 100, GFP_KERNEL);
+	if (!pr_buf)
+		return;
+	pr_len = 0;
+	pr_len += sprintf(pr_buf+pr_len, "cutwindow_h:");
+	for (i = 0; i < 5; i++) {
+		pr_len += sprintf(pr_buf+pr_len,
+			" %d", user_param->cutwindow_val_h[i]);
+	}
+	pr_len += sprintf(pr_buf+pr_len, "\ncutwindow_v:");
+	for (i = 0; i < 5; i++) {
+		pr_len += sprintf(pr_buf+pr_len,
+			" %d", user_param->cutwindow_val_v[i]);
+	}
+	pr_info("%s\n", pr_buf);
+	kfree(pr_buf);
+}
+
 static ssize_t tvafe_cutwindow_store(struct device *dev,
 		struct device_attribute *attr, const char *buff, size_t count)
 {
 	struct tvafe_user_param_s *user_param = tvafe_get_user_param();
 	char *buf_orig, *parm[20] = {NULL};
 	unsigned int index, val;
-	char *pr_buf;
-	unsigned int pr_len;
 
 	if (!buff)
 		return count;
@@ -852,6 +877,10 @@ static ssize_t tvafe_cutwindow_store(struct device *dev,
 	tvafe_parse_param(buf_orig, (char **)&parm);
 
 	if (!strcmp(parm[0], "h")) {
+		if (!parm[1]) {
+			tvafe_cutwindow_info_print();
+			goto tvafe_cutwindow_store_err;
+		}
 		if (kstrtouint(parm[1], 10, &index) < 0)
 			goto tvafe_cutwindow_store_err;
 		if (index < 5) {
@@ -863,6 +892,10 @@ static ssize_t tvafe_cutwindow_store(struct device *dev,
 			pr_info("error: invalid index %d\n", index);
 		}
 	} else if (!strcmp(parm[0], "v")) {
+		if (!parm[1]) {
+			tvafe_cutwindow_info_print();
+			goto tvafe_cutwindow_store_err;
+		}
 		if (kstrtouint(parm[1], 10, &index) < 0)
 			goto tvafe_cutwindow_store_err;
 		if (index < 5) {
@@ -874,26 +907,96 @@ static ssize_t tvafe_cutwindow_store(struct device *dev,
 			pr_info("error: invalid index %d\n", index);
 		}
 	} else if (!strcmp(parm[0], "r")) {
-		pr_buf = kzalloc(sizeof(char) * 100, GFP_KERNEL);
-		if (!pr_buf) {
-			pr_info("print buf malloc error\n");
+		tvafe_cutwindow_info_print();
+	} else if (!strcmp(parm[0], "test")) {
+		if (!parm[2]) {
+			pr_info("cutwin test en=0x%x, hcnt=0x%x, vcnt=0x%x, hcut=%d, vcut=%d\n",
+				user_param->cutwin_test_en,
+				user_param->cutwin_test_hcnt,
+				user_param->cutwin_test_vcnt,
+				user_param->cutwin_test_hcut,
+				user_param->cutwin_test_vcut);
 			goto tvafe_cutwindow_store_err;
 		}
-		pr_len = 0;
-		pr_len += sprintf(pr_buf+pr_len, "cutwindow_h:");
-		for (index = 0; index < 5; index++) {
-			pr_len += sprintf(pr_buf+pr_len,
-				" %d", user_param->cutwindow_val_h[index]);
+		if (!strcmp(parm[1], "en")) {
+			if (kstrtouint(parm[2], 16,
+				       &user_param->cutwin_test_en) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cutwin_test_en = 0x%x\n",
+				user_param->cutwin_test_en);
+		} else if (!strcmp(parm[1], "hcnt")) {
+			if (kstrtouint(parm[2], 16,
+				       &user_param->cutwin_test_hcnt) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cutwin_test_hcnt = 0x%x\n",
+				user_param->cutwin_test_hcnt);
+		} else if (!strcmp(parm[1], "vcnt")) {
+			if (kstrtouint(parm[2], 16,
+				       &user_param->cutwin_test_vcnt) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cutwin_test_vcnt = 0x%x\n",
+				user_param->cutwin_test_vcnt);
+		} else if (!strcmp(parm[1], "hcut")) {
+			if (kstrtouint(parm[2], 10,
+				       &user_param->cutwin_test_hcut) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cutwin_test_hcut = %d\n",
+				user_param->cutwin_test_hcut);
+		} else if (!strcmp(parm[1], "vcut")) {
+			if (kstrtouint(parm[2], 10,
+				       &user_param->cutwin_test_vcut) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cutwin_test_vcut = %d\n",
+				user_param->cutwin_test_vcut);
+		} else {
+			pr_info("error: invaild command\n");
 		}
-		pr_len += sprintf(pr_buf+pr_len, "\ncutwindow_v:");
-		for (index = 0; index < 5; index++) {
-			pr_len += sprintf(pr_buf+pr_len,
-				" %d", user_param->cutwindow_val_v[index]);
+	} else if (!strcmp(parm[0], "cdto")) {
+		if (!parm[2]) {
+			pr_info("cdto_adj hcnt_th=0x%x, ratio_p=%d, offset_p=0x%x, ratio_n=%d, offset_n=0x%x\n",
+				user_param->cdto_adj_hcnt_th,
+				user_param->cdto_adj_ratio_p,
+				user_param->cdto_adj_offset_p,
+				user_param->cdto_adj_ratio_n,
+				user_param->cdto_adj_offset_n);
+			goto tvafe_cutwindow_store_err;
 		}
-		pr_info("%s\n", pr_buf);
-		kfree(pr_buf);
-	} else
+		if (!strcmp(parm[1], "hcnt_th")) {
+			if (kstrtouint(parm[2], 16,
+				       &user_param->cdto_adj_hcnt_th) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cdto_adj_hcnt_th = 0x%x\n",
+				user_param->cdto_adj_hcnt_th);
+		} else if (!strcmp(parm[1], "ratio_p")) {
+			if (kstrtouint(parm[2], 10,
+				       &user_param->cdto_adj_ratio_p) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cdto_adj_ratio_p = %d\n",
+				user_param->cdto_adj_ratio_p);
+		} else if (!strcmp(parm[1], "offset_p")) {
+			if (kstrtouint(parm[2], 16,
+				       &user_param->cdto_adj_offset_p) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cdto_adj_offset_p = 0x%x\n",
+				user_param->cdto_adj_offset_p);
+		} else if (!strcmp(parm[1], "ratio_n")) {
+			if (kstrtouint(parm[2], 10,
+				       &user_param->cdto_adj_ratio_n) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cdto_adj_ratio_n = %d\n",
+				user_param->cdto_adj_ratio_n);
+		} else if (!strcmp(parm[1], "offset_n")) {
+			if (kstrtouint(parm[2], 16,
+				       &user_param->cdto_adj_offset_n) < 0)
+				goto tvafe_cutwindow_store_err;
+			pr_info("set cdto_adj_offset_n = 0x%x\n",
+				user_param->cdto_adj_offset_n);
+		} else {
+			pr_info("error: invaild command\n");
+		}
+	} else {
 		pr_info("error: invaild command\n");
+	}
 
 	kfree(buf_orig);
 	return count;
