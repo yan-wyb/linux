@@ -3716,28 +3716,42 @@ static ssize_t lcd_vx1_debug_store(struct class *class,
 #endif
 	} else if (buf[0] == 'c') { /* ctrl */
 #ifdef CONFIG_AMLOGIC_LCD_TV
-		ret = sscanf(buf, "ctrl %x %d %d %d",
-			&val[0], &val[1], &val[2], &val[3]);
-		if (ret == 4) {
-			pr_info("set vbyone ctrl_flag: 0x%x\n", val[0]);
-			pr_info("power_on_reset_delay: %dms\n", val[1]);
-			pr_info("hpd_data_delay: %dms\n", val[2]);
-			pr_info("cdr_training_hold: %dms\n", val[3]);
-			vx1_conf->ctrl_flag = val[0];
-			vx1_conf->power_on_reset_delay = val[1];
-			vx1_conf->hpd_data_delay = val[2];
-			vx1_conf->cdr_training_hold = val[3];
-			lcd_debug_config_update();
-		} else {
-			pr_info("vbyone ctrl_flag: 0x%x\n",
-				vx1_conf->ctrl_flag);
-			pr_info("power_on_reset_delay: %dms\n",
-				vx1_conf->power_on_reset_delay);
-			pr_info("hpd_data_delay: %dms\n",
-				vx1_conf->hpd_data_delay);
-			pr_info("cdr_training_hold: %dms\n",
-				vx1_conf->cdr_training_hold);
-			return -EINVAL;
+		if (buf[1] == 't') { /* ctrl */
+			ret = sscanf(buf, "ctrl %x %d %d %d",
+				     &val[0], &val[1], &val[2], &val[3]);
+			if (ret == 4) {
+				pr_info("set vbyone ctrl_flag: 0x%x\n", val[0]);
+				pr_info("power_on_reset_delay: %dms\n", val[1]);
+				pr_info("hpd_data_delay: %dms\n", val[2]);
+				pr_info("cdr_training_hold: %dms\n", val[3]);
+				vx1_conf->ctrl_flag = val[0];
+				vx1_conf->power_on_reset_delay = val[1];
+				vx1_conf->hpd_data_delay = val[2];
+				vx1_conf->cdr_training_hold = val[3];
+				lcd_debug_config_update();
+			} else {
+				pr_info("vbyone ctrl_flag: 0x%x\n",
+					vx1_conf->ctrl_flag);
+				pr_info("power_on_reset_delay: %dms\n",
+					vx1_conf->power_on_reset_delay);
+				pr_info("hpd_data_delay: %dms\n",
+					vx1_conf->hpd_data_delay);
+				pr_info("cdr_training_hold: %dms\n",
+					vx1_conf->cdr_training_hold);
+				return -EINVAL;
+			}
+		} else if (buf[1] == 'd') { /* cdr */
+			/* disable vx1 interrupt and vx1 vsync interrupt */
+			vx1_conf->intr_en = 0;
+			vx1_conf->vsync_intr_en = 0;
+			lcd_vbyone_interrupt_enable(0);
+
+			/*[5:0]: vx1 fsm status*/
+			lcd_vcbus_setb(VBO_INSGN_CTRL, 7, 0, 4);
+			msleep(100);
+			LCDPR("vx1 fsm status: 0x%08x",
+			      lcd_vcbus_read(VBO_STATUS_L));
+
 		}
 #else
 		return -EINVAL;
@@ -3756,6 +3770,33 @@ static ssize_t lcd_vx1_debug_store(struct class *class,
 				vx1_conf->hw_filter_cnt);
 			return -EINVAL;
 		}
+	} else if (buf[0] == 'r') { /* rst */
+#ifdef CONFIG_AMLOGIC_LCD_TV
+		/* disable vx1 interrupt and vx1 vsync interrupt */
+		val[0] = vx1_conf->intr_en;
+		val[1] = vx1_conf->vsync_intr_en;
+		vx1_conf->intr_en = 0;
+		vx1_conf->vsync_intr_en = 0;
+		lcd_vbyone_interrupt_enable(0);
+#endif
+		/* force PHY to 0 */
+		lcd_hiu_setb(HHI_LVDS_TX_PHY_CNTL0, 3, 8, 2);
+		lcd_vcbus_write(VBO_SOFT_RST, 0x1ff);
+		udelay(5);
+		/* realease PHY */
+		if (lcd_vcbus_read(VBO_INSGN_CTRL) & 0x1) {
+			pr_info("clr force lockn input\n");
+			lcd_vcbus_setb(VBO_INSGN_CTRL, 0, 0, 1);
+		}
+		lcd_hiu_setb(HHI_LVDS_TX_PHY_CNTL0, 0, 8, 2);
+		lcd_vcbus_write(VBO_SOFT_RST, 0);
+#ifdef CONFIG_AMLOGIC_LCD_TV
+		/* recover vx1 interrupt and vx1 vsync interrupt */
+		vx1_conf->intr_en = val[0];
+		vx1_conf->vsync_intr_en = val[1];
+		lcd_vbyone_interrupt_enable(vx1_intr_state);
+#endif
+		pr_info("vybone reset\n");
 	} else {
 		ret = sscanf(buf, "%d %d %d", &vx1_conf->lane_count,
 			&vx1_conf->region_num, &vx1_conf->byte_mode);
