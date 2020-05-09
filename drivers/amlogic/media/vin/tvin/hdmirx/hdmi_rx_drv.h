@@ -37,8 +37,8 @@
 #define RX_VER0 "ver.2020/05/09"
 /* Add bandgap enable and reset handle for tl1/tm2 */
 #define RX_VER1 "ver.2019/11/22"
-/* enable checksum err filter for packet decoder */
-#define RX_VER2 "ver.2020/05/07"
+/* fix flicker after vpp unmute */
+#define RX_VER2 "ver.2020/05/09"
 
 /*print type*/
 #define	LOG_EN		0x01
@@ -209,6 +209,83 @@ enum rx_cn_type_e {
 	CN_PHOTO,
 	CN_CINEMA,
 	CN_GAME,
+};
+
+struct rx_var_param {
+	int pll_unlock_cnt;
+	int pll_unlock_max;
+	int pll_lock_cnt;
+	int pll_lock_max;
+	int dwc_rst_wait_cnt;
+	int dwc_rst_wait_cnt_max;
+	int sig_stable_cnt;
+	int sig_stable_max;
+	int sig_stable_err_cnt;
+	int sig_stable_err_max;
+	int max_err_cnt;
+	bool clk_debug;
+	int hpd_wait_cnt;
+	/* increase time of hpd low, to avoid some source like */
+	/* MTK box/KaiboerH9 i2c communicate error */
+	int hpd_wait_max;
+	int sig_unstable_cnt;
+	int sig_unstable_max;
+	bool vic_check_en;
+	bool dvi_check_en;
+	int sig_unready_cnt;
+	int sig_unready_max;
+	int pow5v_max_cnt;
+	/* timing diff offset */
+	int diff_pixel_th;
+	int diff_line_th;
+	int diff_frame_th;
+	int err_dbg_cnt;
+	int err_dbg_cnt_max;
+	int force_vic;
+	u32 err_chk_en;
+	int aud_sr_stb_max;
+	int log_level;
+	bool auto_switch_off;
+	int clk_unstable_cnt;
+	int clk_unstable_max;
+	int clk_stable_cnt;
+	int clk_stable_max;
+	int unnormal_wait_max;
+	int wait_no_sig_max;
+	int phy_retry_times;
+	/* No need to judge frame rate while checking timing stable,as there are
+	 * some out-spec sources whose framerate change a lot(e.g:59.7~60.16hz).
+	 * Other brands of tv can support this,we also need to support.
+	 */
+	int stable_check_lvl;
+	/* If dvd source received the frequent pulses on HPD line,
+	 * It will sent a length of dirty audio data sometimes.it's TX's issues.
+	 * Compared with other brands TV, delay 1.5S to avoid this noise.
+	 */
+	int edid_update_delay;
+	int skip_frame_cnt;
+	bool hdcp22_reauth_enable;
+	unsigned int edid_update_flag;
+	unsigned int downstream_hpd_flag;
+	bool hdcp22_stop_auth_enable;
+	bool hdcp22_esm_reset2_enable;
+	int sm_pause;
+	int pre_port;
+	/* waiting time cannot be reduced */
+	/* it will cause hdcp1.4 cts fail */
+	int hdcp_none_wait_max;
+	int esd_phy_rst_cnt;
+	int esd_phy_rst_max;
+	int cec_dev_info;
+	bool term_flag;
+	int clk_chg_cnt;
+	int clk_chg_max;
+	/* vpp mute when signal change, used
+	 * in companion with vlock phase = 84
+	 */
+	bool vpp_mute_enable;
+	/* mute delay cnt before vpp unmute */
+	int mute_cnt;
 };
 
 /**
@@ -475,6 +552,7 @@ struct rx_s {
 #ifdef CONFIG_AMLOGIC_HDMITX
 	struct notifier_block tx_notify;
 #endif
+	struct rx_var_param var;
 };
 
 struct _hdcp_ksv {

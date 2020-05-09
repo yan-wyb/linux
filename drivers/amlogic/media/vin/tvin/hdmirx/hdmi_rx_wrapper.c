@@ -592,6 +592,7 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT);
 		if (hdmirx_top_intr_stat & (1 << 29)) {
 			if (video_mute_enabled()) {
 				set_video_mute(true);
+				rx.var.mute_cnt = 0;
 				if (log_level & 0x100)
 					rx_pr("vpp mute\n");
 			}
@@ -1251,6 +1252,7 @@ static void signal_status_init(void)
 		/*esm_set_stable(0);*/
 	rx.hdcp.hdcp_version = HDCP_VER_NONE;
 	rx.skip = 0;
+	rx.var.mute_cnt = 0;
 }
 
 static bool edid_ver_chg(
@@ -2352,6 +2354,7 @@ void rx_main_state_machine(void)
 {
 	int pre_auds_ch_alloc;
 	int pre_auds_hbr;
+	int one_frame_cnt;
 
 	/* update hdcp sts asap
 	 * if (rx.state >= FSM_WAIT_CLK_STABLE)
@@ -2539,6 +2542,7 @@ void rx_main_state_machine(void)
 				}
 				sig_stable_cnt = 0;
 				rx.skip = 0;
+				rx.var.mute_cnt = 0;
 				rx.state = FSM_SIG_READY;
 				rx.aud_sr_stable_cnt = 0;
 				rx.aud_sr_unstable_cnt = 0;
@@ -2612,6 +2616,7 @@ void rx_main_state_machine(void)
 				rx.state = FSM_WAIT_CLK_STABLE;
 				vic_check_en = false;
 				rx.skip = 0;
+				rx.var.mute_cnt = 0;
 				rx.aud_sr_stable_cnt = 0;
 				rx.aud_sr_unstable_cnt = 0;
 				rx.phy.cable_clk = 0;
@@ -2636,12 +2641,18 @@ void rx_main_state_machine(void)
 			}
 		} else {
 			sig_unready_cnt = 0;
+			one_frame_cnt =
+				(1000 * 100 / rx.pre.frame_rate / 10) + 1;
 			if (rx.skip > 0)
 				rx.skip--;
 			else if (video_mute_enabled()) {
 				/* clear vpp mute after signal stable */
-				if (get_video_mute())
+				if (get_video_mute()) {
+					if (rx.var.mute_cnt++ < one_frame_cnt)
+						break;
+					rx.var.mute_cnt = 0;
 					set_video_mute(false);
+				}
 			}
 		}
 		if (rx.pre.sw_dvi == 1)
