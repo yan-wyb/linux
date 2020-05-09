@@ -76,7 +76,7 @@ struct video_dev_s *cur_dev = &video_dev;
 bool legacy_vpp = true;
 
 static bool bypass_cm;
-
+static bool fg_supported;
 static DEFINE_SPINLOCK(video_onoff_lock);
 static DEFINE_SPINLOCK(video2_onoff_lock);
 
@@ -5079,7 +5079,13 @@ static int fgrain_init(u8 layer_id, u32 table_size)
 	lut_dma_set.mode = LUT_DMA_MANUAL;
 	lut_dma_set.table_size = table_size;
 	ret = lut_dma_register(&lut_dma_set);
+	if (ret >= 0) {
+		fg_supported = 1;
 
+	} else {
+		pr_info("%s failed, fg not support\n", __func__);
+		fg_supported = 0;
+	}
 	return ret;
 }
 
@@ -5151,7 +5157,8 @@ void fgrain_config(u8 layer_id,
 		return;
 	if (!is_meson_tm2_revb())
 		return;
-
+	if (!fg_supported)
+		return;
 	setting->id = layer_id;
 	type = vf->type;
 	if (frame_par->nocomp)
@@ -5203,6 +5210,8 @@ void fgrain_setting(u8 layer_id,
 {
 	if (!vf || !setting)
 		return;
+	if (!fg_supported)
+		return;
 	if (!setting->used || !vf->fgs_valid ||
 		!glayer_info[layer_id].fgrain_support)
 		fgrain_stop(layer_id);
@@ -5220,6 +5229,8 @@ void fgrain_update_table(u8 layer_id,
 			 struct vframe_s *vf)
 {
 	if (!vf)
+		return;
+	if (!fg_supported)
 		return;
 	if (!vf->fgs_valid || !glayer_info[layer_id].fgrain_support)
 		fgrain_stop(layer_id);

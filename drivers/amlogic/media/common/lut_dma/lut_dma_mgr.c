@@ -61,7 +61,7 @@ static int log_level;
 static int lut_dma_test_mode;
 static int lut_dma_test_channel;
 static struct lut_dma_device_info lut_dma_info;
-
+static int lut_dma_probed;
 #define pr_dbg(fmt, args...) \
 	do { \
 		if (log_level >= 1) \
@@ -394,6 +394,9 @@ int lut_dma_write_phy_addr(u32 channel, u32 phy_addr, u32 size)
 	u32 index, mode = 0;
 	u32 pre_size = 0;
 
+	if (!lut_dma_probed)
+		return 0;
+
 	if (phy_addr && size > 0) {
 		mode = info->ins[channel].mode;
 		index = get_cur_wr_frame_index(channel);
@@ -438,6 +441,9 @@ void lut_dma_update_irq_source(u32 channel, u32 irq_source)
 {
 	struct lut_dma_device_info *info = &lut_dma_info;
 
+	if (!lut_dma_probed)
+		return;
+
 	info->ins[channel].trigger_irq_type = 1 << irq_source;
 	lut_dma_reg_set_bits(VPU_DMA_RDMIF0_CTRL + channel,
 			     info->ins[channel].trigger_irq_type,
@@ -449,6 +455,9 @@ int lut_dma_read(u32 channel, void *paddr)
 	struct lut_dma_device_info *info = &lut_dma_info;
 	u32 index = 0, size = 0;
 	struct mutex *lock = NULL;
+
+	if (!lut_dma_probed)
+		return 0;
 
 	if (paddr) {
 		channel = LUT_DMA_RD_CHAN_NUM + channel;
@@ -471,6 +480,9 @@ int lut_dma_write_internal(u32 channel, void *paddr, u32 size)
 	u32 index, mode = 0;
 	u32 pre_size = 0;
 	struct mutex *lock = NULL;
+
+	if (!lut_dma_probed)
+		return 0;
 
 	if (paddr && size > 0) {
 		lock = &info->ins[channel].lut_dma_lock;
@@ -523,6 +535,9 @@ static int lut_dma_register_internal(struct lut_dma_set_t *lut_dma_set)
 	u32 irq_source = 0;
 	struct mutex *lock = NULL;
 	int i;
+
+	if (!lut_dma_probed)
+		return 0;
 
 	dma_dir = lut_dma_set->dma_dir;
 	/* transfer unit:128 bits data */
@@ -612,6 +627,9 @@ void lut_dma_unregister_internal(u32 dma_dir, u32 channel)
 	struct lut_dma_device_info *info = &lut_dma_info;
 	struct mutex *lock = NULL;
 
+	if (!lut_dma_probed)
+		return;
+
 	pr_dbg("%s dma_dir:%d, channel:%d\n",
 	       __func__, dma_dir, channel);
 	if (dma_dir == LUT_DMA_RD) {
@@ -670,6 +688,8 @@ int lut_dma_register(struct lut_dma_set_t *lut_dma_set)
 	struct mutex *lock = NULL;
 	int i;
 
+	if (!lut_dma_probed)
+		return -1;
 	dma_dir = lut_dma_set->dma_dir;
 	/* transfer unit:128 bits data */
 	table_size = lut_dma_set->table_size;
@@ -733,6 +753,8 @@ void lut_dma_unregister(u32 dma_dir, u32 channel)
 	struct lut_dma_device_info *info = &lut_dma_info;
 	struct mutex *lock = NULL;
 
+	if (!lut_dma_probed)
+		return;
 	pr_dbg("%s dma_dir:%d, channel:%d\n",
 	       __func__, dma_dir, channel);
 	if (dma_dir == LUT_DMA_RD) {
@@ -1023,6 +1045,8 @@ static int lut_dma_probe(struct platform_device *pdev)
 	}
 	for (i = 0; i < LUT_DMA_CHANNEL; i++)
 		mutex_init(&info->ins[i].lut_dma_lock);
+	lut_dma_probed = 1;
+	pr_info("%s probe OK\n", __func__);
 	return 0;
 fail_class_create_file:
 	for (i = 0; i < ARRAY_SIZE(lut_dma_attrs); i++)
@@ -1046,6 +1070,7 @@ static int lut_dma_remove(struct platform_device *pdev)
 		info->clsp, &lut_dma_attrs[i]);
 	class_destroy(info->clsp);
 	info->clsp = NULL;
+	lut_dma_probed = 0;
 	return 0;
 }
 

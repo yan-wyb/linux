@@ -9909,7 +9909,8 @@ static int amvideom_probe(struct platform_device *pdev)
 		return video_vsync;
 	}
 
-	pr_info("amvideom vsync irq: %d\n", video_vsync);
+	pr_info("amvideom vsync irq: %d, cpu_type:%d\n", video_vsync,
+		amvideo_meson_dev.cpu_type);
 
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	register_early_suspend(&video_early_suspend_handler);
