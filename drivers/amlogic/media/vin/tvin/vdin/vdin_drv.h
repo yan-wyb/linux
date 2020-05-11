@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0508: vdin game mode support 25,30Hz"
+#define VDIN_VER "ver:2020-0515: don't skip buf when pool full, just drop"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
