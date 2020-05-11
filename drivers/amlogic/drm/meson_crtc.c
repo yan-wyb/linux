@@ -170,7 +170,7 @@ static void am_meson_crtc_enable(struct drm_crtc *crtc)
 		DRM_ERROR("no matched vout mode\n");
 		return;
 	}
-	if (is_meson_g12b_cpu() && is_meson_rev_b())
+	if (pipeline->osd_version == OSD_V3)
 		set_reset_rdma_trigger_line();
 	set_vout_init(mode);
 	update_vout_viu();

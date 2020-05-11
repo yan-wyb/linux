@@ -30,7 +30,7 @@
 #define PREFERRED_BPP		32
 #define MESON_DRM_MAX_CONNECTOR	2
 
-static int am_meson_fbdev_open(struct fb_info *info, int arg)
+static int am_meson_fbdev_alloc_fb(struct fb_info *info)
 {
 	struct drm_fb_helper *helper = info->par;
 	struct meson_drm *private;
@@ -64,6 +64,49 @@ static int am_meson_fbdev_open(struct fb_info *info, int arg)
 		DRM_DEBUG("no need repeate alloc memory %d\n", (u32)size);
 	}
 	return 0;
+}
+
+static void am_meson_fbdev_free_fb(struct fb_info *info)
+{
+	struct drm_fb_helper *helper = info->par;
+	struct meson_drm *private;
+
+	private = helper->dev->dev_private;
+	if (private->fbdev_bo) {
+		am_meson_gem_object_free(private->fbdev_bo);
+		private->fbdev_bo = NULL;
+		DRM_DEBUG("free memory done\n");
+	} else {
+		DRM_DEBUG("memory already free before\n");
+	}
+}
+
+static void am_meson_fbdev_update_fb(struct fb_info *info,
+				     struct fb_var_screeninfo *var)
+{
+	struct drm_fb_helper *helper = info->par;
+	struct drm_framebuffer *fb = helper->fb;
+	int bytes_per_pixel, depth;
+
+	fb->width = var->xres_virtual;
+	fb->height = var->yres_virtual;
+	bytes_per_pixel = DIV_ROUND_UP(var->bits_per_pixel, 8);
+	fb->pitches[0] = ALIGN(var->xres_virtual * bytes_per_pixel, 64);
+	if (var->bits_per_pixel == 32)
+		depth = (var->transp.length > 0) ? 32 : 24;
+	else
+		depth = var->bits_per_pixel;
+	fb->pixel_format = drm_mode_legacy_fb_format(var->bits_per_pixel,
+						     depth);
+}
+
+static int am_meson_fbdev_open(struct fb_info *info, int arg)
+{
+	int ret = 0;
+
+	DRM_DEBUG("%s\n", __func__);
+	ret = am_meson_fbdev_alloc_fb(info);
+	return ret;
 }
 
 static int am_meson_fbdev_release(struct fb_info *info, int arg)
@@ -197,6 +240,7 @@ static int am_meson_drm_fb_pan_display(struct fb_var_screeninfo *var,
 	int ret = 0;
 	int i;
 
+	DRM_DEBUG("%s in\n", __func__);
 	if (oops_in_progress)
 		return -EBUSY;
 
@@ -227,7 +271,145 @@ static int am_meson_drm_fb_pan_display(struct fb_var_screeninfo *var,
 	}
 unlock:
 	drm_modeset_unlock_all(dev);
+	DRM_DEBUG("%s out\n", __func__);
 	return ret;
+}
+
+/**
+ * am_meson_drm_fb_helper_check_var - implementation for ->fb_check_var
+ * @var: screeninfo to check
+ * @info: fbdev registered by the helper
+ */
+static int am_meson_drm_fb_helper_check_var(struct fb_var_screeninfo *var,
+					    struct fb_info *info)
+{
+	struct drm_fb_helper *fb_helper = info->par;
+	struct drm_framebuffer *fb = fb_helper->fb;
+	int depth;
+
+	if (var->pixclock != 0 || in_dbg_master())
+		return -EINVAL;
+
+	/*
+	 * Changes struct fb_var_screeninfo are currently not pushed back
+	 * to KMS, hence fail if different settings are requested.
+	 */
+	DRM_DEBUG("fb requested w/h/bpp  %dx%d-%d (virtual %dx%d)\n",
+		  var->xres, var->yres, var->bits_per_pixel,
+		  var->xres_virtual, var->yres_virtual);
+	DRM_DEBUG("current fb w/h/bpp %dx%d-%d\n",
+		  fb->width, fb->height, fb->bits_per_pixel);
+	if (var->bits_per_pixel != fb->bits_per_pixel ||
+	    var->xres_virtual != fb->width ||
+	    var->yres_virtual != fb->height)
+		DRM_DEBUG("%s need realloc buffer\n", __func__);
+
+	switch (var->bits_per_pixel) {
+	case 16:
+		depth = (var->green.length == 6) ? 16 : 15;
+		break;
+	case 32:
+		depth = (var->transp.length > 0) ? 32 : 24;
+		break;
+	default:
+		depth = var->bits_per_pixel;
+		break;
+	}
+
+	switch (depth) {
+	case 8:
+		var->red.offset = 0;
+		var->green.offset = 0;
+		var->blue.offset = 0;
+		var->red.length = 8;
+		var->green.length = 8;
+		var->blue.length = 8;
+		var->transp.length = 0;
+		var->transp.offset = 0;
+		break;
+	case 15:
+		var->red.offset = 10;
+		var->green.offset = 5;
+		var->blue.offset = 0;
+		var->red.length = 5;
+		var->green.length = 5;
+		var->blue.length = 5;
+		var->transp.length = 1;
+		var->transp.offset = 15;
+		break;
+	case 16:
+		var->red.offset = 11;
+		var->green.offset = 5;
+		var->blue.offset = 0;
+		var->red.length = 5;
+		var->green.length = 6;
+		var->blue.length = 5;
+		var->transp.length = 0;
+		var->transp.offset = 0;
+		break;
+	case 24:
+		var->red.offset = 16;
+		var->green.offset = 8;
+		var->blue.offset = 0;
+		var->red.length = 8;
+		var->green.length = 8;
+		var->blue.length = 8;
+		var->transp.length = 0;
+		var->transp.offset = 0;
+		break;
+	case 32:
+		var->red.offset = 16;
+		var->green.offset = 8;
+		var->blue.offset = 0;
+		var->red.length = 8;
+		var->green.length = 8;
+		var->blue.length = 8;
+		var->transp.length = 8;
+		var->transp.offset = 24;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+/**
+ * drm_fb_helper_set_par - implementation for ->fb_set_par
+ * @info: fbdev registered by the helper
+ *
+ * This will let fbcon do the mode init and is called at initialization time by
+ * the fbdev core when registering the driver, and later on through the hotplug
+ * callback.
+ */
+int am_meson_drm_fb_helper_set_par(struct fb_info *info)
+{
+	struct drm_fb_helper *fb_helper = info->par;
+	struct fb_var_screeninfo *var = &info->var;
+	struct drm_framebuffer *fb = fb_helper->fb;
+
+	if (oops_in_progress)
+		return -EBUSY;
+
+	if (var->pixclock != 0) {
+		DRM_ERROR("PIXEL CLOCK SET\n");
+		return -EINVAL;
+	}
+
+	drm_fb_helper_restore_fbdev_mode_unlocked(fb_helper);
+	if (var->bits_per_pixel != fb->bits_per_pixel ||
+	    var->xres_virtual != fb->width ||
+	    var->yres_virtual != fb->height) {
+		/*realloc framebuffer, free old then alloc new gem*/
+		am_meson_fbdev_free_fb(info);
+		am_meson_fbdev_update_fb(info, var);
+		if (am_meson_fbdev_alloc_fb(info)) {
+			DRM_DEBUG("%s realloc fb fail\n", __func__);
+			return -ENOMEM;
+		}
+		DRM_DEBUG("%s realloc fb done\n", __func__);
+	}
+
+	return 0;
 }
 
 static struct fb_ops meson_drm_fbdev_ops = {
@@ -238,8 +420,8 @@ static struct fb_ops meson_drm_fbdev_ops = {
 	.fb_fillrect	= drm_fb_helper_cfb_fillrect,
 	.fb_copyarea	= drm_fb_helper_cfb_copyarea,
 	.fb_imageblit	= drm_fb_helper_cfb_imageblit,
-	.fb_check_var	= drm_fb_helper_check_var,
-	.fb_set_par	= drm_fb_helper_set_par,
+	.fb_check_var	= am_meson_drm_fb_helper_check_var,
+	.fb_set_par	= am_meson_drm_fb_helper_set_par,
 	.fb_blank	= drm_fb_helper_blank,
 	.fb_pan_display	= am_meson_drm_fb_pan_display,
 	.fb_setcmap	= drm_fb_helper_setcmap,
@@ -265,22 +447,20 @@ static int am_meson_drm_fbdev_create(struct drm_fb_helper *helper,
 
 	bytes_per_pixel = DIV_ROUND_UP(sizes->surface_bpp, 8);
 
-	if (logo.width)
+	if (private->ui_config.fb_w)
+		mode_cmd.width = private->ui_config.fb_w;
+	else if (logo.width)
 		mode_cmd.width = logo.width;
 	else
 		mode_cmd.width = sizes->surface_width;
-	if (logo.height)
+	if (private->ui_config.fb_h)
+		mode_cmd.height = private->ui_config.fb_h;
+	else  if (logo.height)
 		mode_cmd.height = logo.height;
 	else
 		mode_cmd.height = sizes->surface_height;
-	#ifdef CONFIG_DRM_MESON_FBDEV_UI_W
-	mode_cmd.width = CONFIG_DRM_MESON_FBDEV_UI_W;
-	DRM_INFO("CONFIG_DRM_MESON_FBDEV_UI_W = %d\n", mode_cmd.width);
-	#endif
-	#ifdef CONFIG_DRM_MESON_FBDEV_UI_H
-	mode_cmd.height = CONFIG_DRM_MESON_FBDEV_UI_H;
-	DRM_INFO("CONFIG_DRM_MESON_FBDEV_UI_H = %d\n", mode_cmd.height);
-	#endif
+	DRM_INFO("mode_cmd.width = %d\n", mode_cmd.width);
+	DRM_INFO("mode_cmd.height = %d\n", mode_cmd.height);
 
 	mode_cmd.pitches[0] = ALIGN(sizes->surface_width * bytes_per_pixel, 64);
 	mode_cmd.pixel_format = drm_mode_legacy_fb_format(sizes->surface_bpp,
@@ -311,7 +491,11 @@ static int am_meson_drm_fbdev_create(struct drm_fb_helper *helper,
 	fb->bits_per_pixel = sizes->surface_bpp;
 	fb->depth = sizes->surface_depth;
 	drm_fb_helper_fill_fix(fbi, fb->pitches[0], fb->depth);
-	drm_fb_helper_fill_var(fbi, helper, fb->width, fb->height);
+	if (private->ui_config.ui_w)
+		sizes->fb_width = private->ui_config.ui_w;
+	if (private->ui_config.ui_h)
+		sizes->fb_height = private->ui_config.ui_h;
+	drm_fb_helper_fill_var(fbi, helper, sizes->fb_width, sizes->fb_height);
 
 	offset = fbi->var.xoffset * bytes_per_pixel;
 	offset += fbi->var.yoffset * fb->pitches[0];
@@ -336,14 +520,53 @@ static const struct drm_fb_helper_funcs meson_drm_fb_helper_funcs = {
 	.fb_probe = am_meson_drm_fbdev_create,
 };
 
+static void am_meson_fbdev_parse_param(struct drm_device *dev)
+{
+	int ret;
+	struct meson_drm *private = dev->dev_private;
+
+	ret = of_property_read_u32(dev->dev->of_node,
+				   "fbdev_ui_w", &private->ui_config.ui_w);
+	if (ret) {
+		DRM_INFO("don't find  match fbdev_ui_w\n");
+		private->ui_config.ui_w = 0;
+	}
+	ret = of_property_read_u32(dev->dev->of_node,
+				   "fbdev_ui_h", &private->ui_config.ui_h);
+	if (ret) {
+		DRM_INFO("don't find  match fbdev_ui_h\n");
+		private->ui_config.ui_h = 0;
+	}
+	ret = of_property_read_u32(dev->dev->of_node,
+				   "fbdev_fb_w", &private->ui_config.fb_w);
+	if (ret) {
+		DRM_INFO("don't find  match fbdev_fb_w\n");
+		private->ui_config.fb_w = 0;
+	}
+	ret = of_property_read_u32(dev->dev->of_node,
+				   "fbdev_fb_h", &private->ui_config.fb_h);
+	if (ret) {
+		DRM_INFO("don't find  match fbdev_fb_h\n");
+		private->ui_config.fb_h = 0;
+	}
+	ret = of_property_read_u32(dev->dev->of_node,
+				   "fbdev_fb_bpp",
+				   &private->ui_config.fb_bpp);
+	if (ret) {
+		DRM_INFO("don't find  match fbdev_fb_bpp\n");
+		private->ui_config.fb_bpp = 0;
+	}
+}
+
 int am_meson_drm_fbdev_init(struct drm_device *dev)
 {
 	struct meson_drm *private = dev->dev_private;
 	struct drm_fb_helper *helper;
 	unsigned int num_crtc;
-	int ret;
+	int ret, bpp;
 
 	DRM_INFO("%s in\n", __func__);
+	am_meson_fbdev_parse_param(dev);
 	if (!dev->mode_config.num_crtc || !dev->mode_config.num_connector)
 		return -EINVAL;
 
@@ -369,7 +592,11 @@ int am_meson_drm_fbdev_init(struct drm_device *dev)
 		goto err_drm_fb_helper_fini;
 	}
 
-	ret = drm_fb_helper_initial_config(helper, PREFERRED_BPP);
+	if (private->ui_config.fb_bpp)
+		bpp = private->ui_config.fb_bpp;
+	else
+		bpp = PREFERRED_BPP;
+	ret = drm_fb_helper_initial_config(helper, bpp);
 	if (ret < 0) {
 		dev_err(dev->dev, "Failed to set initial hw config - %d.\n",
 			ret);

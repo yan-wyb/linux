@@ -462,7 +462,7 @@ static void osd_afbc_config(struct osd_mif_reg_s *reg, bool afbc_en)
 {
 	osd_mali_unpack_enable(reg, afbc_en);
 	osd_mali_src_en(reg, afbc_en);
-	osd_endian_mode(reg, ~afbc_en);
+	osd_endian_mode(reg, !afbc_en);
 	osd_mem_mode(reg, afbc_en);
 }
 

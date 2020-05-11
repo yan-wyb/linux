@@ -323,7 +323,7 @@ static void video_hw_init(struct meson_vpu_block *vblk)
 	int i;
 
 	if (!vblk || !video) {
-		DRM_DEBUG("video_hw_init break for NULL.\n");
+		DRM_DEBUG("%s break for NULL.\n", __func__);
 		return;
 	}
 	INIT_KFIFO(video->ready_q);
@@ -350,7 +350,7 @@ static void video_hw_init(struct meson_vpu_block *vblk)
 	vf_provider_init(&video->vprov,
 			 video->base.name,
 			 &vp_vf_ops, video);
-	DRM_DEBUG("%s video_hw_init done.\n", video->base.name);
+	DRM_DEBUG("%s:%s done.\n", __func__, video->base.name);
 }
 
 struct meson_vpu_block_ops video_ops = {

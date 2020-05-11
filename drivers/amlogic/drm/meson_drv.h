@@ -46,6 +46,14 @@ struct meson_crtc_funcs {
 	void (*disable_vblank)(struct drm_crtc *crtc);
 };
 
+struct meson_drm_fbdev_config {
+	u32 ui_w;
+	u32 ui_h;
+	u32 fb_w;
+	u32 fb_h;
+	u32 fb_bpp;
+};
+
 struct meson_drm {
 	struct device *dev;
 
@@ -74,6 +82,7 @@ struct meson_drm {
 	u32 num_planes;
 	struct am_osd_plane *planes[MESON_MAX_OSD];
 	struct am_video_plane *video_planes[MESON_MAX_VIDEO];
+	struct meson_drm_fbdev_config ui_config;
 };
 
 static inline int meson_vpu_is_compatible(struct meson_drm *priv,

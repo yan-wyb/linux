@@ -274,12 +274,16 @@ static int am_meson_update_output_state(struct drm_atomic_state *state,
 	return 0;
 }
 
+/*simaler with __drm_atomic_helper_set_config,
+ *TODO:sync with __drm_atomic_helper_set_config
+ */
 int __am_meson_drm_set_config(struct drm_mode_set *set,
 			      struct drm_atomic_state *state)
 {
 	struct drm_crtc_state *crtc_state;
 	struct drm_plane_state *primary_state;
 	struct drm_crtc *crtc = set->crtc;
+	struct meson_drm *private = crtc->dev->dev_private;
 	int hdisplay, vdisplay;
 	int ret;
 
@@ -337,11 +341,23 @@ int __am_meson_drm_set_config(struct drm_mode_set *set,
 	else
 		primary_state->rotation = DRM_ROTATE_0;
 	if (drm_rotation_90_or_270(primary_state->rotation)) {
-		primary_state->src_w = set->fb->height << 16;
-		primary_state->src_h = set->fb->width << 16;
+		if (private->ui_config.ui_h)
+			primary_state->src_w = private->ui_config.ui_h << 16;
+		else
+			primary_state->src_w = set->fb->height << 16;
+		if (private->ui_config.ui_w)
+			primary_state->src_h = private->ui_config.ui_w << 16;
+		else
+			primary_state->src_h = set->fb->width << 16;
 	} else {
-		primary_state->src_w = set->fb->width << 16;
-		primary_state->src_h = set->fb->height << 16;
+		if (private->ui_config.ui_w)
+			primary_state->src_w = private->ui_config.ui_w << 16;
+		else
+			primary_state->src_w = set->fb->width << 16;
+		if (private->ui_config.ui_h)
+			primary_state->src_h = private->ui_config.ui_h << 16;
+		else
+			primary_state->src_h = set->fb->height << 16;
 	}
 
 commit:
@@ -352,6 +368,9 @@ commit:
 	return 0;
 }
 
+/*copy from drm_atomic_helper_set_config,
+ *TODO:sync with drm_atomic_helper_set_config
+ */
 static int am_meson_drm_set_config(struct drm_mode_set *set)
 {
 	struct drm_atomic_state *state;

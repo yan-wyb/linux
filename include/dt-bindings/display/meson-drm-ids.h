@@ -44,15 +44,9 @@
  *V1:G12A
  *V2:G12B-revA:base G12A,add repeate last line function
  *V3:G12B-RevB:add line interrupt support
- *V4:TL1:base G12A,fix shift issue,delete osd3
- *V5:SM1:base G12A,fix shift issue
- *V6:TM2,base G12A,fix shift issue,add mux for osd1-sr
  */
 #define OSD_V1 1
 #define OSD_V2 2
 #define OSD_V3 3
-#define OSD_V4 4
-#define OSD_V5 5
-#define OSD_V6 6
 
 #endif
