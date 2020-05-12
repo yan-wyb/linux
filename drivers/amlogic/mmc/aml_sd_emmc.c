@@ -3325,7 +3325,8 @@ static int meson_mmc_probe(struct platform_device *pdev)
 			mmc->ops = &meson_mmc_ops;
 		aml_reg_print(pdata);
 
-		if (aml_card_type_mmc(pdata)) {
+		if (aml_card_type_mmc(pdata) &&
+				(host->data->chip_type == MMC_CHIP_TM2_B)) {
 			pm_runtime_set_active(&pdev->dev);
 			pm_runtime_set_autosuspend_delay(&pdev->dev,
 					MMC_PM_TIMEOUT);
@@ -3429,7 +3430,9 @@ static int meson_mmc_remove(struct platform_device *pdev)
 	kfree(host->blk_test);
 	kfree(host->adj_win);
 
-	pm_runtime_disable(&pdev->dev);
+	if (host->data->chip_type == MMC_CHIP_TM2_B)
+		pm_runtime_disable(&pdev->dev);
+
 	mmc_free_host(host->mmc);
 	kfree(pdata);
 	kfree(host);
