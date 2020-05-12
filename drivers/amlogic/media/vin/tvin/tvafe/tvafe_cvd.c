@@ -1463,8 +1463,18 @@ static bool tvafe_cvd2_condition_shift(struct tvafe_cvd2_s *cvd2)
 					__func__);
 			}
 		}
+	}
 
-		return true;
+	/* fake chroma lock */
+	if ((cvd2->vd_port == TVIN_PORT_CVBS1) ||
+	    (cvd2->vd_port == TVIN_PORT_CVBS2)) {
+		if (cvd2->hw.chroma_lock && cvd2->hw.h_lock &&
+		    cvd2->hw.v_lock && !cvd2->hw.h_nonstd &&
+		    !cvd2->hw.no_color_burst) {
+			if (!cvd2->hw.fsc_358 && !cvd2->hw.fsc_443) {
+				return false;
+			}
+		}
 	}
 
 	if (((cvd2->vd_port == TVIN_PORT_CVBS3) ||
