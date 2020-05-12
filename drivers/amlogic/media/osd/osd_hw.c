@@ -5387,12 +5387,18 @@ static void osd_update_disp_freescale_enable(u32 index)
 	}
 
 	hf_phase_step = (u64)src_w << 24;
+	if (dst_w == 0)
+		dst_w = 1;
 	do_div(hf_phase_step, dst_w);
 	if (shift_workaround) {
 		vf_phase_step = (u64)(src_h - 1) << 20;
+		if (dst_h == 0)
+			dst_h = 1;
 		do_div(vf_phase_step, dst_h);
 	} else {
 		vf_phase_step = (u64)src_h << 20;
+		if (dst_h == 0)
+			dst_h = 1;
 		do_div(vf_phase_step, dst_h);
 	}
 
