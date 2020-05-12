@@ -25,12 +25,14 @@
 #include <linux/slab.h>
 #include "meson_mhu_dsp.h"
 
-#define CMD_TAG			(2 << 25)
+#define SYNC_CMD_TAG	BIT(26)
+#define ASYNC_CMD_TAG	BIT(25)
 
 struct scpi_data_buf {
 	int client_id;
 	struct mhu_data_buf *data;
 	struct completion complete;
+	int async;
 };
 
 enum scpi_error_codes {
@@ -91,7 +93,7 @@ static int send_scpi_cmd(struct scpi_data_buf *scpi_buf, int client_id)
 	}
 
 	wait_for_completion(&scpi_buf->complete);
-	status = *(u32 *)(data->rx_buf); /* read first word */
+	status = SCPI_SUCCESS;
 
 free_channel:
 	mbox_free_channel(chan);
@@ -100,7 +102,7 @@ free_channel:
 }
 
 #define SCPI_SETUP_DBUF_SIZE(scpi_buf, mhu_buf, _client_id,\
-			_cmd, _tx_buf, _tx_size, _rx_buf, _rx_size) \
+			_cmd, _tx_buf, _tx_size, _rx_buf, _rx_size, _async) \
 do {						\
 	struct mhu_data_buf *pdata = &(mhu_buf);\
 	struct scpi_data_buf *psdata = &(scpi_buf); \
@@ -111,6 +113,7 @@ do {						\
 	pdata->rx_size = _rx_size;		\
 	psdata->client_id = _client_id;		\
 	psdata->data = pdata;			\
+	psdata->async = _async;			\
 } while (0)
 
 static int scpi_execute_cmd(struct scpi_data_buf *scpi_buf)
@@ -122,67 +125,65 @@ static int scpi_execute_cmd(struct scpi_data_buf *scpi_buf)
 	data = scpi_buf->data;
 	data->cmd = (data->cmd & 0xffff)
 		    | (data->tx_size & 0x1ff) << 16
-		    | CMD_TAG; //Sync Flag
+		    | (scpi_buf->async); //Sync Flag
 	data->cl_data = scpi_buf;
 
 	return send_scpi_cmd(scpi_buf, scpi_buf->client_id);
 }
 
-int scpi_send_dsp_data(void *data, int size, bool to_dspa)
-{
-	struct scpi_data_buf sdata;
-	struct mhu_data_buf mdata;
-	int client_id = 0;
-
-	struct __packed {
-		u32 status;
-	} buf;
-
-	if (!to_dspa)
-		client_id = 3;
-	else
-		client_id = 1;
-
-	SCPI_SETUP_DBUF_SIZE(sdata, mdata, client_id,
-			     SCPI_CMD_SEND_DSP_DATA, data,
-			     size, &buf, sizeof(buf));
-	if (scpi_execute_cmd(&sdata))
-		return -EPERM;
-	return buf.status;
-}
-EXPORT_SYMBOL_GPL(scpi_send_dsp_data);
-
 int scpi_send_dsp_cmd(void *data, int size, bool to_dspa,
-		      int cmd, int taskid)
+		      int cmd, int sync, void *revdata, int revsize)
 {
 	struct scpi_data_buf sdata;
 	struct mhu_data_buf mdata;
 	int client_id = 0;
-
-	struct __packed {
-		u32 status;
-	} buf;
-
-	struct txbuf {
-		u64 taskid;
-		char data[240];
-	} txbuf;
+	struct mbox_data_sync syncbuf;
+	struct mbox_data asyncbuf;
 
 	if (!to_dspa)
 		client_id = 3;
 	else
 		client_id = 1;
 
-	txbuf.taskid = taskid;
-	memcpy(txbuf.data, data, size);
+	if (sync) {
+		if (size > MBOX_SYNC_TX_SIZE) {
+			pr_err("%s warning: revsize %d over!!!\n",
+			       __func__, size);
+			return -SCPI_ERR_SIZE;
+		}
 
-	SCPI_SETUP_DBUF_SIZE(sdata, mdata, client_id,
-			     cmd, (void *)&txbuf,
-			     sizeof(txbuf), &buf, sizeof(buf));
+		memcpy(syncbuf.data, data, size);
+		SCPI_SETUP_DBUF_SIZE(sdata, mdata, client_id,
+				     cmd, (void *)&syncbuf,
+				     sizeof(syncbuf), &syncbuf,
+				     sizeof(syncbuf), SYNC_CMD_TAG);
+	} else {
+		if (size > MBOX_TX_SIZE) {
+			pr_err("%s warning: revsize %d over!!!\n",
+			       __func__, size);
+			return -SCPI_ERR_SIZE;
+		}
+
+		memcpy(asyncbuf.data, data, size);
+		SCPI_SETUP_DBUF_SIZE(sdata, mdata, client_id,
+				     cmd, (void *)&asyncbuf,
+				     sizeof(asyncbuf), &asyncbuf,
+				     sizeof(asyncbuf), ASYNC_CMD_TAG);
+	}
+
 	if (scpi_execute_cmd(&sdata))
 		return -EPERM;
 
-	return buf.status;
+	if (revsize > MBOX_SYNC_TX_SIZE) {
+		pr_err("%s warning: revsize %d over!!!\n",
+		       __func__, revsize);
+		revsize = MBOX_SYNC_TX_SIZE;
+	}
+
+	if (sync)
+		memcpy(revdata, &syncbuf.data, revsize);
+
+	return SCPI_SUCCESS;
 }
 EXPORT_SYMBOL_GPL(scpi_send_dsp_cmd);
 
