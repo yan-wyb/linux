@@ -607,8 +607,12 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT);
 			#ifdef VSIF_PKT_READ_FROM_PD_FIFO
 			rx_pkt_handler(PKT_BUFF_SET_FIFO);
 			#endif
+			if (rx.state == FSM_SIG_READY) {
+				rx.vsync_cnt++;
+				rx_update_sig_info();
+			}
 			if (log_level & 0x400)
-				rx_pr("[isr] DE rise edge.\n");
+				rx_pr("[isr] DE rise.\n");
 		}
 		if (hdmirx_top_intr_stat & (1 << 26)) {
 			rx_emp_lastpkt_done_irq();

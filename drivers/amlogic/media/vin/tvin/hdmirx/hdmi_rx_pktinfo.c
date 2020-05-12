@@ -1350,16 +1350,18 @@ static int vsi_handler(struct hdmi_rx_ctrl *ctx)
  *
  */
 //static int vsi_pkt_cnt;
-uint8_t rx_get_vsi_info(void)
+void rx_get_vsi_info(void)
 {
 	struct vsi_infoframe_st *pkt;
-	uint8_t ret = E_VSI_NULL;
 	unsigned int tmp;
 
+	rx.vs_info_details.vsi_state = E_VSI_NULL;
+	rx.vs_info_details.emp_pkt_cnt = rx.empbuff.emppktcnt;
+	rx.empbuff.emppktcnt = 0;
 	pkt = (struct vsi_infoframe_st *)&rx_pkt.vs_info;
 
-	if (rx.empbuff.emppktcnt &&
-	rx.empbuff.emp_tagid == IEEE_DV15) {
+	if (rx.vs_info_details.emp_pkt_cnt &&
+	    rx.empbuff.emp_tagid == IEEE_DV15) {
 		pkt->pkttype = 0x81;
 		pkt->length = E_PKT_LENGTH_27;
 		pkt->ieee = rx.empbuff.emp_tagid;
@@ -1389,7 +1391,7 @@ uint8_t rx_get_vsi_info(void)
 	switch (pkt->ieee) {
 	case IEEE_DV15:
 		/* dolbyvision 1.5 */
-		ret = E_VSI_DV15;
+		rx.vs_info_details.vsi_state = E_VSI_DV15;
 		if (pkt->length != E_PKT_LENGTH_27) {
 			if (log_level & PACKET_LOG)
 				rx_pr("vsi dv15 length err\n");
@@ -1410,13 +1412,13 @@ uint8_t rx_get_vsi_info(void)
 		break;
 	case IEEE_VSI21:
 		/* hdmi2.1 */
-		ret = E_VSI_VSI21;
+		rx.vs_info_details.vsi_state = E_VSI_VSI21;
 		tmp = pkt->sbpkt.payload.data[0] & _BIT(9);
 		rx.vs_info_details.allm_mode = tmp ? true : false;
 		break;
 	case IEEE_HDR10PLUS:
 		/* HDR10+ */
-		ret = E_VSI_HDR10PLUS;
+		rx.vs_info_details.vsi_state = E_VSI_HDR10PLUS;
 		if ((pkt->length != E_PKT_LENGTH_27) ||
 			(pkt->pkttype != 0x01) ||
 			(pkt->ver_st.version != 0x01) ||
@@ -1428,7 +1430,7 @@ uint8_t rx_get_vsi_info(void)
 		break;
 	case IEEE_VSI14:
 		/* dolbyvision1.0 */
-		ret = E_VSI_4K3D;
+		rx.vs_info_details.vsi_state = E_VSI_4K3D;
 		if (pkt->length == E_PKT_LENGTH_24) {
 			rx.vs_info_details.dolby_vision = true;
 			if ((pkt->sbpkt.payload.data[0] & 0xffff) == 0) {
@@ -1436,7 +1438,7 @@ uint8_t rx_get_vsi_info(void)
 					dv_nopacket_timeout;
 				pkt->sbpkt.payload.data[0] = 0xffff;
 			}
-			ret = E_VSI_DV10;
+			rx.vs_info_details.vsi_state = E_VSI_DV10;
 		} else if ((pkt->length == E_PKT_LENGTH_5) &&
 			(pkt->sbpkt.payload.data[0] & 0xffff)) {
 			rx.vs_info_details.dolby_vision = false;
@@ -1461,7 +1463,7 @@ uint8_t rx_get_vsi_info(void)
 	default:
 		break;
 	}
-	return ret;
+	/* memset(&rx_pkt.vs_info, 0, sizeof(struct pd_infoframe_s)); */
 }
 
 #if 0

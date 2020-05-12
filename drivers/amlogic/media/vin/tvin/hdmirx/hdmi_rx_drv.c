@@ -802,19 +802,19 @@ int hdmirx_hw_get_3d_structure(void)
 void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 {
 	static uint8_t last_vsi_state;
-	uint8_t vsi_state = rx_get_vsi_info();
 
-	if (last_vsi_state != vsi_state) {
+	if (last_vsi_state != rx.vs_info_details.vsi_state) {
 		if (log_level & PACKET_LOG) {
-			rx_pr("!!!vsi state = %d\n", vsi_state);
+			rx_pr("!!!vsi state = %d\n",
+			      rx.vs_info_details.vsi_state);
 			rx_pr("1:4K3D;2:vsi21;3:HDR10+;4:DV10;5:DV15\n");
 		}
 		prop->trans_fmt = TVIN_TFMT_2D;
 		prop->dolby_vision = false;
 		prop->hdr10p_info.hdr10p_on = false;
-		last_vsi_state = vsi_state;
+		last_vsi_state = rx.vs_info_details.vsi_state;
 	}
-	switch (vsi_state) {
+	switch (rx.vs_info_details.vsi_state) {
 	case E_VSI_HDR10PLUS:
 		prop->hdr10p_info.hdr10p_on = rx.vs_info_details.hdr10plus;
 		memcpy(&(prop->hdr10p_info.hdr10p_data),
@@ -825,16 +825,6 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 	case E_VSI_DV15:
 		prop->dolby_vision = rx.vs_info_details.dolby_vision;
 		prop->low_latency = rx.vs_info_details.low_latency;
-		if ((rx.vs_info_details.dolby_vision == true) &&
-			(rx.vs_info_details.dolby_timeout <=
-				dv_nopacket_timeout) &&
-			(rx.vs_info_details.dolby_timeout != 0)) {
-			rx.vs_info_details.dolby_timeout--;
-			if (rx.vs_info_details.dolby_timeout == 0) {
-				rx.vs_info_details.dolby_vision = false;
-					rx_pr("dv10 timeout\n");
-			}
-		}
 		if (rx.vs_info_details.dolby_vision) {
 			memcpy(&prop->dv_vsif_raw,
 			       &rx_pkt.vs_info, 3);
@@ -892,6 +882,7 @@ void hdmirx_get_vsi_info(struct tvin_sig_property_s *prop)
 		break;
 	}
 }
+
 /*
  * hdmirx_get_repetition_info - get repetition info
  */
@@ -914,13 +905,32 @@ void hdmirx_get_latency_info(struct tvin_sig_property_s *prop)
 static uint32_t emp_irq_cnt;
 void hdmirx_get_emp_info(struct tvin_sig_property_s *prop)
 {
-	prop->emp_data.size = rx.empbuff.emppktcnt;
-	if (rx.empbuff.emppktcnt)
+	prop->emp_data.size = rx.vs_info_details.emp_pkt_cnt;
+	if (rx.vs_info_details.emp_pkt_cnt)
 		memcpy(&(prop->emp_data.empbuf),
-			emp_buf, rx.empbuff.emppktcnt * 32);
+			emp_buf, rx.vs_info_details.emp_pkt_cnt * 32);
+#ifndef HDMIRX_SEND_INFO_TO_VDIN
 	if (emp_irq_cnt == rx.empbuff.irqcnt)
-		rx.empbuff.emppktcnt = 0;
+		rx.vs_info_details.emp_pkt_cnt = 0;
 	emp_irq_cnt = rx.empbuff.irqcnt;
+#endif
+}
+
+void rx_set_sig_info(void)
+{
+	struct tvin_frontend_s *fe = tvin_get_frontend(TVIN_PORT_HDMI0,
+		VDIN_FRONTEND_IDX);
+
+	if (fe->sm_ops && fe->sm_ops->vdin_set_property)
+		fe->sm_ops->vdin_set_property(fe);
+	else
+		rx_pr("hdmi notify err\n");
+}
+
+void rx_update_sig_info(void)
+{
+	rx_get_vsi_info();
+	rx_set_sig_info();
 }
 
 /*

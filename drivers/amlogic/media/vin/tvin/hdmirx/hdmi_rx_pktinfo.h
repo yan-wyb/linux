@@ -1061,7 +1061,7 @@ extern void rx_pkt_check_content(void);
 extern void rx_pkt_set_fifo_pri(uint32_t pri);
 extern uint32_t rx_pkt_get_fifo_pri(void);
 
-extern uint8_t rx_get_vsi_info(void);
+void rx_get_vsi_info(void);
 
 /*please ignore checksum byte*/
 extern void rx_pkt_get_audif_ex(void *pktinfo);

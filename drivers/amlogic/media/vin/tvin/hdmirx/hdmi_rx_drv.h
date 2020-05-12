@@ -34,7 +34,7 @@
 #include "hdmi_rx_edid.h"
 
 /* Decrease emp buffer size to 2k */
-#define RX_VER0 "ver.2020/05/09"
+#define RX_VER0 "ver.2020/05/22"
 /* Add bandgap enable and reset handle for tl1/tm2 */
 #define RX_VER1 "ver.2019/11/22"
 /* fix flicker after vpp unmute */
@@ -412,6 +412,8 @@ struct vsi_info_s {
 	unsigned int eff_tmax_pq;
 	bool allm_mode;
 	bool hdr10plus;
+	u8 vsi_state;
+	u8 emp_pkt_cnt;
 	u8 timeout;
 };
 
@@ -549,6 +551,7 @@ struct rx_s {
 	uint32_t arc_port;
 	enum edid_ver_e edid_ver;
 	bool arc_5vsts;
+	u32 vsync_cnt;
 #ifdef CONFIG_AMLOGIC_HDMITX
 	struct notifier_block tx_notify;
 #endif
@@ -639,6 +642,7 @@ extern void rx_debug_loadkey(void);
 extern void rx_debug_load22key(void);
 extern int rx_debug_wr_reg(const char *buf, char *tmpbuf, int i);
 extern int rx_debug_rd_reg(const char *buf, char *tmpbuf);
+void rx_update_sig_info(void);
 
 /* repeater */
 bool hdmirx_repeat_support(void);
@@ -655,8 +659,6 @@ extern void hdmirx_fill_key_buf(const char *buf, int size);
 extern int dv_nopacket_timeout;
 extern unsigned int packet_fifo_cfg;
 extern unsigned int *pd_fifo_buf;
-
-
 
 /* for other modules */
 extern int External_Mute(int mute_flag);
