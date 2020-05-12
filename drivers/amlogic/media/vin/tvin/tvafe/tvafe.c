@@ -823,7 +823,11 @@ static bool tvafe_is_nosig(struct tvin_frontend_s *fe)
 	if (tvafe->cvd2.info.smr_cnt++ >= 65536)
 		tvafe->cvd2.info.smr_cnt = 0;
 
-	ret = tvafe_cvd2_no_sig(&tvafe->cvd2, &devp->mem);
+	if (devp->flags & TVAFE_FLAG_DEV_STARTED)
+		ret = tvafe_cvd2_no_sig(&tvafe->cvd2, &devp->mem, 1);
+	else
+		ret = tvafe_cvd2_no_sig(&tvafe->cvd2, &devp->mem, 0);
+
 	if ((!tvafe_mode) && (port == TVIN_PORT_CVBS3) &&
 		(devp->flags & TVAFE_FLAG_DEV_SNOW_FLAG)) { /* playing snow */
 		tvafe->cvd2.info.snow_state[3] = tvafe->cvd2.info.snow_state[2];

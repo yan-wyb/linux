@@ -159,6 +159,10 @@ module_param(acd_h, uint, 0664);
 MODULE_PARM_DESC(acd_h, "acd_h");
 static unsigned int acd_h_back = 0x890359;
 
+static unsigned int dec_stop_not_adj;
+module_param(dec_stop_not_adj, uint, 0664);
+MODULE_PARM_DESC(dec_stop_not_adj, "dec_stop_not_adj");
+
 static unsigned int hs_adj_th_level0 = 0x260;
 static unsigned int hs_adj_th_level1 = 0x4f0;
 static unsigned int hs_adj_th_level2 = 0x770;
@@ -2115,7 +2119,7 @@ static void tvafe_cvd2_reinit(struct tvafe_cvd2_s *cvd2)
  * tvafe cvd2 signal status for smr
  */
 inline bool tvafe_cvd2_no_sig(struct tvafe_cvd2_s *cvd2,
-			struct tvafe_cvd2_mem_s *mem)
+			struct tvafe_cvd2_mem_s *mem, bool is_dec_start)
 {
 	struct tvafe_user_param_s *user_param = tvafe_get_user_param();
 	static bool ret;
@@ -2135,9 +2139,10 @@ inline bool tvafe_cvd2_no_sig(struct tvafe_cvd2_s *cvd2,
 		ret = false;
 		cvd2->cvd2_init_en = false;
 #ifdef TVAFE_CVD2_AUTO_DE_ENABLE
-		if (((!cvd2->info.scene_colorful) &&
-		     (user_param->auto_adj_en & TVAFE_AUTO_DE)) ||
-		    (user_param->auto_adj_en & TVAFE_AUTO_VS)) {
+		if ((((!cvd2->info.scene_colorful) &&
+		      (user_param->auto_adj_en & TVAFE_AUTO_DE)) ||
+		     (user_param->auto_adj_en & TVAFE_AUTO_VS)) &&
+		    (!dec_stop_not_adj || (is_dec_start && dec_stop_not_adj))) {
 			tvafe_cvd2_auto_de(cvd2);
 			tvafe_cvd2_adj_vs(cvd2);
 		} else

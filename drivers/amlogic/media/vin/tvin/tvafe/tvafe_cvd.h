@@ -201,7 +201,7 @@ extern int cvd_get_rf_strength(void);
 extern void tvafe_cvd2_try_format(struct tvafe_cvd2_s *cvd2,
 			struct tvafe_cvd2_mem_s *mem, enum tvin_sig_fmt_e fmt);
 extern bool tvafe_cvd2_no_sig(struct tvafe_cvd2_s *cvd2,
-			struct tvafe_cvd2_mem_s *mem);
+			struct tvafe_cvd2_mem_s *mem, bool is_dec_start);
 extern bool tvafe_cvd2_fmt_chg(struct tvafe_cvd2_s *cvd2);
 extern enum tvin_sig_fmt_e tvafe_cvd2_get_format(
 			struct tvafe_cvd2_s *cvd2);
