@@ -1240,14 +1240,14 @@ void video_post_process(
 		} else {
 			if ((vf && vf->type & VIDTYPE_RGB_444) &&
 			   (get_hdr_module_status(vd_path) != HDR_MODULE_OFF)) {
-				WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 0, 1, 1);
-				WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 0, 1, 1);
+				VSYNC_WR_MPEG_REG_BITS(VPP_VADJ1_MISC, 0, 1, 1);
+				VSYNC_WR_MPEG_REG_BITS(VPP_VADJ2_MISC, 0, 1, 1);
 				mtx_setting(
 				POST2_MTX,
 				MATRIX_YUV709F_RGB, MTX_ON);
 			} else {
-				WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 1, 1, 1);
-				WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 1, 1, 1);
+				VSYNC_WR_MPEG_REG_BITS(VPP_VADJ1_MISC, 1, 1, 1);
+				VSYNC_WR_MPEG_REG_BITS(VPP_VADJ2_MISC, 1, 1, 1);
 				mtx_setting(
 				POST2_MTX,
 				MATRIX_YUV709_RGB, MTX_ON);

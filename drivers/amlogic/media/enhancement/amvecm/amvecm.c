@@ -304,14 +304,16 @@ static int amvecm_set_contrast2(int val)
 {
 	val += 0x80;
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y_2,
+		VSYNC_WR_MPEG_REG_BITS(
+			VPP_VADJ2_Y_2,
 			val, 0, 8);
-		WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 1, 0, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ2_MISC, 1, 0, 1);
 
 	} else {
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y,
+		VSYNC_WR_MPEG_REG_BITS(
+			VPP_VADJ2_Y,
 			val, 0, 8);
-		WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
 	}
 	return 0;
 }
@@ -319,19 +321,22 @@ static int amvecm_set_contrast2(int val)
 static int amvecm_set_brightness2(int val)
 {
 	if (get_cpu_type() <= MESON_CPU_MAJOR_ID_GXTVBB)
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y,
+		VSYNC_WR_MPEG_REG_BITS(
+			VPP_VADJ2_Y,
 			val, 8, 9);
 	else if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y_2,
+		VSYNC_WR_MPEG_REG_BITS(
+			VPP_VADJ2_Y_2,
 			val, 8, 11);
 	else
-		WRITE_VPP_REG_BITS(VPP_VADJ2_Y,
+		VSYNC_WR_MPEG_REG_BITS(
+			VPP_VADJ2_Y,
 			val >> 1, 8, 10);
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
-		WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 1, 0, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ2_MISC, 1, 0, 1);
 	else
-		WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
 	return 0;
 }
 
@@ -1237,9 +1242,9 @@ static int amvecm_set_saturation_hue(int mab)
 	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
-		WRITE_VPP_REG(VPP_VADJ1_MA_MB_2, mab);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MA_MB_2, mab);
 	else
-		WRITE_VPP_REG(VPP_VADJ1_MA_MB, mab);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MA_MB, mab);
 
 	mc = (s16)((mab<<22)>>22); /* mc = -mb */
 	mc = 0 - mc;
@@ -1251,11 +1256,11 @@ static int amvecm_set_saturation_hue(int mab)
 	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		WRITE_VPP_REG(VPP_VADJ1_MC_MD_2, mab);
-		WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 1, 0, 1);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MC_MD_2, mab);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ1_MISC, 1, 0, 1);
 	} else {
-		WRITE_VPP_REG(VPP_VADJ1_MC_MD, mab);
-		WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MC_MD, mab);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
 	}
 	pr_amvecm_dbg("%s set video_saturation_hue OK!!!\n", __func__);
 	return 0;
@@ -1305,9 +1310,9 @@ static int amvecm_set_saturation_hue_post(int val1,
 	pr_info("\n[amvideo..] saturation_post:%d hue_post:%d mab:%x\n",
 			saturation_post, hue_post, mab);
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
-		WRITE_VPP_REG(VPP_VADJ2_MA_MB_2, mab);
+		VSYNC_WR_MPEG_REG(VPP_VADJ2_MA_MB_2, mab);
 	else
-		WRITE_VPP_REG(VPP_VADJ2_MA_MB, mab);
+		VSYNC_WR_MPEG_REG(VPP_VADJ2_MA_MB, mab);
 	mc = (s16)((mab<<22)>>22); /* mc = -mb */
 	mc = 0 - mc;
 	if (mc > 511)
@@ -1317,11 +1322,11 @@ static int amvecm_set_saturation_hue_post(int val1,
 	md = (s16)((mab<<6)>>22);  /* md =	ma; */
 	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		WRITE_VPP_REG(VPP_VADJ2_MC_MD_2, mab);
-		WRITE_VPP_REG_BITS(VPP_VADJ2_MISC, 1, 0, 1);
+		VSYNC_WR_MPEG_REG(VPP_VADJ2_MC_MD_2, mab);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ2_MISC, 1, 0, 1);
 	} else {
-		WRITE_VPP_REG(VPP_VADJ2_MC_MD, mab);
-		WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
+		VSYNC_WR_MPEG_REG(VPP_VADJ2_MC_MD, mab);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ_CTRL, 1, 2, 1);
 	}
 	return 0;
 }
@@ -2680,9 +2685,9 @@ void vpp_vd_adj1_saturation_hue(signed int sat_val,
 		mb = -512;
 	mab =  ((ma & 0x3ff) << 16) | (mb & 0x3ff);
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A)
-		WRITE_VPP_REG(VPP_VADJ1_MA_MB_2, mab);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MA_MB_2, mab);
 	else
-		WRITE_VPP_REG(VPP_VADJ1_MA_MB, mab);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MA_MB, mab);
 	mc = (s16)((mab<<22)>>22); /* mc = -mb */
 	mc = 0 - mc;
 	if (mc > 511)
@@ -2693,11 +2698,11 @@ void vpp_vd_adj1_saturation_hue(signed int sat_val,
 	mab = ((mc&0x3ff)<<16)|(md&0x3ff);
 
 	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
-		WRITE_VPP_REG(VPP_VADJ1_MC_MD_2, mab);
-		WRITE_VPP_REG_BITS(VPP_VADJ1_MISC, 1, 0, 1);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MC_MD_2, mab);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ1_MISC, 1, 0, 1);
 	} else {
-		WRITE_VPP_REG(VPP_VADJ1_MC_MD, mab);
-		WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
+		VSYNC_WR_MPEG_REG(VPP_VADJ1_MC_MD, mab);
+		VSYNC_WR_MPEG_REG_BITS(VPP_VADJ_CTRL, 1, 0, 1);
 	}
 };
 

@@ -2005,6 +2005,7 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel)
 	unsigned int hist_height, hist_width, i;
 	u32 num_pixel, total_pixel;
 	int j;
+	int k = 0;
 	enum hdr_module_sel module_sel = VD1_HDR;
 	unsigned int hdr2_hist_rd;
 
@@ -2069,17 +2070,22 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel)
 	if (total_pixel) {
 		for (i = 0; i < 128; i++) {
 			num_pixel += hdr_hist[NUM_HDR_HIST - 1][i];
-			for (j = 8; j >= 0; j--) {
+			for (j = 8; j >= k; j--) {
 				if (num_pixel * 100 / total_pixel >=
 					percentile_percent[j]) {
 					percentile[j] =
 					hist_maxrgb_luminance[i];
+					k = j + 1;
+					if (k > 8)
+						k = 8;
 					break;
 				}
 			}
 			if (hdr_hist[NUM_HDR_HIST - 1][i])
 				hdr_max_rgb =
 					(i + 1) * 10000 / 128;
+			if (percentile[8] != 0)
+				break;
 		}
 		if (percentile[0] == 0)
 			percentile[0] = 1;
@@ -2935,8 +2941,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 
 	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param, NULL);
 
-	if (hdr_process_select != HDR10P_SDR)
-		set_ootf_lut(module_sel, &hdr_lut_param);
+	set_ootf_lut(module_sel, &hdr_lut_param);
 
 	set_oetf_lut(module_sel, &hdr_lut_param);
 
@@ -3268,6 +3273,10 @@ enum hdr_process_sel hdr10p_func(
 	set_hdr_matrix(module_sel, HDR_IN_MTX, &hdr_mtx_param, NULL);
 
 	set_eotf_lut(module_sel, &hdr_lut_param);
+
+	set_hdr_matrix(module_sel, HDR_GAMUT_MTX, &hdr_mtx_param, NULL);
+
+	set_ootf_lut(module_sel, &hdr_lut_param);
 
 	set_oetf_lut(module_sel, &hdr_lut_param);
 

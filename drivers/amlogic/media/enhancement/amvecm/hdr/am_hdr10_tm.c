@@ -134,12 +134,23 @@ int time_iir(u32 *maxl)
 		dtl_lum =
 			(max_lum[2] > max_lum[1]) ?
 			(max_lum[2] - max_lum[1]) :
-			(max_lum[1] > max_lum[2]);
+			(max_lum[1] - max_lum[2]);
 
-		max_lum[2] =
-			(max_lum[2] > max_lum[1]) ?
-			(max_lum[1] + (dtl_lum >> 6)) :
-			(max_lum[1] - (dtl_lum >> 6));
+		if (dtl_lum < (1 << 3))
+			max_lum[2] =
+				(max_lum[2] > max_lum[1]) ?
+				(max_lum[1] + (dtl_lum >> 1)) :
+				(max_lum[1] - (dtl_lum >> 1));
+		else if (dtl_lum < (1 << 6))
+			max_lum[2] =
+				(max_lum[2] > max_lum[1]) ?
+				(max_lum[1] + (dtl_lum >> 3)) :
+				(max_lum[1] - (dtl_lum >> 3));
+		else
+			max_lum[2] =
+				(max_lum[2] > max_lum[1]) ?
+				(max_lum[1] + (dtl_lum >> 6)) :
+				(max_lum[1] - (dtl_lum >> 6));
 
 		*maxl = max_lum[2];
 		ret = 2;
@@ -433,6 +444,9 @@ int hdr10_tm_dynamic_proc(struct vframe_master_display_colour_s *p)
 
 	/*use 95% maxl because of high percert flicker*/
 	maxl = (percentile[8] > primry_maxl) ? primry_maxl : percentile[8];
+	pr_hdr_tm(
+		"maxl = %d, percentile[8] = %d, primry_maxl =%d\n",
+		maxl, percentile[8], primry_maxl);
 
 	if (hdr_tm_iir)
 		scn_chang_flag = time_iir(&maxl);
