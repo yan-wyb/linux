@@ -2021,6 +2021,7 @@ static bool mel_mode;
 static uint16_t tv_backlight;
 static bool tv_backlight_changed;
 static bool set_backlight_delay_one_vsync;
+static bool enable_vpu_probe;
 
 #define MAX_PARAM   8
 static bool is_meson_gxm(void)
@@ -5767,7 +5768,8 @@ static int dolby_vision_policy_process(
 				}
 			}
 		}
-		if (src_format == FORMAT_SDR) {
+		if (src_format == FORMAT_SDR &&
+		    (mode_change || *mode == dolby_vision_mode)) {
 			if (*mode == DOLBY_VISION_OUTPUT_MODE_BYPASS)
 				dolby_vision_hdr10_policy &= ~SDR_BY_DV;
 			else
@@ -6023,7 +6025,8 @@ static int dolby_vision_policy_process(
 			mode_change = 1;
 		}
 	}
-	if (src_format == FORMAT_SDR) {
+	if (src_format == FORMAT_SDR &&
+	    (mode_change || *mode == dolby_vision_mode)) {
 		if (*mode == DOLBY_VISION_OUTPUT_MODE_BYPASS)
 			dolby_vision_hdr10_policy &= ~SDR_BY_DV;
 		else
@@ -11553,7 +11556,6 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			}
 		}
 	}
-	__invoke_psci_fn_smc(0x82000080, 0, 0, 0);
 	return ret;
 }
 EXPORT_SYMBOL(register_dv_functions);
@@ -11961,6 +11963,7 @@ static const char *amdolby_vision_debug_usage_str = {
 	"echo force_support_emp 1/0 > /sys/class/amdolby_vision/debug; send emp\n"
 	"echo set_backlight_delay 0 > /sys/class/amdolby_vision/debug; set backlight no delay\n"
 	"echo set_backlight_delay 1 > /sys/class/amdolby_vision/debug; set backlight delay one vysnc\n"
+	"echo enable_vpu_probe 1 > /sys/class/amdolby_vision/debug; enable vpu probe\n"
 };
 static ssize_t  amdolby_vision_debug_show(struct class *cla,
 		struct class_attribute *attr, char *buf)
@@ -12018,6 +12021,18 @@ static ssize_t amdolby_vision_debug_store(struct class *cla,
 			set_backlight_delay_one_vsync = 1;
 		pr_info("set_backlight_delay_one_vsync %d\n",
 			set_backlight_delay_one_vsync);
+	} else if (!strcmp(parm[0], "enable_vpu_probe")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		if (val == 0) {
+			enable_vpu_probe = 0;
+		} else {
+			enable_vpu_probe = 1;
+			if ((is_meson_tm2() || is_meson_sm1_cpu()))
+				__invoke_psci_fn_smc(0x82000080, 0, 0, 0);
+		}
+		pr_info("set enable_vpu_probe %d\n",
+			enable_vpu_probe);
 	} else {
 		pr_info("unsupport cmd\n");
 	}
