@@ -1203,6 +1203,7 @@ int earcrx_get_audio_coding_type(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
 	enum audio_coding_types coding_type;
+	enum attend_type type;
 
 	if (!p_earc || IS_ERR(p_earc->rx_top_map))
 		return 0;
@@ -1210,7 +1211,8 @@ int earcrx_get_audio_coding_type(struct snd_kcontrol *kcontrol,
 	if (!p_earc->rx_dmac_clk_on)
 		return 0;
 
-	coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map);
+	type = earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map);
+	coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map, type);
 
 	ucontrol->value.integer.value[0] = coding_type;
 
@@ -1222,7 +1224,8 @@ int earcrx_get_freq(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct earc *p_earc = dev_get_drvdata(component->dev);
-	enum audio_coding_types codec_type;
+	enum audio_coding_types coding_type;
+	enum attend_type type;
 	int freq;
 
 	if (!p_earc || IS_ERR(p_earc->rx_top_map))
@@ -1231,8 +1234,9 @@ int earcrx_get_freq(struct snd_kcontrol *kcontrol,
 	if (!p_earc->rx_dmac_clk_on)
 		return 0;
 
-	codec_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map);
-	freq = earcrx_get_cs_freq(p_earc->rx_dmac_map, codec_type);
+	type = earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map);
+	coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map, type);
+	freq = earcrx_get_cs_freq(p_earc->rx_dmac_map, coding_type);
 
 	ucontrol->value.integer.value[0] = freq;
 
@@ -1603,6 +1607,7 @@ static int earcrx_get_chmap(struct snd_kcontrol *kcontrol,
 	struct earc *p_earc = info->private_data;
 	struct snd_pcm_chmap *chmap;
 	enum audio_coding_types coding_type;
+	enum attend_type type;
 	int ca;
 
 	if (!p_earc || IS_ERR(p_earc->tx_top_map))
@@ -1614,7 +1619,8 @@ static int earcrx_get_chmap(struct snd_kcontrol *kcontrol,
 	if (!p_earc->rx_dmac_clk_on)
 		goto non_chmap;
 
-	coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map);
+	type = earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map);
+	coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map, type);
 	ca = earcrx_get_cs_ca(p_earc->rx_dmac_map);
 
 	if (!support_chmap(coding_type))

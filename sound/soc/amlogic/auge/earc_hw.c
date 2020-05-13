@@ -375,16 +375,20 @@ static unsigned int ecc_syndrome(unsigned int val1, unsigned int val2)
 	return val1;
 }
 
-static int earcrx_get_cs_pcpd(struct regmap *dmac_map)
+static int earcrx_get_cs_pcpd(struct regmap *dmac_map, bool ecc_check)
 {
 	unsigned int val = earcrx_get_cs_bits(dmac_map, 192, 0xffffffff);
 	unsigned int pc_e = (val >> 16) & 0xffff;
 	unsigned int pd_e = val & 0xffff;
 
-	return ecc_syndrome(pc_e, pd_e) << 16 | ecc_syndrome(pd_e, pc_e);
+	if (ecc_check)
+		return ecc_syndrome(pc_e, pd_e) << 16 |
+			ecc_syndrome(pd_e, pc_e);
+	else
+		return val;
 }
 
-unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map)
+unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map, enum attend_type type)
 {
 	enum audio_coding_types coding_type = AUDIO_CODING_TYPE_UNDEFINED;
 	unsigned int val, layout;
@@ -433,7 +437,8 @@ unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map)
 		if (layout == 0x7) {
 			coding_type = AUDIO_CODING_TYPE_AC3_LAYOUT_B;
 		} else {
-			int pcpd = earcrx_get_cs_pcpd(dmac_map);
+			int pcpd = earcrx_get_cs_pcpd(dmac_map,
+						      type == ATNDTYP_EARC);
 			int pc_v = (pcpd >> 16) & 0xffff;
 
 			/* compressed audio  type */
