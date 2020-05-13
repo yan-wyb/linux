@@ -76,7 +76,9 @@ struct video_dev_s *cur_dev = &video_dev;
 bool legacy_vpp = true;
 
 static bool bypass_cm;
+#ifdef CONFIG_AMLOGIC_MEDIA_LUT_DMA
 static bool fg_supported;
+#endif
 static DEFINE_SPINLOCK(video_onoff_lock);
 static DEFINE_SPINLOCK(video2_onoff_lock);
 
