@@ -825,8 +825,10 @@
 		clocks = <&clkc CLKID_24M>;
 		clock-names = "g12a_24m";
 		reset = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+#if 0
 		ir_cut_gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_HIGH
 				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
+#endif
 	};
 
 	iq: iq {
@@ -835,12 +837,29 @@
 		sensor-name = "imx290"; /*imx290;os08a10;imx227;imx307*/
 	};
 	ircut: ircut {
+#if 0
 		compatible = "amlogic, ircut";
 		status = "okay";
 		filter1-gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
 		filter2-gpios = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
 		light_in-gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
 		alarm-gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
+#endif
+		compatible = "amlogic, aml-ircut";
+		status = "okay";
+		ircut-gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_HIGH
+				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
+		ircut-chip = <1>;
+		ir-led-gpio = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
+		ir-led-chip = <0>;
+		ldr-gpio = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_LOW>;
+		ldr-chip = <0>;
+		ircut-sequence = "init: 0=0, 1=0",
+				"enable: 0=0, 1=1, w=100, 1=0",
+				"disable: 0=1, 1=0, w=100, 1=1";
+		ir-led-sequence = "init: 0=0",
+				"enable: 0=1",
+				"disable: 0=0";
 	};
 	vcodec_dec {
 		compatible = "amlogic, vcodec-dec";
