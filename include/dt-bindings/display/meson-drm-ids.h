@@ -44,9 +44,11 @@
  *V1:G12A
  *V2:G12B-revA:base G12A,add repeate last line function
  *V3:G12B-RevB:add line interrupt support
+ *V4:SM1/TL1/TM2 etc , the ic after G12B-revB
  */
 #define OSD_V1 1
 #define OSD_V2 2
 #define OSD_V3 3
+#define OSD_V4 4
 
 #endif

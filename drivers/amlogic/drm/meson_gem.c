@@ -38,6 +38,8 @@ static int am_meson_gem_alloc_ion_buff(
 	int flags)
 {
 	struct ion_handle *handle;
+	phys_addr_t addr;
+	size_t len;
 	bool bscatter = false;
 
 	if (!client)
@@ -73,8 +75,11 @@ static int am_meson_gem_alloc_ion_buff(
 		return -ENOMEM;
 	}
 
+	ion_phys(client, handle, (ion_phys_addr_t *)&addr, &len);
+
 	meson_gem_obj->handle = handle;
 	meson_gem_obj->bscatter = bscatter;
+	meson_gem_obj->addr = addr;
 	DRM_DEBUG("%s: allocate handle (%p).\n",
 		__func__, meson_gem_obj->handle);
 	return 0;
@@ -275,15 +280,8 @@ phys_addr_t am_meson_gem_object_get_phyaddr(
 	struct am_meson_gem_object *meson_gem,
 	size_t *len)
 {
-	phys_addr_t addr;
-
-	if (meson_gem->sg || meson_gem->is_secure)
-		return meson_gem->addr;
-
-	ion_phys(drm->gem_client, meson_gem->handle,
-						(ion_phys_addr_t *)&addr, len);
-
-	return addr;
+	*len = meson_gem->base.size;
+	return meson_gem->addr;
 }
 EXPORT_SYMBOL(am_meson_gem_object_get_phyaddr);
 

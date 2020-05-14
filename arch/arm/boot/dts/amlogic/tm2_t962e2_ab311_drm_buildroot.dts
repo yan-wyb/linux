@@ -1868,7 +1868,6 @@
 &drm_vpu {
 	status = "okay";
 	logo_addr = "0x7f800000";
-	osd_ver = /bits/ 8 <OSD_V6>;
 };
 
 &drm_amhdmitx {
