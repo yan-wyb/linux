@@ -342,6 +342,10 @@ static unsigned int disable_dv_drop;
 MODULE_PARM_DESC(disable_dv_drop, "\n disable_dv_drop\n");
 module_param(disable_dv_drop, uint, 0664);
 
+static u32 vdin_frame_skip_cnt;
+MODULE_PARM_DESC(vdin_frame_skip_cnt, "\n vdin_frame_skip_cnt\n");
+module_param(vdin_frame_skip_cnt, uint, 0664);
+
 static unsigned int video_3d_format;
 static unsigned int mvc_flag;
 unsigned int force_3d_scaler = 3;
@@ -932,7 +936,7 @@ static u32 toggle_same_count;
 static int hdmin_delay_start;
 static int hdmin_delay_start_time;
 static int hdmin_delay_duration;
-static int hdmin_delay_max_ms = 140;
+static int hdmin_delay_max_ms = 128;
 static int vframe_walk_delay;
 /* video_inuse */
 u32 video_inuse;
@@ -1784,6 +1788,11 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 	vframe_walk_delay = (int)div_u64(((jiffies_64 -
 		vf->ready_jiffies64) * 1000), HZ);
 
+	if (debug_flag & DEBUG_FLAG_HDMI_AVSYNC_DEBUG)
+		pr_info("vf %p, ready_jiffies64 %d, walk_delay %d\n",
+			vf, jiffies_to_msecs(vf->ready_jiffies64),
+			vframe_walk_delay);
+
 	/* set video PTS */
 	if (cur_dispbuf != vf) {
 		if (vf->pts != 0) {
@@ -2295,6 +2304,10 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 	}
 
 	expired = (int)(timestamp_pcrscr_get() + vsync_pts_align - pts) >= 0;
+
+	if (debug_flag & DEBUG_FLAG_HDMI_AVSYNC_DEBUG)
+		pr_info("vf/next %p/%p, pcr %d, pts %d, expired %d\n",
+			cur_vf, next_vf, timestamp_pcrscr_get(), pts, expired);
 
 #ifdef PTS_THROTTLE
 	if (expired && next_vf && next_vf->next_vf_pts_valid &&
@@ -2882,20 +2895,47 @@ int hdmi_in_start_check(struct vframe_s *vf)
 	if (!vf || vf->duration == 0)
 		return 0;
 	if (hdmin_delay_duration < 0)
-		hdmin_delay_duration = 300;
+		hdmin_delay_duration = 100;
+
+	/* update duration */
+	vsync_duration = (int)(vf->duration / 96);
+
+	/*delay <= 1/2 vsync :  no need dealy*/
+	if (hdmin_delay_duration <= vsync_duration / 2) {
+		pr_info("hdmin_delay_duration < %d, no need delay\n",
+			vsync_duration / 2);
+		hdmin_delay_start = 0;
+		return 0;
+	}
+
 	if (hdmin_delay_start_time == -1) {
-		/* update duration */
-		vsync_duration = (int)(vf->duration / 96);
 		hdmin_delay_start_time = jiffies_to_msecs(jiffies);
-		hdmin_delay_start_time -= vsync_duration * 2;
+		/*this funtcion lead to one vsync delay */
+		/*hdmin_delay_start_time -= vsync_duration;*/
+
+		if (debug_flag & DEBUG_FLAG_HDMI_AVSYNC_DEBUG)
+			pr_info("vsync_duration %d, hdmin_delay_start_time %d\n",
+				vsync_duration, hdmin_delay_start_time);
 		return 1;
 	}
+
 	expire = jiffies_to_msecs(jiffies) -
 		hdmin_delay_start_time;
-	if (expire < hdmin_delay_duration)
+
+	if (debug_flag & DEBUG_FLAG_HDMI_AVSYNC_DEBUG)
+		pr_info("hdmin_delay_start_time %d, expire %d, hdmin_delay_duration %d\n",
+			hdmin_delay_start_time, expire, hdmin_delay_duration);
+
+	/*delay one more vsync? select the one that closer to required*/
+	if (expire - hdmin_delay_duration < -vsync_duration / 2)
 		return 1;
 	hdmin_delay_start = 0;
-	timestamp_vpts_set(timestamp_pcrscr_get());
+
+	if (debug_flag & DEBUG_FLAG_HDMI_AVSYNC_DEBUG)
+		pr_info("hdmi video delay done! expire %d\n", expire);
+
+	/*reset vpts = pcr will lead vpts_expire delay two vsync*/
+	timestamp_vpts_set(timestamp_pcrscr_get() - 2 * DUR2PTS(vf->duration));
 	return 0;
 }
 
@@ -3788,8 +3828,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	    (vf->source_type == VFRAME_SOURCE_TYPE_HDMI ||
 	    vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
 		int buf_cnt = video_vdin_buf_info_get();
-
-		if (buf_cnt > 1) {
+		if (buf_cnt > 2) {
 			struct vinfo_s *video_info;
 
 			video_info = get_current_vinfo();
@@ -3797,7 +3836,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 				hdmin_delay_max_ms = 1000 *
 				video_info->sync_duration_den /
 				video_info->sync_duration_num
-				* (buf_cnt-1);
+				* (buf_cnt - 2);
 		}
 	}
 
@@ -4205,8 +4244,10 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			if (vf &&
 				((vf->source_type == VFRAME_SOURCE_TYPE_HDMI) ||
 				(vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) &&
-				video_vf_disp_mode_check(vf))
+				video_vf_disp_mode_check(vf)) {
+				vdin_frame_skip_cnt++;
 				break;
+			}
 			force_blackout = 0;
 			if (vf) {
 				if (last_mode_3d !=
@@ -7820,16 +7861,21 @@ static ssize_t hdmin_delay_duration_store(struct class *class,
 {
 	int r;
 	int value;
+	int update_value;
 
 	r = kstrtoint(buf, 0, &value);
 	if (r < 0)
 		return -EINVAL;
-	if (value > hdmin_delay_max_ms) {
-		pr_info("hdmin_delay_duration %d limit exceeded, set to %d\n",
-			value, hdmin_delay_max_ms);
-		value = hdmin_delay_max_ms;
+	update_value = value;
+	if (value + vframe_walk_delay > hdmin_delay_max_ms) {
+		if (hdmin_delay_max_ms > vframe_walk_delay)
+			update_value = hdmin_delay_max_ms - vframe_walk_delay;
+		else
+			update_value = 0;
+		pr_info("already delay %d, hdmin_delay %d out of range, set to %d\n",
+			vframe_walk_delay, value, update_value);
 	}
-	hdmin_delay_duration = value;
+	hdmin_delay_duration = update_value;
 	pr_info("[%s] hdmin_delay_duration:%d\n",
 		__func__, hdmin_delay_duration);
 	return count;
