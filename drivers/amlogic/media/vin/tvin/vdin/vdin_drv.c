@@ -2508,14 +2508,15 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	devp = file->private_data;
 	if (!devp)
 		return -EFAULT;
-	mutex_lock(&devp->fe_lock);
 	switch (cmd) {
 	case TVIN_IOC_OPEN: {
 		struct tvin_parm_s parm = {0};
+		mutex_lock(&devp->fe_lock);
 		if (copy_from_user(&parm, argp, sizeof(struct tvin_parm_s))) {
 			pr_err("TVIN_IOC_OPEN(%d) invalid parameter\n",
 					devp->index);
 			ret = -EFAULT;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		if (time_en)
@@ -2525,6 +2526,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_err("TVIN_IOC_OPEN(%d) port %s opend already\n",
 					parm.index, tvin_port_str(parm.port));
 			ret = -EBUSY;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		devp->parm.index = parm.index;
@@ -2535,6 +2537,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_err("TVIN_IOC_OPEN(%d) failed to open port 0x%x\n",
 					devp->index, parm.port);
 			ret = -EFAULT;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 
@@ -2542,16 +2545,19 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (vdin_dbg_en)
 			pr_info("TVIN_IOC_OPEN(%d) port %s opened ok\n\n",
 				parm.index,	tvin_port_str(devp->parm.port));
+		mutex_unlock(&devp->fe_lock);
 		break;
 	}
 	case TVIN_IOC_START_DEC: {
 		struct tvin_parm_s parm = {0};
 		enum tvin_sig_fmt_e fmt;
 
+		mutex_lock(&devp->fe_lock);
 		if (devp->flags & VDIN_FLAG_DEC_STARTED) {
 			pr_err("TVIN_IOC_START_DEC(%d) port 0x%x, started already flags=0x%x\n",
 					parm.index, parm.port, devp->flags);
 			ret = -EBUSY;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		if (time_en) {
@@ -2567,12 +2573,14 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				tvin_sig_status_str(devp->parm.info.status),
 				tvin_sig_fmt_str(devp->parm.info.fmt));
 			ret = -EPERM;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		if (copy_from_user(&parm, argp, sizeof(struct tvin_parm_s))) {
 			pr_err("TVIN_IOC_START_DEC(%d) invalid parameter\n",
 					devp->index);
 			ret = -EFAULT;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		if ((parm.info.fmt == TVIN_SIG_FMT_NULL) &&
@@ -2590,6 +2598,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_err("TVIN_IOC_START_DEC(%d) error, fmt is null\n",
 					devp->index);
 			ret = -EFAULT;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		vdin_start_dec(devp);
@@ -2612,15 +2621,18 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("TVIN_IOC_START_DEC(%d) port %s, decode started ok flags=0x%x\n",
 				devp->index,
 				tvin_port_str(devp->parm.port), devp->flags);
+		mutex_unlock(&devp->fe_lock);
 		break;
 	}
 	case TVIN_IOC_STOP_DEC:	{
 		struct tvin_parm_s *parm = &devp->parm;
 
+		mutex_lock(&devp->fe_lock);
 		if (!(devp->flags & VDIN_FLAG_DEC_STARTED)) {
 			pr_err("TVIN_IOC_STOP_DEC(%d) decode havn't started flags=0x%x\n",
 					devp->index, devp->flags);
 			ret = -EPERM;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 
@@ -2641,6 +2653,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				parm->index, tvin_port_str(parm->port),
 				devp->flags);
 
+		mutex_unlock(&devp->fe_lock);
 		reset_tvin_smr(parm->index);
 		break;
 	}
@@ -2674,10 +2687,12 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		struct tvin_parm_s *parm = &devp->parm;
 		enum tvin_port_e port = parm->port;
 
+		mutex_lock(&devp->fe_lock);
 		if (!(devp->flags & VDIN_FLAG_DEC_OPENED)) {
 			pr_err("TVIN_IOC_CLOSE(%d) you have not opened port\n",
 					devp->index);
 			ret = -EPERM;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		if (time_en)
@@ -2689,6 +2704,8 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("TVIN_IOC_CLOSE(%d) port %s closed ok\n\n",
 					parm->index,
 				tvin_port_str(port));
+
+		mutex_unlock(&devp->fe_lock);
 		break;
 	}
 	case TVIN_IOC_S_PARM: {
@@ -2714,9 +2731,11 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case TVIN_IOC_G_SIG_INFO: {
 		struct tvin_info_s info;
 		memset(&info, 0, sizeof(struct tvin_info_s));
+		mutex_lock(&devp->fe_lock);
 		/* if port is not opened, ignore this command */
 		if (!(devp->flags & VDIN_FLAG_DEC_OPENED)) {
 			ret = -EPERM;
+			mutex_unlock(&devp->fe_lock);
 			pr_info("vdin get info fail, DEC_OPENED\n");
 			break;
 		}
@@ -2730,6 +2749,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (vdin_dbg_en)
 			pr_info("%s TVIN_IOC_G_SIG_INFO signal_type: 0x%x\n",
 				__func__, info.signal_type);
+		mutex_unlock(&devp->fe_lock);
 		break;
 	}
 	case TVIN_IOC_G_FRONTEND_INFO: {
@@ -2741,6 +2761,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 
 		memset(&info, 0, sizeof(struct tvin_frontend_info_s));
+		mutex_lock(&devp->fe_lock);
 		info.cfmt = devp->parm.info.cfmt;
 		info.fps = devp->parm.info.fps;
 		info.colordepth = devp->prop.colordepth;
@@ -2750,6 +2771,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (copy_to_user(argp, &info,
 			sizeof(struct tvin_frontend_info_s)))
 			ret = -EFAULT;
+		mutex_unlock(&devp->fe_lock);
 		break;
 	}
 	case TVIN_IOC_G_BUF_INFO: {
@@ -2790,10 +2812,12 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		vdin_resume_dec(devp);
 		break;
 	case TVIN_IOC_FREEZE_VF: {
+		mutex_lock(&devp->fe_lock);
 		if (!(devp->flags & VDIN_FLAG_DEC_STARTED)) {
 			pr_err("TVIN_IOC_FREEZE_BUF(%d) decode havn't started\n",
 					devp->index);
 			ret = -EPERM;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 
@@ -2801,18 +2825,22 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			vdin_vf_freeze(devp->vfp, 1);
 		else
 			vdin_vf_freeze(devp->vfp, 2);
+		mutex_unlock(&devp->fe_lock);
 		if (vdin_dbg_en)
 			pr_info("TVIN_IOC_FREEZE_VF(%d) ok\n\n", devp->index);
 		break;
 	}
 	case TVIN_IOC_UNFREEZE_VF: {
+		mutex_lock(&devp->fe_lock);
 		if (!(devp->flags & VDIN_FLAG_DEC_STARTED)) {
 			pr_err("TVIN_IOC_FREEZE_BUF(%d) decode havn't started\n",
 					devp->index);
 			ret = -EPERM;
+			mutex_unlock(&devp->fe_lock);
 			break;
 		}
 		vdin_vf_unfreeze(devp->vfp);
+		mutex_unlock(&devp->fe_lock);
 		if (vdin_dbg_en)
 			pr_info("TVIN_IOC_UNFREEZE_VF(%d) ok\n\n", devp->index);
 		break;
@@ -2900,9 +2928,11 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case TVIN_IOC_GET_LATENCY_MODE:
+		mutex_lock(&devp->fe_lock);
 		if (copy_to_user(argp,
 			&(devp->prop.latency),
 			sizeof(struct tvin_latency_s))) {
+			mutex_unlock(&devp->fe_lock);
 			ret = -EFAULT;
 			pr_info("TVIN_IOC_GET_ALLM_MODE err\n\n");
 			break;
@@ -2913,6 +2943,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				devp->prop.latency.allm_mode,
 				devp->prop.latency.it_content,
 				devp->prop.latency.cn_type);
+		mutex_unlock(&devp->fe_lock);
 		break;
 	case TVIN_IOC_G_VDIN_HIST:
 		if (devp->index == 0) {
@@ -2966,7 +2997,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&vdin_v4l2_param, argp,
 				sizeof(struct vdin_v4l2_param_s))) {
 			pr_info("vdin_v4l2_param copy fail\n");
-			mutex_unlock(&devp->fe_lock);
 			return -EFAULT;
 		}
 		memset(&param, 0, sizeof(struct vdin_parm_s));
@@ -3050,7 +3080,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			sizeof(struct vdin_set_canvas_s) *
 			VDIN_CANVAS_MAX_CNT)) {
 			pr_info("TVIN_IOC_S_CANVAS_ADDR copy fail\n");
-			mutex_unlock(&devp->fe_lock);
 			return -EFAULT;
 		}
 
@@ -3112,7 +3141,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		if (copy_from_user(&recov_idx, argp, sizeof(unsigned int))) {
 			pr_info("TVIN_IOC_S_CANVAS_RECOVERY copy fail\n");
-			mutex_unlock(&devp->fe_lock);
 			return -EFAULT;
 		}
 
@@ -3126,10 +3154,8 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 					devp->index, recov_idx);
 		break;
 	case TVIN_IOC_S_DV_DESCRAMBLE:
-		if (copy_from_user(&idx, argp, sizeof(idx))) {
-			mutex_unlock(&devp->fe_lock);
+		if (copy_from_user(&idx, argp, sizeof(idx)))
 			return -EFAULT;
-		}
 		dv_de_scramble = idx;
 		vdin_dolby_desc_sc_enable(devp, dv_de_scramble);
 		break;
@@ -3156,8 +3182,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	/* pr_info("%s %d is not supported command\n", __func__, cmd); */
 		break;
 	}
-
-	mutex_unlock(&devp->fe_lock);
 	return ret;
 }
 

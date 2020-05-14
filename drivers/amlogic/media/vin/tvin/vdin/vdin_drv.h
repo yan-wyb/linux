@@ -48,7 +48,7 @@
 /* Ref.2019/04/25: tl1 vdin0 afbce dynamically switch support,
  *                 vpp also should support this function
  */
-#define VDIN_VER "ver:2020-0515: don't skip buf when pool full, just drop"
+#define VDIN_VER "ver:2020-0514: fe_lock will locked, sometime cause vdin1 fail"
 
 /*the counter of vdin*/
 #define VDIN_MAX_DEVS			2
