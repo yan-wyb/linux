@@ -515,7 +515,10 @@ void tvin_smr(struct vdin_dev_s *devp)
 			if (sm_p->state_cnt >= nosig_in_cnt) {
 				sm_p->state_cnt = nosig_in_cnt;
 				info->status = TVIN_SIG_STATUS_NOSIG;
-				info->fmt = TVIN_SIG_FMT_NULL;
+				if (!(((port == TVIN_PORT_CVBS3) ||
+				       (port == TVIN_PORT_CVBS0)) &&
+				      (devp->flags & VDIN_FLAG_SNOW_FLAG)))
+					info->fmt = TVIN_SIG_FMT_NULL;
 				if (sm_debug_enable && !sm_print_nosig) {
 					pr_info("[smr.%d] no signal\n",
 							devp->index);
@@ -546,7 +549,10 @@ void tvin_smr(struct vdin_dev_s *devp)
 				tvin_smr_init_counter(devp->index);
 				sm_p->state = TVIN_SM_STATUS_NOSIG;
 				info->status = TVIN_SIG_STATUS_NOSIG;
-				info->fmt = TVIN_SIG_FMT_NULL;
+				if (!(((port == TVIN_PORT_CVBS3) ||
+				       (port == TVIN_PORT_CVBS0)) &&
+				      (devp->flags & VDIN_FLAG_SNOW_FLAG)))
+					info->fmt = TVIN_SIG_FMT_NULL;
 				if (sm_debug_enable)
 					pr_info("[smr.%d] unstable --> no signal\n",
 							devp->index);
