@@ -57,6 +57,8 @@
 #define MBOX_RESERVE_LEN		8
 /* u64 complete*/
 #define MBOX_COMPLETE_LEN		8
+/*mbox to dsp, wait irq time*/
+#define MBOX_TIME_OUT		2000
 
 struct mhu_data_buf {
 	u32 cmd;

@@ -367,7 +367,7 @@ static ssize_t mbox_message_write(struct file *filp,
 	data_buf.rx_buf = NULL;
 	cl.dev = dev;
 	cl.tx_block = true;
-	cl.tx_tout = 2000;
+	cl.tx_tout = MBOX_TIME_OUT;
 	mutex_lock(&dsp_mbox_dev->mutex);
 	chan = mbox_request_channel(&cl, chan_index);
 	if (IS_ERR(chan)) {
@@ -405,6 +405,7 @@ static ssize_t mbox_message_read(struct file *filp, char __user *userbuf,
 	struct list_head *list;
 	unsigned long flags;
 	struct device *dev = dsp_scpi_device;
+	unsigned long wait;
 
 	spin_lock_irqsave(&dsp_lock, flags);
 	if (list_empty(&mbox_list)) {
@@ -415,7 +416,12 @@ static ssize_t mbox_message_read(struct file *filp, char __user *userbuf,
 		msg = list_entry(list, struct mbox_message, list);
 		if (msg->task == current) {
 			spin_unlock_irqrestore(&dsp_lock, flags);
-			wait_for_completion(&msg->complete);
+			wait = msecs_to_jiffies(MBOX_TIME_OUT);
+			ret = wait_for_completion_timeout(&msg->complete, wait);
+			if (ret == 0) {
+				dev_err(dev, "Read msg wait time out\n");
+				return -ENXIO;
+			}
 			dev_dbg(dev, "Wait end %s\n", msg->data);
 			break;
 		}
