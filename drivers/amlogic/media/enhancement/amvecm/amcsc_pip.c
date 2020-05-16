@@ -932,10 +932,11 @@ void hdmi_packet_process(
 		/* continue */
 	}
 
-	if ((target_format[vd_path] == cur_output_format)
-	&& (cur_output_format != BT2020_PQ_DYNAMIC)
-	&& ((cur_output_format == BT2020_PQ) &&
-	!(signal_change_flag & SIG_PRI_INFO)))
+	if ((target_format[vd_path] == cur_output_format) &&
+	    (cur_output_format != BT2020_PQ_DYNAMIC) &&
+	    !(signal_change_flag & SIG_FORCE_CHG) &&
+	    ((cur_output_format == BT2020_PQ) &&
+	     !(signal_change_flag & SIG_PRI_INFO)))
 		return;
 
 	/* clean hdr10plus packet when switch to others */

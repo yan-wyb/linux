@@ -131,6 +131,7 @@ int is_video_turn_on(bool *vd_on, enum vd_path_e vd_path);
 #define SIG_COLORIMETRY_SUPPORT 0x1000
 #define SIG_OUTPUT_MODE_CHG	0x2000
 #define SIG_HDR_OOTF_CHG 0x4000
+#define SIG_FORCE_CHG 0x8000
 
 #define LUT_289_SIZE	289
 extern unsigned int lut_289_mapping[LUT_289_SIZE];

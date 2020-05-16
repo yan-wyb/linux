@@ -7074,8 +7074,10 @@ static void di_reg_process_irq(void)
 
 		if (need_bypass(vframe) || ((di_debug_flag>>20) & 0x1)) {
 			if (!di_pre_stru.bypass_flag) {
-				pr_info("DI bypass all %ux%u-0x%x.",
-				vframe->width, vframe->height, vframe->type);
+				pr_info("DI bypass all %ux%u-0x%x.\n",
+					vframe->width,
+					vframe->height,
+					vframe->type);
 			}
 			di_pre_stru.bypass_flag = true;
 			di_patch_post_update_mc_sw(DI_MC_SW_OTHER, false);

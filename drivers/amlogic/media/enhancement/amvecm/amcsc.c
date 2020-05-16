@@ -7588,6 +7588,9 @@ static int vpp_matrix_update(
 		signal_change_flag =
 			signal_type_changed(vf, vinfo, vd_path);
 
+	if (flags & CSC_FLAG_FORCE_SIGNAL)
+		signal_change_flag |= SIG_FORCE_CHG;
+
 	get_cur_vd_signal_type(vd_path);
 	if (force_csc_type != 0xff)
 		csc_type = force_csc_type;
@@ -7601,9 +7604,9 @@ static int vpp_matrix_update(
 		    (!is_dolby_vision_on() ||
 		     (vd_path == VD2_PATH))) {
 			video_process_status[vd_path] = HDR_MODULE_ON;
-			pr_csc(4,
-			       "video_process_status[%s] = HDR_MODULE_ON\n",
-			       vd_path == VD1_PATH ? "VD1" : "VD2");
+			pr_csc(
+				4, "video_process_status[%s] = HDR_MODULE_ON\n",
+				vd_path == VD1_PATH ? "VD1" : "VD2");
 		} else {
 			return 2;
 		}
@@ -7692,7 +7695,7 @@ static int vpp_matrix_update(
 	& (SIG_CS_CHG | SIG_PRI_INFO | SIG_KNEE_FACTOR | SIG_HDR_MODE |
 		SIG_HDR_SUPPORT | SIG_HLG_MODE | SIG_OP_CHG |
 		SIG_SRC_OUTPUT_CHG | SIG_HDR10_PLUS_MODE |
-		SIG_SRC_CHG | SIG_HDR_OOTF_CHG))) {
+		SIG_SRC_CHG | SIG_HDR_OOTF_CHG | SIG_FORCE_CHG))) {
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) &&
 		(get_cpu_type() != MESON_CPU_MAJOR_ID_TL1))
 			video_post_process(vf, csc_type, vinfo,
@@ -7757,6 +7760,7 @@ int amvecm_matrix_process(
 	bool cap_changed = false;
 	bool send_fake_frame = false;
 	int dv_hdr_policy = 0;
+	static bool dolby_enable;
 
 	if ((get_cpu_type() < MESON_CPU_MAJOR_ID_GXTVBB) ||
 	    is_meson_gxl_package_905M2() || (csc_en == 0) || !vinfo)
@@ -7800,6 +7804,8 @@ int amvecm_matrix_process(
 			/* dv from on to off */
 			if (dovi_on) {
 				cap_changed = true;
+				if (flags & CSC_FLAG_TOGGLE_FRAME)
+					flags |= CSC_FLAG_FORCE_SIGNAL;
 				dovi_on = false;
 			}
 		}
@@ -7840,8 +7846,8 @@ int amvecm_matrix_process(
 			if (video_process_status[vd_path] != HDR_MODULE_ON) {
 				video_process_status[vd_path] = HDR_MODULE_ON;
 				pr_csc(4,
-				       "video_process_status[%s] = HDR_MODULE_ON\n",
-				       vd_path == VD1_PATH ? "VD1" : "VD2");
+					"video_process_status[%s] = HDR_MODULE_ON new vf\n",
+					vd_path == VD1_PATH ? "VD1" : "VD2");
 			}
 			vpp_matrix_update(vf, vinfo, flags, vd_path);
 			video_process_flags[vd_path] &=
@@ -7869,8 +7875,8 @@ int amvecm_matrix_process(
 			if (video_process_status[vd_path] != HDR_MODULE_ON) {
 				video_process_status[vd_path] = HDR_MODULE_ON;
 				pr_csc(4,
-				       "video_process_status[%s] = HDR_MODULE_ON\n",
-				       vd_path == VD1_PATH ? "VD1" : "VD2");
+					"video_process_status[%s] = HDR_MODULE_ON rpt vf\n",
+					vd_path == VD1_PATH ? "VD1" : "VD2");
 			}
 			vpp_matrix_update(vf_rpt, vinfo, flags, vd_path);
 			video_process_flags[vd_path] &=
@@ -7992,9 +7998,18 @@ int amvecm_matrix_process(
 			toggle_frame = 1;
 		} else if (csc_en & 0x10) {
 			toggle_frame = null_vf_max;
+		} else if (vd_path == VD1_PATH &&
+			   dolby_enable && !is_dolby_vision_enable()) {
+			/*dv enable->disable*/
+			null_vf_cnt[vd_path] = 1;
+			toggle_frame = 1;
+			pr_csc(8, "vd%d: dv enable->disable\n", vd_path + 1);
 		} else {
 			toggle_frame = 0;
 		}
+		if (vd_path == VD1_PATH)
+			dolby_enable = is_dolby_vision_enable();
+
 		if (null_vf_cnt[vd_path] == toggle_frame) {
 			if (null_vf_cnt[vd_path] == 0) {
 				/* video on */
@@ -8087,7 +8102,9 @@ int amvecm_matrix_process(
 				sizeof(struct vframe_master_display_colour_s));
 				vpp_matrix_update(
 					&fake_vframe, vinfo,
-					CSC_FLAG_TOGGLE_FRAME, vd_path);
+					CSC_FLAG_TOGGLE_FRAME |
+					CSC_FLAG_FORCE_SIGNAL,
+					vd_path);
 				last_vf[vd_path] = NULL;
 				null_vf_cnt[vd_path] = null_vf_max + 1;
 				fg_vf_sw_dbg = 4;

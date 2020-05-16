@@ -4811,6 +4811,8 @@ void enable_dolby_vision(int enable)
 							0x55555455);
 						/* hdr core on */
 						hdr_vd1_iptmap();
+					} else {
+						hdr_vd1_off();
 					}
 				} else if (is_meson_tm2_tvmode()) {
 					VSYNC_WR_DV_REG_BITS(
