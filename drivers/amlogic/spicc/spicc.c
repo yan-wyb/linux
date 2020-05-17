@@ -1224,14 +1224,15 @@ static int of_spicc_get_data(
 		dev_err(&pdev->dev, "get clk fail\n");
 		return PTR_ERR(spicc->clk);
 	}
+	clk_prepare_enable(spicc->clk);
+	if (spicc->clk_rate)
+		clk_set_rate(spicc->clk, spicc->clk_rate);
+
 	spicc->hclk = devm_clk_get(&pdev->dev, "cts_spicc_hclk");
 	if (IS_ERR_OR_NULL(spicc->hclk))
 		dev_err(&pdev->dev, "get cts_spicc_hclk failed\n");
-	if (spicc->clk_rate) {
-		clk_set_rate(spicc->clk, spicc->clk_rate);
-		clk_prepare_enable(spicc->clk);
+	else
 		clk_prepare_enable(spicc->hclk);
-	}
 
 	if (spicc_get_flag(spicc, FLAG_ENHANCE)) {
 		err = of_property_read_u32(np, "enhance_dlyctl", &value);
