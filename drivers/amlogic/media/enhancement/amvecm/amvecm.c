@@ -7108,6 +7108,10 @@ void init_pq_setting(void)
 	else
 		init_pq_control(PQ_BOX);
 
+	/*ai pq interface*/
+	ai_detect_scene_init();
+	adaptive_param_init();
+
 	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
 		is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
 		is_meson_tl1_cpu() || is_meson_tm2_cpu())
@@ -7207,11 +7211,7 @@ tvchip_pq_setting:
 
 	/*dnlp alg parameters init*/
 	dnlp_alg_param_init();
-
 	vpp_pq_ctrl_config(pq_cfg);
-	/*ai pq interface*/
-	ai_detect_scene_init();
-	adaptive_param_init();
 }
 /* #endif*/
 
