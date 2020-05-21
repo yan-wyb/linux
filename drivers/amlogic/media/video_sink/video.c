@@ -10375,6 +10375,48 @@ bool is_meson_tm2_revb(void)
 		return false;
 }
 
+static void video_cap_set(void)
+{
+	if (legacy_vpp) {
+		layer_cap =
+			LAYER1_AFBC |
+			LAYER1_AVAIL |
+			LAYER0_AFBC |
+			LAYER0_SCALER |
+			LAYER0_AVAIL;
+	} else if (is_meson_tl1_cpu()) {
+		layer_cap =
+			LAYER1_AVAIL |
+			LAYER0_AFBC |
+			LAYER0_SCALER |
+			LAYER0_AVAIL;
+	} else if (is_meson_tm2_cpu()) {
+		if (is_meson_tm2_revb())
+			layer_cap =
+				LAYER1_SCALER |
+				LAYER1_AVAIL |
+				LAYER0_AFBC |
+				LAYER0_SCALER |
+				LAYER0_AVAIL |
+				LAYER1_AFBC;
+		else
+			layer_cap =
+				LAYER1_SCALER |
+				LAYER1_AVAIL |
+				LAYER0_AFBC |
+				LAYER0_SCALER |
+				LAYER0_AVAIL;
+	} else {
+		layer_cap =
+			LAYER1_AFBC |
+			LAYER1_SCALER |
+			LAYER1_AVAIL |
+			LAYER0_AFBC |
+			LAYER0_SCALER |
+			LAYER0_AVAIL;
+	}
+}
+
 static int amvideom_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -10403,6 +10445,7 @@ static int amvideom_probe(struct platform_device *pdev)
 	}
 
 	video_early_init();
+	video_cap_set();
 	video_hw_init();
 
 	safe_switch_videolayer(0, false, false);
@@ -10564,35 +10607,6 @@ static int __init video_init(void)
 			"Can't create amvideo_poll device\n");
 		goto err5;
 	}
-
-	if (legacy_vpp)
-		layer_cap =
-			LAYER1_AFBC |
-			LAYER1_AVAIL |
-			LAYER0_AFBC |
-			LAYER0_SCALER |
-			LAYER0_AVAIL;
-	else if (is_meson_tl1_cpu())
-		layer_cap =
-			LAYER1_AVAIL |
-			LAYER0_AFBC |
-			LAYER0_SCALER |
-			LAYER0_AVAIL;
-	else if (is_meson_tm2_cpu())
-		layer_cap =
-			LAYER1_SCALER |
-			LAYER1_AVAIL |
-			LAYER0_AFBC |
-			LAYER0_SCALER |
-			LAYER0_AVAIL;
-	else
-		layer_cap =
-			LAYER1_AFBC |
-			LAYER1_SCALER |
-			LAYER1_AVAIL |
-			LAYER0_AFBC |
-			LAYER0_SCALER |
-			LAYER0_AVAIL;
 
 	init_waitqueue_head(&amvideo_trick_wait);
 	init_waitqueue_head(&amvideo_prop_change_wait);
