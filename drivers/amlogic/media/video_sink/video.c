@@ -5953,6 +5953,7 @@ static void set_omx_pts(u32 *p)
 	u32 session = p[5];
 	unsigned int try_cnt = 0x1000;
 	bool updateomxpts = true;
+	struct vframe_s *vf = NULL;
 
 	cur_omx_index = frame_num;
 	mutex_lock(&omx_mutex);
@@ -6037,6 +6038,28 @@ static void set_omx_pts(u32 *p)
 				omx_drop_done = true;
 			pr_info("omx need drop %d\n",
 				omx_need_drop_frame_num);
+
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+			if (!dovi_drop_flag && omx_need_drop_frame_num > 0) {
+				vf = vf_peek(RECEIVER_NAME);
+				if (is_dolby_vision_enable() &&
+				    vf && is_dovi_frame(vf)) {
+					if (debug_flag &
+						DEBUG_FLAG_OMX_DV_DROP_FRAME)
+					pr_info("will drop %d in vsync\n",
+						omx_need_drop_frame_num);
+					dovi_drop_flag = true;
+					dovi_drop_frame_num =
+						omx_need_drop_frame_num;
+					if (disable_dv_drop) {
+						omx_run = true;
+						dovi_drop_flag = false;
+						dovi_drop_frame_num = 0;
+						omx_drop_done = true;
+					}
+				}
+			}
+#endif
 		}
 		omx_run = true;
 		if (omx_pts_set_from_hwc_count < OMX_MAX_COUNT_RESET_SYSTEMTIME)
@@ -6046,8 +6069,6 @@ static void set_omx_pts(u32 *p)
 			omx_pts_set_from_hwc_count_begin++;
 
 	} else if (set_from_hwc == 0 && !omx_run) {
-		struct vframe_s *vf = NULL;
-
 		while (try_cnt--) {
 			vf = vf_peek(RECEIVER_NAME);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
