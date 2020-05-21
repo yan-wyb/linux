@@ -3928,6 +3928,13 @@ uint32_t sink_hdr_support(const struct vinfo_s *vinfo)
 		(vinfo->hdr_info.hdr10plus_info.application_version
 		== 1))
 			hdr_cap |= HDRP_SUPPORT;
+
+		/* panel output and TL1 and TM2 */
+		if ((vinfo->viu_color_fmt == COLOR_FMT_RGB444) &&
+		    ((get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) ||
+		    (get_cpu_type() == MESON_CPU_MAJOR_ID_TM2)))
+			hdr_cap |= HDRP_SUPPORT;
+
 		if (vinfo->hdr_info.colorimetry_support & 0xe0)
 			hdr_cap |= BT2020_SUPPORT;
 		dv_cap = sink_dv_support(vinfo);
@@ -6719,12 +6726,6 @@ static int sink_support_hlg(const struct vinfo_s *vinfo)
 
 static int sink_support_hdr10_plus(const struct vinfo_s *vinfo)
 {
-	/* panel output and TL1 and TM2 */
-	if ((vinfo->viu_color_fmt == COLOR_FMT_RGB444) &&
-	    ((get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) ||
-	    (get_cpu_type() == MESON_CPU_MAJOR_ID_TM2)))
-		return 1;
-
 	/* hdmi */
 	if (sink_hdr_support(vinfo) & HDRP_SUPPORT)
 		return 1;
