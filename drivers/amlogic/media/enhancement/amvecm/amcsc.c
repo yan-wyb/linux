@@ -3743,8 +3743,10 @@ int hdr10_primaries_changed(
 
 	primaries_type = get_primaries_type(p_mdc);
 	if (primaries_type == 0) {
-		if ((p_hdr10_param->luminance[0]
-		!= max_lum)
+		if (((p_hdr10_param->luminance[0]
+		!= max_lum) &&
+		(p_hdr10_param->luminance[0]
+		!= max_lum / 10000))
 		|| (p_hdr10_param->luminance[1]
 		!= min_lum)) {
 			flag |= 1;
@@ -3782,7 +3784,9 @@ int hdr10_primaries_changed(
 		for (i = 0; i < 2; i++) {
 			if (p_hdr10_param->luminance[i]
 			!= p_mdc->luminance[i]) {
-				flag |= 1;
+				if ((i != 0) || (p_hdr10_param->luminance[0]
+				!= p_mdc->luminance[0] / 10000))
+					flag |= 1;
 				p_hdr10_param->
 				luminance[i]
 					= p_mdc->luminance[i];
@@ -4064,8 +4068,10 @@ int signal_type_changed(struct vframe_s *vf,
 			change_flag |= SIG_PRI_INFO;
 	}
 	if (change_flag & SIG_PRI_INFO) {
-		pr_csc(1, "vd%d Master_display_colour changed %x.\n",
-			vd_path + 1, ret);
+		pr_csc(
+			1, "vd%d Master_display_colour changed %x flag %x.\n",
+			vd_path + 1, ret,
+			p_cur->present_flag);
 		print_primaries_info(p_cur);
 	}
 	if (signal_type != cur_signal_type[vd_path]) {
