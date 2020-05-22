@@ -857,7 +857,7 @@
 	ircut: ircut {
 		compatible = "amlogic, aml-ircut";
 		status = "okay";
-		ircut-gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_HIGH
+		ircut-gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_LOW
 				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
 		ircut-chip = <1>;
 		ir-led-gpio = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
