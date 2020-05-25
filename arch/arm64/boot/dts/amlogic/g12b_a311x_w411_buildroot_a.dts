@@ -812,12 +812,12 @@
 #endif
 		compatible = "amlogic, aml-ircut";
 		status = "okay";
-		ircut-gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_LOW
-				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
+		ircut-gpio = <&gpio GPIOH_6 GPIO_ACTIVE_LOW
+				&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
 		ircut-chip = <1>;
 		ir-led-gpio = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
 		ir-led-chip = <0>;
-		ldr-gpio = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_LOW>;
+		ldr-gpio = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
 		ldr-chip = <0>;
 		ircut-sequence = "init: 0=0, 1=0",
 				"enable: 0=0, 1=1, w=100, 1=0",
@@ -850,6 +850,10 @@
 
 &isp {
 	status = "okay";
+	temper-line-offset = <0x1680>;
+	temper-buf-size = <12>;
+	temper-frame-num = <1>;
+	temper-frame-size = <0xBDD800>;
 	memory-region = <&isp_cma_reserved>;
 };
 

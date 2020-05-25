@@ -858,6 +858,10 @@
 
 &isp {
 	status = "okay";
+	temper-line-offset = <0x1680>;
+	temper-buf-size = <12>;
+	temper-frame-num = <1>;
+	temper-frame-size = <0xBDD800>;
 	memory-region = <&isp_cma_reserved>;
 };
 
