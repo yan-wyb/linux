@@ -3176,6 +3176,33 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("%s wr vframe en: %d\n", __func__,
 				devp->vframe_wr_en);
 		break;
+	case TVIN_IOC_G_INPUT_TIMING: {
+	/* when signal is stable, tvserver can get timing info*/
+		struct tvin_format_s info;
+		enum tvin_sig_fmt_e fmt = devp->parm.info.fmt;
+
+		mutex_lock(&devp->fe_lock);
+		if (tvin_get_sm_status(devp->index) == TVIN_SM_STATUS_STABLE) {
+			devp->fmt_info_p =
+				(struct tvin_format_s *)tvin_get_fmt_info(fmt);
+			if (!devp->fmt_info_p) {
+				pr_err("vdin%d get timing error fmt is null\n",
+				       devp->index);
+				mutex_unlock(&devp->fe_lock);
+				break;
+			}
+			memcpy(&info, devp->fmt_info_p,
+			       sizeof(struct tvin_format_s));
+			if (copy_to_user(argp, &info,
+					 sizeof(struct tvin_format_s)))
+				ret = -EFAULT;
+		} else {
+			pr_info("vdin%d G_INPUT_TIMING err, not stable\n",
+				devp->index);
+		}
+		mutex_unlock(&devp->fe_lock);
+		break;
+	}
 	default:
 		ret = -ENOIOCTLCMD;
 	/* pr_info("%s %d is not supported command\n", __func__, cmd); */
