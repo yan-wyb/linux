@@ -499,12 +499,11 @@ struct affinity_info_s {
 	unsigned long affinity_mask;
 };
 
-static struct affinity_info_s affinity_info;
-
 static int osd_setting_blending_scope(u32 index);
 static int vpp_blend_setting_default(u32 index);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
+static struct affinity_info_s affinity_info;
 /* sync fence relative varible. */
 static int timeline_created[VIU_COUNT];
 static void *osd_timeline[VIU_COUNT];
@@ -9756,6 +9755,7 @@ static int osd_extra_canvas_alloc(void)
 	return 0;
 }
 
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 /* kthread affinity set api */
 static void affinity_set(unsigned long mask)
 {
@@ -9826,6 +9826,7 @@ static void affinity_set_init(void)
 	if (!affinity_thread)
 		pr_err("create affinity thread fail!\n");
 }
+#endif
 
 void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	struct osd_device_data_s *osd_meson)
@@ -10201,7 +10202,9 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 	}
 	if (osd_hw.hw_rdma_en)
 		osd_rdma_enable(2);
+#ifdef CONFIG_AMLOGIC_MEDIA_FB_OSD_SYNC_FENCE
 	affinity_set_init();
+#endif
 }
 
 void set_viu2_format(u32 format)
