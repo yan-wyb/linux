@@ -3900,7 +3900,8 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	}
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
-	vlock_process(vf, cur_frame_par);/*need call every vsync*/
+	if (vf && cur_frame_par)
+		vlock_process(vf, cur_frame_par);/*need call every vsync*/
 #endif
 	enc_line = get_cur_enc_line();
 	if (enc_line > vsync_enter_line_max)
