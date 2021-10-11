@@ -183,7 +183,9 @@ kallsyms()
 		kallsymopt="${kallsymopt} --symbol-prefix=_"
 	fi
 
-	if [ -n "${CONFIG_KALLSYMS_ALL}" ]; then
+	# we don't need all symbols, this can help to save about 1MB memory
+	#if [ -n "${CONFIG_KALLSYMS_ALL}" ]; then
+	if [[ -n "${CONFIG_KALLSYMS_ALL}" && ! -n "${CONFIG_AMLOGIC_MODIFY}" ]]; then
 		kallsymopt="${kallsymopt} --all-symbols"
 	fi
 
@@ -200,7 +202,12 @@ kallsyms()
 
 	local afile="`basename ${2} .o`.S"
 
-	${NM} -n ${1} | scripts/kallsyms ${kallsymopt} > ${afile}
+	# using higher compress ration version
+	if [ -n "{CONFIG_AMLOGIC_MODIFY}" ]; then
+		${NM} -n ${1} | scripts/kallsyms_aml ${kallsymopt} > ${afile}
+	else
+		${NM} -n ${1} | scripts/kallsyms ${kallsymopt} > ${afile}
+	fi
 	${CC} ${aflags} -c -o ${2} ${afile}
 }
 

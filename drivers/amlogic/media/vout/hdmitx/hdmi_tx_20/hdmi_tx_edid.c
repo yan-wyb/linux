@@ -90,6 +90,9 @@ static unsigned char __nosavedata edid_checkvalue[4] = {0};
 static unsigned int hdmitx_edid_check_valid_blocks(unsigned char *buf);
 static void Edid_DTD_parsing(struct rx_cap *prxcap, unsigned char *data);
 static void hdmitx_edid_set_default_aud(struct hdmitx_dev *hdev);
+char hdmimodepropname[20] = "null";
+
+
 
 static int xtochar(int num, unsigned char *checksum)
 {
@@ -1295,7 +1298,7 @@ static int Edid_Y420CMDB_fill_all_vic(struct hdmitx_dev *hdmitx_device)
 		memset(&(info->y420cmdb_bitmap[0]), 0xff, a);
 
 	if ((b != 0) && (a < Y420CMDB_MAX))
-		info->y420cmdb_bitmap[a] = (((1 << b) - 1) << (8-b));
+		info->y420cmdb_bitmap[a] = (1 << b) - 1;
 
 	info->bitmap_length = (b == 0) ? a : (a + 1);
 	info->bitmap_valid = (info->bitmap_length != 0)?1:0;
@@ -1579,7 +1582,6 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdev,
 	unsigned char *vfpdb_offset = NULL;
 	struct rx_cap *prxcap = &hdev->rxcap;
 	unsigned int aud_flag = 0;
-
 	if (blockbuf[0] != 0x02)
 		return -1; /* not a CEA BLOCK. */
 	end = blockbuf[2]; /* CEA description. */
@@ -1817,16 +1819,58 @@ static void hdmitx_edid_set_default_aud(struct hdmitx_dev *hdev)
 /* add default VICs for DVI case */
 static void hdmitx_edid_set_default_vic(struct hdmitx_dev *hdmitx_device)
 {
+    enum hdmi_vic vic;
 	struct rx_cap *prxcap = &hdmitx_device->rxcap;
-
-	prxcap->VIC_count = 0x3;
+	prxcap->VIC_count = 0x4;
 	prxcap->VIC[0] = HDMI_720x480p60_16x9;
 	prxcap->VIC[1] = HDMI_1280x720p60_16x9;
-	prxcap->VIC[2] = HDMI_1920x1080p60_16x9;
+	prxcap->VIC[2] = HDMI_1920x1080i60_16x9;
+	prxcap->VIC[3] = HDMI_1920x1080p60_16x9;
 	prxcap->native_VIC = HDMI_720x480p60_16x9;
 	hdmitx_device->vic_count = prxcap->VIC_count;
-	pr_info(EDID "set default vic\n");
+    vic = hdmitx_edid_vic_tab_map_vic(hdmimodepropname);
+	switch(vic)
+	{
+		case HDMIV_1024x768p60hz:
+		case HDMIV_1440x900p60hz:
+		case HDMIV_640x480p60hz:
+		case HDMIV_1280x1024p60hz:
+		case HDMIV_800x600p60hz:
+		case HDMIV_1680x1050p60hz:
+		case HDMIV_1024x600p60hz:
+		case HDMIV_2560x1600p60hz:
+		case HDMIV_2560x1440p60hz:
+		case HDMIV_2560x1080p60hz:
+		case HDMIV_1920x1200p60hz:
+		case HDMIV_1600x1200p60hz:
+		case HDMIV_1600x900p60hz:
+		case HDMIV_1360x768p60hz:
+		case HDMIV_1280x800p60hz:
+		case HDMIV_480x320p60hz:
+		case HDMIV_800x480p60hz:
+		case HDMIV_1280x480p60hz:
+		prxcap->VIC_count = 0x1;
+        prxcap->VIC[0] = vic;
+		prxcap->native_VIC = vic;
+	    pr_info(EDID "single resolution screen set default vic %d\n",vic);
+		break;
+		default:
+		printk("hdmi screen is not single resolution\n");
+	}
 }
+
+static int __init hdmimode_setup(char *str)
+{
+       if (str != NULL)
+               sprintf(hdmimodepropname, "%s", str);
+
+       return 0;
+}
+
+__setup("hdmimode=", hdmimode_setup);
+
+
+
 
 #if 0
 #define PRINT_HASH(hash)	\
@@ -2076,6 +2120,7 @@ static void Edid_DTD_parsing(struct rx_cap *prxcap, unsigned char *data)
 	t->v_sync_offset = (((data[11] >> 2) & 0x3) << 4) +
 		((data[10] >> 4) & 0xf);
 	t->v_sync = (((data[11] >> 0) & 0x3) << 4) + ((data[10] >> 0) & 0xf);
+
 /*
  * Special handling of 1080i60hz, 1080i50hz
  */
@@ -2084,6 +2129,7 @@ static void Edid_DTD_parsing(struct rx_cap *prxcap, unsigned char *data)
 		t->v_active = t->v_active / 2;
 		t->v_blank = t->v_blank / 2;
 	}
+
 /*
  * Special handling of 480i60hz, 576i50hz
  */
@@ -2609,6 +2655,8 @@ static struct dispmode_vic dispmode_vic_tab[] = {
 	{"2560x1440p60hz", HDMIV_2560x1440p60hz},
 	{"2560x1600p60hz", HDMIV_2560x1600p60hz},
 	{"3440x1440p60hz", HDMIV_3440x1440p60hz},
+	{"480x320p60hz", HDMIV_480x320p60hz},
+	{"1280x480p60hz", HDMIV_1280x480p60hz},
 };
 
 int hdmitx_edid_VIC_support(enum hdmi_vic vic)
@@ -2733,10 +2781,6 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 			if (para->cd != COLORDEPTH_24B)
 				return 0;
 		break;
-	case HDMI_720x480i60_16x9:
-	case HDMI_720x576i50_16x9:
-		if (para->cs == COLORSPACE_YUV422)
-			return 0;
 	default:
 		break;
 	}
