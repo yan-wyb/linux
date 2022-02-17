@@ -321,17 +321,6 @@ static int notrace ramoops_pstore_write_buf(enum pstore_type_id type,
 
 	prz = cxt->przs[cxt->dump_write_cnt];
 
-	/*
-	 * Since this is a new crash dump, we need to reset the buffer in
-	 * case it still has an old dump present. Without this, the new dump
-	 * will get appended, which would seriously confuse anything trying
-	 * to check dump file contents. Specifically, ramoops_read_kmsg_hdr()
-	 * expects to find a dump header in the beginning of buffer data, so
-	 * we must to reset the buffer values, in order to ensure that the
-	 * header will be written to the beginning of the buffer.
-	 */
-	persistent_ram_zap(prz);
-
 	hlen = ramoops_write_kmsg_hdr(prz, compressed);
 	if (size + hlen > prz->buffer_size)
 		size = prz->buffer_size - hlen;
@@ -613,9 +602,6 @@ static int ramoops_probe(struct platform_device *pdev)
 	cxt->size = pdata->mem_size;
 	cxt->phys_addr = pdata->mem_address;
 	cxt->memtype = pdata->mem_type;
-#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
-	cxt->memtype |= (!!ramoops_io_en);
-#endif
 	cxt->record_size = pdata->record_size;
 	cxt->console_size = pdata->console_size;
 	cxt->ftrace_size = pdata->ftrace_size;
@@ -695,7 +681,7 @@ static int ramoops_probe(struct platform_device *pdev)
 #ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
 	if (ramoops_ftrace_size) {
 		cxt->fprz->flags |= (PRZ_FLAG_NO_LOCK | PRZ_FLAG_BIG_LOCK);
-		ramoops_ftrace_en = !persistent_ram_old_size(cxt->fprz);
+		ramoops_ftrace_en = 1;
 	}
 	pr_info("ramoops_io_en:%d %d old:0x%lx ftrace_size:0x%lx",
 		ramoops_io_en, ramoops_ftrace_en,

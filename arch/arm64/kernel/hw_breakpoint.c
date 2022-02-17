@@ -114,7 +114,11 @@ int hw_breakpoint_slots(int type)
 	WRITE_WB_REG_CASE(OFF, 14, REG, VAL);	\
 	WRITE_WB_REG_CASE(OFF, 15, REG, VAL)
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+u64 read_wb_reg(int reg, int n)
+#else
 static u64 read_wb_reg(int reg, int n)
+#endif
 {
 	u64 val = 0;
 
@@ -129,14 +133,18 @@ static u64 read_wb_reg(int reg, int n)
 
 	return val;
 }
+#ifndef CONFIG_AMLOGIC_MODIFY
 NOKPROBE_SYMBOL(read_wb_reg);
+#endif
 
 static void write_wb_reg(int reg, int n, u64 val)
 {
 #ifdef CONFIG_AMLOGIC_VMAP
 	/* avoid write DBGWVR since we use it for special purpose */
-	if (reg >= AARCH64_DBG_REG_WVR && reg < AARCH64_DBG_REG_WCR)
+	if ((reg + n) >= (AARCH64_DBG_REG_WVR + 2) &&
+	    (reg + n) < AARCH64_DBG_REG_WCR) {
 		return;
+	}
 #endif
 	switch (reg + n) {
 	GEN_WRITE_WB_REG_CASES(AARCH64_DBG_REG_BVR, AARCH64_DBG_REG_NAME_BVR, val);
@@ -553,13 +561,12 @@ int arch_validate_hwbkpt_settings(struct perf_event *bp)
 			/* Aligned */
 			break;
 		case 1:
+			/* Allow single byte watchpoint. */
+			if (info->ctrl.len == ARM_BREAKPOINT_LEN_1)
+				break;
 		case 2:
 			/* Allow halfword watchpoints and breakpoints. */
 			if (info->ctrl.len == ARM_BREAKPOINT_LEN_2)
-				break;
-		case 3:
-			/* Allow single byte watchpoint. */
-			if (info->ctrl.len == ARM_BREAKPOINT_LEN_1)
 				break;
 		default:
 			return -EINVAL;

@@ -64,6 +64,8 @@ source "drivers/amlogic/pwm/Kconfig"
 
 source "drivers/amlogic/media/Kconfig"
 
+source "drivers/amlogic/npu/Kconfig"
+
 source "drivers/amlogic/mmc/Kconfig"
 
 source "drivers/amlogic/mtd/Kconfig"
@@ -83,6 +85,8 @@ source "drivers/amlogic/thermal/Kconfig"
 source "drivers/amlogic/amaudio/Kconfig"
 
 source "drivers/amlogic/amaudio2/Kconfig"
+
+source "drivers/amlogic/amlkaraoke/Kconfig"
 
 source "drivers/amlogic/audiodsp/Kconfig"
 
@@ -138,11 +142,13 @@ source "drivers/amlogic/spi-nor/Kconfig"
 
 source "drivers/amlogic/dolby_fw/Kconfig"
 
-source "drivers/amlogic/media_modules/Kconfig"
+source "drivers/amlogic/ircut/Kconfig"
 
-source "drivers/amlogic/npu/Kconfig"
+source "drivers/amlogic/hifi4dsp/Kconfig"
 
-source "drivers/amlogic/isp_module/Kconfig"
+source "drivers/amlogic/pixel_probe/Kconfig"
+
+source "drivers/amlogic/firmware/Kconfig"
 
 endmenu
 endif

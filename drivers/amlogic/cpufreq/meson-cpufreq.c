@@ -42,14 +42,20 @@
 #include <linux/amlogic/scpi_protocol.h>
 #include "../../base/power/opp/opp.h"
 #include "meson-cpufreq.h"
-#include <linux/amlogic/cpu_version.h>
+#include <linux/arm-smccc.h>
 
-#define VIM3_A53_DEFAULT	1800000 /* VIM3 Little Core A53 */
-#define VIM3_A73_DEFAULT	2208000 /* VIM3 Big Core A73 */
-#define VIM3L_A55_DEFAULT	1908000 /* VIM3L Core A55 */
+static unsigned int get_cpufreq_table_index(u64 function_id,
+					    u64 arg0, u64 arg1, u64 arg2)
+{
+	struct arm_smccc_res res;
 
-
-static unsigned long max_freq[2] = {0, 0};
+	arm_smccc_smc((unsigned long)function_id,
+		      (unsigned long)arg0,
+		      (unsigned long)arg1,
+		      (unsigned long)arg2,
+		      0, 0, 0, 0, &res);
+	return res.a0;
+}
 
 static unsigned int meson_cpufreq_get_rate(unsigned int cpu)
 {
@@ -216,6 +222,7 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 	struct meson_cpufreq_driver_data *cpufreq_data;
 	struct device *cpu_dev;
 	struct regulator *cpu_reg;
+	struct cpufreq_freqs freqs;
 	int ret = 0;
 
 	if (!policy) {
@@ -295,12 +302,13 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 				volt_new, volt_tol, ret);
 			freqs.old = freq_new / 1000;
 			freqs.new = freq_old / 1000;
-			cpufreq_freq_transition_begin(policy, &freqs);
+			cpufreq_freq_transition_begin(policy,
+						      &freqs);
 
 			ret = meson_cpufreq_set_rate(policy, cur_cluster,
 				freq_old / 1000);
 			cpufreq_freq_transition_end(policy,
-					&freqs, ret);
+						    &freqs, ret);
 		}
 	}
 
@@ -322,66 +330,17 @@ static inline u32 get_table_max(struct cpufreq_frequency_table *table)
 	return max_freq;
 }
 
-int get_cpufreq_tables_efuse(u32 cur_cluster)
-{
-	int ret, efuse_info;
-	u32 freq, vol;
-
-	efuse_info = scpi_get_cpuinfo(cur_cluster, &freq, &vol);
-	if (efuse_info)
-		pr_err("%s,get invalid efuse_info = %d by mailbox!\n",
-			__func__, efuse_info);
-
-	pr_info("%s:efuse info for cpufreq =  %u\n", __func__, freq);
-	BUG_ON(freq && freq < EFUSE_CPUFREQ_MIN);
-	freq = DIV_ROUND_UP(freq, CLK_DIV) * CLK_DIV;
-	pr_info("%s:efuse adjust cpufreq =  %u\n", __func__, freq);
-	if (freq >= hispeed_cpufreq_max)
-		ret = HISPEED_INDEX;
-	else if (freq >= medspeed_cpufreq_max && freq < hispeed_cpufreq_max)
-		ret = MEDSPEED_INDEX;
-	else
-		ret = LOSPEED_INDEX;
-
-	return ret;
-}
-
 int choose_cpufreq_tables_index(const struct device_node *np, u32 cur_cluster)
 {
 	int ret = 0;
 
-	cpufreq_tables_supply = of_property_read_bool(np, "diff_tables_supply");
+	cpufreq_tables_supply = of_property_read_bool(np,
+						      "multi_tables_available");
 	if (cpufreq_tables_supply) {
 		/*choose appropriate cpufreq tables according efuse info*/
-		if (of_property_read_u32(np, "hispeed_cpufreq_max",
-					&hispeed_cpufreq_max)) {
-			pr_err("%s:don't find the node <dynamic_cpufreq_max>\n",
-					__func__);
-			hispeed_cpufreq_max = 0;
-			return ret;
-		}
-
-		if (of_property_read_u32(np, "medspeed_cpufreq_max",
-			&medspeed_cpufreq_max)) {
-			pr_err("%s:don't find the node <medspeed_cpufreq_max>\n",
-				__func__);
-			medspeed_cpufreq_max = 0;
-			return ret;
-		}
-
-		if (of_property_read_u32(np, "lospeed_cpufreq_max",
-			&lospeed_cpufreq_max)) {
-			pr_err("%s:don't find the node <lospeed_cpufreq_max>\n",
-				__func__);
-			lospeed_cpufreq_max = 0;
-			return ret;
-		}
-
-		ret = get_cpufreq_tables_efuse(cur_cluster);
-		pr_info("%s:hispeed_max %u,medspeed_max %u,lospeed_max %u,tables_index %u\n",
-				__func__, hispeed_cpufreq_max,
-				medspeed_cpufreq_max, lospeed_cpufreq_max, ret);
-
+		ret = get_cpufreq_table_index(GET_DVFS_TABLE_INDEX,
+					      cur_cluster, 0, 0);
+		pr_info("%s:tables_index %u\n", __func__, ret);
 	}
 
 	return ret;
@@ -563,8 +522,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	}
 	pr_info("value of gp1_clk_target %u\n", gp1_clk_target);
 
-	if (cur_cluster < MAX_CLUSTERS)
-		cpumask_copy(policy->cpus, topology_core_cpumask(policy->cpu));
+	cpumask_copy(policy->cpus, topology_core_cpumask(policy->cpu));
 
 	tables_index = choose_cpufreq_tables_index(np, cur_cluster);
 	ret = dev_pm_opp_of_cpumask_add_table_indexed(policy->cpus,
@@ -580,17 +538,6 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		dev_err(cpu_dev, "%s: failed to init cpufreq table, cpu: %d, err: %d\n",
 				__func__, cpu_dev->id, ret);
 		goto free_reg;
-	}
-
-	if (is_meson_g12b_cpu() || is_meson_sm1_cpu()) {
-		int i = 0;
-
-		max_freq[cur_cluster] = min(max_freq[cur_cluster], (unsigned long)get_table_max(freq_table[cur_cluster]));
-		for (i = 0; (freq_table[cur_cluster][i].frequency != CPUFREQ_TABLE_END) && max_freq[cur_cluster]; i++) {
-			if (freq_table[cur_cluster][i].frequency > max_freq[cur_cluster]) {
-				freq_table[cur_cluster][i].frequency = CPUFREQ_TABLE_END;
-			}
-		}
 	}
 
 	ret = cpufreq_table_validate_and_show(policy, freq_table[cur_cluster]);
@@ -665,51 +612,6 @@ free_np:
 		of_node_put(np);
 	return ret;
 }
-
-static int __init get_max_freq(unsigned int cluster, char *str)
-{
-	int ret;
-	unsigned long value;
-
-	if (!str || (cluster >= ARRAY_SIZE(max_freq)))
-		return -EINVAL;
-
-	ret = kstrtoul(str, 0, &value);
-	if (ret == 0) {
-		max_freq[cluster] = value * 1000;
-		pr_info("max cpufreq of cluster%d : %ldMHz\n", cluster, max_freq[cluster] / 1000);
-
-		return 0;
-	}
-
-	pr_err("[%s] invalid data, error: %d, str %s\n", __func__, ret, str);
-
-	return -EINVAL;
-}
-
-static int __init get_max_freq_a53(char *str)
-{
-	if (0 == strcmp(machine_model, "Khadas VIM3"))
-		return get_max_freq(0, str);
-	return -EINVAL;
-}
-__setup("max_freq_a53=", get_max_freq_a53);
-
-static int __init get_max_freq_a55(char *str)
-{
-	if (0 == strcmp(machine_model, "Khadas VIM3L"))
-		return get_max_freq(0, str);
-	return -EINVAL;
-}
-__setup("max_freq_a55=", get_max_freq_a55);
-
-static int __init get_max_freq_a73(char *str)
-{
-	if (0 == strcmp(machine_model, "Khadas VIM3"))
-		return get_max_freq(1, str);
-	return -EINVAL;
-}
-__setup("max_freq_a73=", get_max_freq_a73);
 
 static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 {
@@ -800,18 +702,6 @@ static int meson_cpufreq_probe(struct platform_device *pdev)
 	struct regulator *cpu_reg = NULL;
 	unsigned int cpu = 0;
 	int ret, i;
-
-	if (is_meson_g12b_cpu()) {
-		if (!max_freq[0]) {
-			max_freq[0] = VIM3_A53_DEFAULT;
-		}
-		if (!max_freq[1]) {
-			max_freq[1] = VIM3_A73_DEFAULT;
-		}
-	} else if (is_meson_sm1_cpu()) {
-		if (!max_freq[0])
-			max_freq[0] = VIM3L_A55_DEFAULT;
-	}
 
 	for (i = 0; i < MAX_CLUSTERS; i++)
 		mutex_init(&cluster_lock[i]);

@@ -1185,7 +1185,6 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 			 * condition with req->complete callback.
 			 */
 			usb_ep_dequeue(ep->ep, req);
-			wait_for_completion(&done);
 			interrupted = ep->status < 0;
 		}
 
@@ -1217,7 +1216,6 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 
 		ret = usb_ep_queue(ep->ep, req, GFP_ATOMIC);
 		if (unlikely(ret)) {
-			io_data->req = NULL;
 			usb_ep_free_request(ep->ep, req);
 			goto error_lock;
 		}
@@ -1266,19 +1264,18 @@ static int ffs_aio_cancel(struct kiocb *kiocb)
 {
 	struct ffs_io_data *io_data = kiocb->private;
 	struct ffs_epfile *epfile = kiocb->ki_filp->private_data;
-	unsigned long flags;
 	int value;
 
 	ENTER();
 
-	spin_lock_irqsave(&epfile->ffs->eps_lock, flags);
+	spin_lock_irq(&epfile->ffs->eps_lock);
 
 	if (likely(io_data && io_data->ep && io_data->req))
 		value = usb_ep_dequeue(io_data->ep, io_data->req);
 	else
 		value = -EINVAL;
 
-	spin_unlock_irqrestore(&epfile->ffs->eps_lock, flags);
+	spin_unlock_irq(&epfile->ffs->eps_lock);
 
 	return value;
 }
@@ -1291,12 +1288,11 @@ static ssize_t ffs_epfile_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 	ENTER();
 
 	if (!is_sync_kiocb(kiocb)) {
-		p = kzalloc(sizeof(io_data), GFP_KERNEL);
+		p = kmalloc(sizeof(io_data), GFP_KERNEL);
 		if (unlikely(!p))
 			return -ENOMEM;
 		p->aio = true;
 	} else {
-		memset(p, 0, sizeof(*p));
 		p->aio = false;
 	}
 
@@ -1328,12 +1324,11 @@ static ssize_t ffs_epfile_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 	ENTER();
 
 	if (!is_sync_kiocb(kiocb)) {
-		p = kzalloc(sizeof(io_data), GFP_KERNEL);
+		p = kmalloc(sizeof(io_data), GFP_KERNEL);
 		if (unlikely(!p))
 			return -ENOMEM;
 		p->aio = true;
 	} else {
-		memset(p, 0, sizeof(*p));
 		p->aio = false;
 	}
 
@@ -1908,10 +1903,6 @@ static void ffs_data_reset(struct ffs_data *ffs)
 	ffs->state = FFS_READ_DESCRIPTORS;
 	ffs->setup_state = FFS_NO_SETUP;
 	ffs->flags = 0;
-
-	ffs->ms_os_descs_ext_prop_count = 0;
-	ffs->ms_os_descs_ext_prop_name_len = 0;
-	ffs->ms_os_descs_ext_prop_data_len = 0;
 }
 
 
@@ -3459,7 +3450,7 @@ static int ffs_func_setup(struct usb_function *f,
 	__ffs_event_add(ffs, FUNCTIONFS_SETUP);
 	spin_unlock_irqrestore(&ffs->ev.waitq.lock, flags);
 
-	return creq->wLength == 0 ? USB_GADGET_DELAYED_STATUS : 0;
+	return USB_GADGET_DELAYED_STATUS;
 }
 
 static bool ffs_func_req_match(struct usb_function *f,

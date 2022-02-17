@@ -36,9 +36,6 @@
 #include <linux/serial.h>
 #include "usb-wwan.h"
 
-#define HW_bcdUSB 0x0110
-#define HUAWEI_VENDOR_ID 0x12d1
-
 /*
  * Generate DTR/RTS signals on the port using the SET_CONTROL_LINE_STATE request
  * in CDC ACM.
@@ -220,7 +217,6 @@ int usb_wwan_write(struct tty_struct *tty, struct usb_serial_port *port,
 {
 	struct usb_wwan_port_private *portdata;
 	struct usb_wwan_intf_private *intfdata;
-    struct usb_host_endpoint *ep;
 	int i;
 	int left, todo;
 	struct urb *this_urb = NULL;	/* spurious */
@@ -259,15 +255,6 @@ int usb_wwan_write(struct tty_struct *tty, struct usb_serial_port *port,
 		/* send the data */
 		memcpy(this_urb->transfer_buffer, buf, todo);
 		this_urb->transfer_buffer_length = todo;
-
-        if((HUAWEI_VENDOR_ID == port->serial->dev->descriptor.idVendor)
-                && (HW_bcdUSB != port->serial->dev->descriptor.bcdUSB)){
-            ep = usb_pipe_endpoint(this_urb->dev, this_urb->pipe);
-            if(ep && (0 != this_urb->transfer_buffer_length)
-                    && (0 == this_urb->transfer_buffer_length % ep->desc.wMaxPacketSize)){
-                this_urb->transfer_flags |= URB_ZERO_PACKET;
-            }
-        }
 
 		spin_lock_irqsave(&intfdata->susp_lock, flags);
 		if (intfdata->suspended) {
@@ -318,10 +305,6 @@ static void usb_wwan_indat_callback(struct urb *urb)
 	if (status) {
 		dev_dbg(dev, "%s: nonzero status: %d on endpoint %02x.\n",
 			__func__, status, endpoint);
-
-		/* don't resubmit on fatal errors */
-		if (status == -ESHUTDOWN || status == -ENOENT)
-			return;
 	} else {
 		if (urb->actual_length) {
 			tty_insert_flip_string(&port->port, data,
@@ -512,7 +495,6 @@ static struct urb *usb_wwan_setup_urb(struct usb_serial_port *port,
 				      void (*callback) (struct urb *))
 {
 	struct usb_serial *serial = port->serial;
-	struct usb_wwan_intf_private *intfdata = usb_get_serial_data(serial);
 	struct urb *urb;
 
 	urb = usb_alloc_urb(0, GFP_KERNEL);	/* No ISO */
@@ -522,21 +504,6 @@ static struct urb *usb_wwan_setup_urb(struct usb_serial_port *port,
 	usb_fill_bulk_urb(urb, serial->dev,
 			  usb_sndbulkpipe(serial->dev, endpoint) | dir,
 			  buf, len, callback, ctx);
-
-	if (dir == USB_DIR_OUT) {
-		struct usb_device_descriptor *desc = &serial->dev->descriptor;
-		if (desc->idVendor == cpu_to_le16(0x05C6) && desc->idProduct == cpu_to_le16(0x9090))
-			urb->transfer_flags |= URB_ZERO_PACKET;
-		if (desc->idVendor == cpu_to_le16(0x05C6) && desc->idProduct == cpu_to_le16(0x9003))
-			urb->transfer_flags |= URB_ZERO_PACKET;
-		if (desc->idVendor == cpu_to_le16(0x05C6) && desc->idProduct == cpu_to_le16(0x9215))
-			urb->transfer_flags |= URB_ZERO_PACKET;
-		if (desc->idVendor == cpu_to_le16(0x2C7C))
-			urb->transfer_flags |= URB_ZERO_PACKET;
-	}
-
-	if (intfdata->use_zlp && dir == USB_DIR_OUT)
-		urb->transfer_flags |= URB_ZERO_PACKET;
 
 	return urb;
 }

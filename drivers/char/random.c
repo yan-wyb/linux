@@ -1211,7 +1211,6 @@ void add_interrupt_randomness(int irq, int irq_flags)
 
 	fast_mix(fast_pool);
 	add_interrupt_bench(cycles);
-	this_cpu_add(net_rand_state.s1, fast_pool->pool[cycles & 3]);
 
 	if (unlikely(crng_init == 0)) {
 		if ((fast_pool->count >= 64) &&
@@ -1827,21 +1826,13 @@ static int
 write_pool(struct entropy_store *r, const char __user *buffer, size_t count)
 {
 	size_t bytes;
-	__u32 t, buf[16];
+	__u32 buf[16];
 	const char __user *p = buffer;
 
 	while (count > 0) {
-		int b, i = 0;
-
 		bytes = min(count, sizeof(buf));
 		if (copy_from_user(&buf, p, bytes))
 			return -EFAULT;
-
-		for (b = bytes ; b > 0 ; b -= sizeof(__u32), i++) {
-			if (!arch_get_random_int(&t))
-				break;
-			buf[i] ^= t;
-		}
 
 		count -= bytes;
 		p += bytes;
@@ -2119,14 +2110,17 @@ struct batched_entropy {
 
 /*
  * Get a random word for internal kernel use only. The quality of the random
- * number is good as /dev/urandom, but there is no backtrack protection, with
- * the goal of being quite fast and not depleting entropy.
+ * number is either as good as RDRAND or as good as /dev/urandom, with the
+ * goal of being quite fast and not depleting entropy.
  */
 static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_long);
 unsigned long get_random_long(void)
 {
 	unsigned long ret;
 	struct batched_entropy *batch;
+
+	if (arch_get_random_long(&ret))
+		return ret;
 
 	batch = &get_cpu_var(batched_entropy_long);
 	if (batch->position % ARRAY_SIZE(batch->entropy_long) == 0) {
@@ -2150,6 +2144,9 @@ unsigned int get_random_int(void)
 {
 	unsigned int ret;
 	struct batched_entropy *batch;
+
+	if (arch_get_random_int(&ret))
+		return ret;
 
 	batch = &get_cpu_var(batched_entropy_int);
 	if (batch->position % ARRAY_SIZE(batch->entropy_int) == 0) {

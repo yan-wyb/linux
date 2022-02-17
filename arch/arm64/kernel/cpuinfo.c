@@ -172,7 +172,7 @@ static int c_show(struct seq_file *m, void *v)
 	seq_puts(m, "\n");
 #endif
 
-	seq_printf(m, "Hardware\t: %s\n", machine_model);
+	seq_printf(m, "Hardware\t: %s\n\n", "Amlogic");
 	return 0;
 }
 

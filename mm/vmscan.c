@@ -1266,6 +1266,10 @@ free_it:
 		 * appear not as the counts should be low
 		 */
 		list_add(&page->lru, &free_pages);
+	#ifdef CONFIG_AMLOGIC_CMA
+		if (ttu_flags & TTU_IGNORE_ACCESS)
+			ClearPageCmaAllocating(page);
+	#endif
 		continue;
 
 cull_mlocked:
@@ -1314,6 +1318,9 @@ static int filecache_need_migrate(struct page *page)
 
 	if (!PageActive(page) && page_mapcount(page) >= INACTIVE_MIGRATE)
 		return 1;
+
+	if (PageUnevictable(page))
+		return 0;
 
 	return 0;
 }
@@ -3209,7 +3216,6 @@ static bool zone_balanced(struct zone *zone, int order, int classzone_idx)
 	 */
 	clear_bit(PGDAT_CONGESTED, &zone->zone_pgdat->flags);
 	clear_bit(PGDAT_DIRTY, &zone->zone_pgdat->flags);
-	clear_bit(PGDAT_WRITEBACK, &zone->zone_pgdat->flags);
 
 	return true;
 }
@@ -3387,7 +3393,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		 * If we're getting trouble reclaiming, start doing writepage
 		 * even in laptop mode.
 		 */
-		if (sc.priority < DEF_PRIORITY - 2)
+		if (sc.priority < DEF_PRIORITY - 2 || !pgdat_reclaimable(pgdat))
 			sc.may_writepage = 1;
 
 		/* Call soft limit reclaim before calling shrink_node. */

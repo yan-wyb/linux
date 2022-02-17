@@ -102,7 +102,11 @@ static u8 max_watchpoint_len;
 	WRITE_WB_REG_CASE(OP2, 14, VAL);	\
 	WRITE_WB_REG_CASE(OP2, 15, VAL)
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+u32 read_wb_reg(int n)
+#else
 static u32 read_wb_reg(int n)
+#endif
 {
 	u32 val = 0;
 
@@ -257,6 +261,9 @@ static int enable_monitor_mode(void)
 	case ARM_DEBUG_ARCH_V7_ECP14:
 	case ARM_DEBUG_ARCH_V7_1:
 	case ARM_DEBUG_ARCH_V8:
+#ifdef CONFIG_AMLOGIC_MODIFY
+	case ARM_DEBUG_ARCH_V8_1:
+#endif
 		ARM_DBG_WRITE(c0, c2, 2, (dscr | ARM_DSCR_MDBGEN));
 		isb();
 		break;
@@ -688,12 +695,6 @@ static void disable_single_step(struct perf_event *bp)
 	arch_install_hw_breakpoint(bp);
 }
 
-static int watchpoint_fault_on_uaccess(struct pt_regs *regs,
-				       struct arch_hw_breakpoint *info)
-{
-	return !user_mode(regs) && info->ctrl.privilege == ARM_BREAKPOINT_USER;
-}
-
 static void watchpoint_handler(unsigned long addr, unsigned int fsr,
 			       struct pt_regs *regs)
 {
@@ -753,27 +754,16 @@ static void watchpoint_handler(unsigned long addr, unsigned int fsr,
 		}
 
 		pr_debug("watchpoint fired: address = 0x%x\n", info->trigger);
-
-		/*
-		 * If we triggered a user watchpoint from a uaccess routine,
-		 * then handle the stepping ourselves since userspace really
-		 * can't help us with this.
-		 */
-		if (watchpoint_fault_on_uaccess(regs, info))
-			goto step;
-
 		perf_bp_event(wp, regs);
 
 		/*
-		 * Defer stepping to the overflow handler if one is installed.
-		 * Otherwise, insert a temporary mismatch breakpoint so that
-		 * we can single-step over the watchpoint trigger.
+		 * If no overflow handler is present, insert a temporary
+		 * mismatch breakpoint so we can single-step over the
+		 * watchpoint trigger.
 		 */
-		if (!is_default_overflow_handler(wp))
-			goto unlock;
+		if (is_default_overflow_handler(wp))
+			enable_single_step(wp, instruction_pointer(regs));
 
-step:
-		enable_single_step(wp, instruction_pointer(regs));
 unlock:
 		rcu_read_unlock();
 	}
@@ -1054,8 +1044,26 @@ static struct notifier_block dbg_reset_nb = {
 static int dbg_cpu_pm_notify(struct notifier_block *self, unsigned long action,
 			     void *v)
 {
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct perf_event *wp, **slots;
+	int i;
+
+	if (action == CPU_PM_EXIT) {
+		reset_ctrl_regs(NULL);
+		/* reinstall already installed wp after exit pm */
+		slots = this_cpu_ptr(wp_on_reg);
+		for (i = 0; i < core_num_wrps; ++i) {
+			wp = slots[i];
+			if (wp) {
+				slots[i] = NULL;
+				arch_install_hw_breakpoint(wp);
+			}
+		}
+	}
+#else
 	if (action == CPU_PM_EXIT)
 		reset_ctrl_regs(NULL);
+#endif
 
 	return NOTIFY_OK;
 }

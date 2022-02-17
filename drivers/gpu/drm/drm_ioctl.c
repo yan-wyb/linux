@@ -36,7 +36,6 @@
 
 #include <linux/pci.h>
 #include <linux/export.h>
-#include <linux/nospec.h>
 
 /**
  * DOC: getunique and setversion story
@@ -277,6 +276,9 @@ static int drm_getcap(struct drm_device *dev, void *data, struct drm_file *file_
 		break;
 	case DRM_CAP_ADDFB2_MODIFIERS:
 		req->value = dev->mode_config.allow_fb_modifiers;
+		break;
+	case DRM_CAP_CRTC_IN_VBLANK_EVENT:
+		req->value = 1;
 		break;
 	default:
 		return -EINVAL;
@@ -669,17 +671,13 @@ long drm_ioctl(struct file *filp,
 
 	if (is_driver_ioctl) {
 		/* driver ioctl */
-		unsigned int index = nr - DRM_COMMAND_BASE;
-
-		if (index >= dev->driver->num_ioctls)
+		if (nr - DRM_COMMAND_BASE >= dev->driver->num_ioctls)
 			goto err_i1;
-		index = array_index_nospec(index, dev->driver->num_ioctls);
-		ioctl = &dev->driver->ioctls[index];
+		ioctl = &dev->driver->ioctls[nr - DRM_COMMAND_BASE];
 	} else {
 		/* core ioctl */
 		if (nr >= DRM_CORE_IOCTL_COUNT)
 			goto err_i1;
-		nr = array_index_nospec(nr, DRM_CORE_IOCTL_COUNT);
 		ioctl = &drm_ioctls[nr];
 	}
 
@@ -775,7 +773,6 @@ bool drm_ioctl_flags(unsigned int nr, unsigned int *flags)
 
 	if (nr >= DRM_CORE_IOCTL_COUNT)
 		return false;
-	nr = array_index_nospec(nr, DRM_CORE_IOCTL_COUNT);
 
 	*flags = drm_ioctls[nr].flags;
 	return true;

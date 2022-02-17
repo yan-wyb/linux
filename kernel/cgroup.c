@@ -4387,11 +4387,7 @@ int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
 	 */
 	do {
 		css_task_iter_start(&from->self, &it);
-
-		do {
-			task = css_task_iter_next(&it);
-		} while (task && (task->flags & PF_EXITING));
-
+		task = css_task_iter_next(&it);
 		if (task)
 			get_task_struct(task);
 		css_task_iter_end(&it);
@@ -6332,14 +6328,14 @@ void cgroup_sk_alloc_disable(void)
 
 void cgroup_sk_alloc(struct sock_cgroup_data *skcd)
 {
-	if (cgroup_sk_alloc_disabled) {
-		skcd->no_refcnt = 1;
+	if (cgroup_sk_alloc_disabled)
+		return;
+
+	/* Socket clone path */
+	if (skcd->val) {
+		cgroup_get(sock_cgroup_ptr(skcd));
 		return;
 	}
-
-	/* Don't associate the sock with unrelated interrupted task's cgroup. */
-	if (in_interrupt())
-		return;
 
 	rcu_read_lock();
 
@@ -6357,26 +6353,8 @@ void cgroup_sk_alloc(struct sock_cgroup_data *skcd)
 	rcu_read_unlock();
 }
 
-void cgroup_sk_clone(struct sock_cgroup_data *skcd)
-{
-	/* Socket clone path */
-	if (skcd->val) {
-		if (skcd->no_refcnt)
-			return;
-		/*
-		 * We might be cloning a socket which is left in an empty
-		 * cgroup and the cgroup might have already been rmdir'd.
-		 * Don't use cgroup_get_live().
-		 */
-		cgroup_get(sock_cgroup_ptr(skcd));
-	}
-}
-
 void cgroup_sk_free(struct sock_cgroup_data *skcd)
 {
-	if (skcd->no_refcnt)
-		return;
-
 	cgroup_put(sock_cgroup_ptr(skcd));
 }
 
@@ -6622,7 +6600,15 @@ static int cgroup_css_links_read(struct seq_file *seq, void *v)
 		struct task_struct *task;
 		int count = 0;
 
+		/*
+		 * Fix for android.security.sts.Poc16_11#testPocCVE_2016_6753
+		 * We should not expose kernel address info to user space
+		 */
+#ifdef CONFIG_AMLOGIC_MODIFY
+		seq_puts(seq, "css_set (____ptrval____)\n");
+#else
 		seq_printf(seq, "css_set %p\n", cset);
+#endif
 
 		list_for_each_entry(task, &cset->tasks, cg_list) {
 			if (count++ > MAX_TASKS_SHOWN_PER_CSS)

@@ -208,6 +208,11 @@ static int dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg |= DWC3_GUSB3PIPECTL_PHYSOFTRST;
 	dwc3_writel(dwc->regs, DWC3_GUSB3PIPECTL(0), reg);
 
+		/* Assert USB3 PHY reset */
+	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(1));
+	reg |= DWC3_GUSB3PIPECTL_PHYSOFTRST;
+	dwc3_writel(dwc->regs, DWC3_GUSB3PIPECTL(1), reg);
+
 	/* Assert USB2 PHY reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB2PHYCFG(0));
 	reg |= DWC3_GUSB2PHYCFG_PHYSOFTRST;
@@ -244,6 +249,11 @@ static int dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(0));
 	reg &= ~DWC3_GUSB3PIPECTL_PHYSOFTRST;
 	dwc3_writel(dwc->regs, DWC3_GUSB3PIPECTL(0), reg);
+
+		/* Clear USB3 PHY reset */
+	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(1));
+	reg &= ~DWC3_GUSB3PIPECTL_PHYSOFTRST;
+	dwc3_writel(dwc->regs, DWC3_GUSB3PIPECTL(1), reg);
 
 	/* Clear USB2 PHY reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB2PHYCFG(0));
@@ -320,11 +330,16 @@ static void dwc3_frame_length_adjustment(struct dwc3 *dwc)
 
 	reg = dwc3_readl(dwc->regs, DWC3_GFLADJ);
 	dft = reg & DWC3_GFLADJ_30MHZ_MASK;
-	if (dft != dwc->fladj) {
+#ifndef CONFIG_AMLOGIC_USB
+	if (!dev_WARN_ONCE(dwc->dev, dft == dwc->fladj,
+	    "request value same as default, ignoring\n")) {
+#endif
 		reg &= ~DWC3_GFLADJ_30MHZ_MASK;
 		reg |= DWC3_GFLADJ_30MHZ_SDBND_SEL | dwc->fladj;
 		dwc3_writel(dwc->regs, DWC3_GFLADJ, reg);
+#ifndef CONFIG_AMLOGIC_USB
 	}
+#endif
 }
 
 /**
@@ -959,6 +974,7 @@ static int dwc3_core_get_phy(struct dwc3 *dwc)
 	if (dwc->usb3_phy)
 		if (dwc->usb3_phy->flags == AML_USB3_PHY_ENABLE)
 			dwc->super_speed_support = 1;
+
 #endif
 
 	dwc->usb2_generic_phy = devm_phy_get(dev, "usb2-phy");
@@ -1052,9 +1068,6 @@ static void dwc3_core_exit_mode(struct dwc3 *dwc)
 		/* do nothing */
 		break;
 	}
-
-	/* de-assert DRVVBUS for HOST and OTG mode */
-	dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_DEVICE);
 }
 
 #define DWC3_ALIGN_MASK		(16 - 1)
@@ -1117,7 +1130,7 @@ static int dwc3_probe(struct platform_device *pdev)
 	dwc->regs_size	= resource_size(res);
 
 	/* default to highest possible threshold */
-	lpm_nyet_threshold = 0xf;
+	lpm_nyet_threshold = 0xff;
 
 	/* default to -3.5dB de-emphasis */
 	tx_de_emphasis = 1;
@@ -1229,8 +1242,7 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	ret = dwc3_core_init(dwc);
 	if (ret) {
-		if (ret != -EPROBE_DEFER)
-			dev_err(dev, "failed to initialize core: %d\n", ret);
+		dev_err(dev, "failed to initialize core\n");
 		goto err4;
 	}
 
@@ -1272,7 +1284,6 @@ static int dwc3_probe(struct platform_device *pdev)
 
 err5:
 	dwc3_event_buffers_cleanup(dwc);
-	dwc3_ulpi_exit(dwc);
 
 err4:
 	dwc3_free_scratch_buffers(dwc);

@@ -966,9 +966,10 @@ void dpm_complete(pm_message_t state)
 	}
 	list_splice(&list, &dpm_list);
 	mutex_unlock(&dpm_list_mtx);
-
+#ifndef CONFIG_AMLOGIC_MODIFY
 	/* Allow device probing and trigger re-probing of deferred devices */
 	device_unblock_probing();
+#endif
 	trace_suspend_resume(TPS("dpm_complete"), state.event, false);
 }
 
@@ -1362,39 +1363,28 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 
 	dpm_wait_for_children(dev, async);
 
-	if (async_error) {
-		dev->power.direct_complete = false;
+	if (async_error)
 		goto Complete;
-	}
 
 	/*
-	 * Wait for possible runtime PM transitions of the device in progress
-	 * to complete and if there's a runtime resume request pending for it,
-	 * resume it before proceeding with invoking the system-wide suspend
-	 * callbacks for it.
-	 *
-	 * If the system-wide suspend callbacks below change the configuration
-	 * of the device, they must disable runtime PM for it or otherwise
-	 * ensure that its runtime-resume callbacks will not be confused by that
-	 * change in case they are invoked going forward.
+	 * If a device configured to wake up the system from sleep states
+	 * has been suspended at run time and there's a resume request pending
+	 * for it, this is equivalent to the device signaling wakeup, so the
+	 * system suspend operation should be aborted.
 	 */
-	pm_runtime_barrier(dev);
+	if (pm_runtime_barrier(dev) && device_may_wakeup(dev))
+		pm_wakeup_event(dev, 0);
 
 	if (pm_wakeup_pending()) {
 		pm_get_active_wakeup_sources(suspend_abort,
 			MAX_SUSPEND_ABORT_LEN);
 		log_suspend_abort_reason(suspend_abort);
-		dev->power.direct_complete = false;
 		async_error = -EBUSY;
 		goto Complete;
 	}
 
 	if (dev->power.syscore)
 		goto Complete;
-
-	/* Avoid direct_complete to let wakeup_path propagate. */
-	if (device_may_wakeup(dev) || dev->power.wakeup_path)
-		dev->power.direct_complete = false;
 
 	if (dev->power.direct_complete) {
 		if (pm_runtime_status_suspended(dev)) {
@@ -1643,7 +1633,7 @@ int dpm_prepare(pm_message_t state)
 
 	trace_suspend_resume(TPS("dpm_prepare"), state.event, true);
 	might_sleep();
-
+#ifndef CONFIG_AMLOGIC_MODIFY
 	/*
 	 * Give a chance for the known devices to complete their probes, before
 	 * disable probing of devices. This sync point is important at least
@@ -1657,7 +1647,7 @@ int dpm_prepare(pm_message_t state)
 	 * instead. The normal behavior will be restored in dpm_complete().
 	 */
 	device_block_probing();
-
+#endif
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_list)) {
 		struct device *dev = to_device(dpm_list.next);

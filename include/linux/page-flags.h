@@ -105,6 +105,9 @@ enum pageflags {
 	PG_young,
 	PG_idle,
 #endif
+#ifdef CONFIG_AMLOGIC_CMA
+	PG_cma_allocating,	/* indicate page is under cma allocating */
+#endif
 	__NR_PAGEFLAGS,
 
 	/* Filesystems */
@@ -265,6 +268,9 @@ PAGEFLAG(Active, active, PF_HEAD) __CLEARPAGEFLAG(Active, active, PF_HEAD)
 __PAGEFLAG(Slab, slab, PF_NO_TAIL)
 __PAGEFLAG(SlobFree, slob_free, PF_NO_TAIL)
 PAGEFLAG(Checked, checked, PF_NO_COMPOUND)	   /* Used by some filesystems */
+#ifdef CONFIG_AMLOGIC_CMA
+PAGEFLAG(CmaAllocating, cma_allocating, PF_ANY)
+#endif
 
 /* Xen */
 PAGEFLAG(Pinned, pinned, PF_NO_COMPOUND)
@@ -545,28 +551,12 @@ static inline int PageTransCompound(struct page *page)
  *
  * Unlike PageTransCompound, this is safe to be called only while
  * split_huge_pmd() cannot run from under us, like if protected by the
- * MMU notifier, otherwise it may result in page->_mapcount check false
+ * MMU notifier, otherwise it may result in page->_mapcount < 0 false
  * positives.
- *
- * We have to treat page cache THP differently since every subpage of it
- * would get _mapcount inc'ed once it is PMD mapped.  But, it may be PTE
- * mapped in the current process so comparing subpage's _mapcount to
- * compound_mapcount to filter out PTE mapped case.
  */
 static inline int PageTransCompoundMap(struct page *page)
 {
-	struct page *head;
-
-	if (!PageTransCompound(page))
-		return 0;
-
-	if (PageAnon(page))
-		return atomic_read(&page->_mapcount) < 0;
-
-	head = compound_head(page);
-	/* File THP is PMD mapped and not PTE mapped */
-	return atomic_read(&page->_mapcount) ==
-	       atomic_read(compound_mapcount_ptr(head));
+	return PageTransCompound(page) && atomic_read(&page->_mapcount) < 0;
 }
 
 /*
@@ -717,12 +707,22 @@ static inline void ClearPageSlabPfmemalloc(struct page *page)
  * Flags checked when a page is freed.  Pages being freed should not have
  * these flags set.  It they are, there is a problem.
  */
+#ifdef CONFIG_AMLOGIC_CMA
+#define PAGE_FLAGS_CHECK_AT_FREE \
+	(1UL << PG_lru	 | 1UL << PG_locked    | \
+	 1UL << PG_private | 1UL << PG_private_2 | \
+	 1UL << PG_writeback | 1UL << PG_reserved | \
+	 1UL << PG_cma_allocating | \
+	 1UL << PG_slab	 | 1UL << PG_swapcache | 1UL << PG_active | \
+	 1UL << PG_unevictable | __PG_MLOCKED)
+#else
 #define PAGE_FLAGS_CHECK_AT_FREE \
 	(1UL << PG_lru	 | 1UL << PG_locked    | \
 	 1UL << PG_private | 1UL << PG_private_2 | \
 	 1UL << PG_writeback | 1UL << PG_reserved | \
 	 1UL << PG_slab	 | 1UL << PG_swapcache | 1UL << PG_active | \
 	 1UL << PG_unevictable | __PG_MLOCKED)
+#endif
 
 /*
  * Flags checked when a page is prepped for return by the page allocator.

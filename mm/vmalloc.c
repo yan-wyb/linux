@@ -31,7 +31,6 @@
 #include <linux/compiler.h>
 #include <linux/llist.h>
 #include <linux/bitops.h>
-#include <linux/overflow.h>
 
 #include <asm/uaccess.h>
 #include <asm/tlbflush.h>
@@ -255,10 +254,14 @@ struct page *vmalloc_to_page(const void *vmalloc_addr)
 	 */
 	if (!pgd_none(*pgd)) {
 		pud_t *pud = pud_offset(pgd, addr);
+#ifndef CONFIG_AMLOGIC_MODIFY
 		WARN_ON_ONCE(pud_bad(*pud));
+#endif
 		if (!pud_none(*pud) && !pud_bad(*pud)) {
 			pmd_t *pmd = pmd_offset(pud, addr);
+#ifndef CONFIG_AMLOGIC_MODIFY
 			WARN_ON_ONCE(pmd_bad(*pmd));
+#endif
 			if (!pmd_none(*pmd) && !pmd_bad(*pmd)) {
 				pte_t *ptep, pte;
 
@@ -356,6 +359,21 @@ static void __insert_vmap_area(struct vmap_area *va)
 static void purge_vmap_area_lazy(void);
 
 static BLOCKING_NOTIFIER_HEAD(vmap_notify_list);
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+static void dump_vmalloc(void)
+{
+	struct vmap_area *va, *next;
+
+	spin_lock(&vmap_area_lock);
+	list_for_each_entry_safe(va, next, &vmap_area_list, list) {
+		pr_info("%s, va:%lx-%lx, size:%08ld KB, alloc:%pf\n",
+			__func__, va->va_start, va->va_end,
+			(va->va_end - va->va_start) >> 10, va->vm->caller);
+	}
+	spin_unlock(&vmap_area_lock);
+}
+#endif
 
 /*
  * Allocate a region of KVA of the specified size and alignment, within the
@@ -460,11 +478,7 @@ nocache:
 	}
 
 found:
-	/*
-	 * Check also calculated address against the vstart,
-	 * because it can be 0 because of big align request.
-	 */
-	if (addr + size > vend || addr < vstart)
+	if (addr + size > vend)
 		goto overflow;
 
 	va->va_start = addr;
@@ -497,6 +511,9 @@ overflow:
 		}
 	}
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	dump_vmalloc();
+#endif
 	if (printk_ratelimit())
 		pr_warn("vmap allocation for size %lu failed: use vmalloc=<size> to increase size\n",
 			size);
@@ -1505,7 +1522,7 @@ static void __vunmap(const void *addr, int deallocate_pages)
 			addr))
 		return;
 
-	area = find_vm_area(addr);
+	area = remove_vm_area(addr);
 	if (unlikely(!area)) {
 		WARN(1, KERN_ERR "Trying to vfree() nonexistent vm area (%p)\n",
 				addr);
@@ -1515,7 +1532,6 @@ static void __vunmap(const void *addr, int deallocate_pages)
 	debug_check_no_locks_freed(addr, get_vm_area_size(area));
 	debug_check_no_obj_freed(addr, get_vm_area_size(area));
 
-	remove_vm_area(addr);
 	if (deallocate_pages) {
 		int i;
 
@@ -1713,12 +1729,6 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
 	addr = __vmalloc_area_node(area, gfp_mask, prot, node);
 	if (!addr)
 		return NULL;
-
-	/*
-	 * First make sure the mappings are removed from all page-tables
-	 * before they are freed.
-	 */
-	vmalloc_sync_unmappings();
 
 	/*
 	 * In this function, newly allocated vm_struct has VM_UNINITIALIZED
@@ -2180,7 +2190,6 @@ finished:
  *	@vma:		vma to cover
  *	@uaddr:		target user address to start at
  *	@kaddr:		virtual address of vmalloc kernel memory
- *	@pgoff:		offset from @kaddr to start at
  *	@size:		size of map area
  *
  *	Returns:	0 for success, -Exxx on failure
@@ -2193,15 +2202,9 @@ finished:
  *	Similar to remap_pfn_range() (see mm/memory.c)
  */
 int remap_vmalloc_range_partial(struct vm_area_struct *vma, unsigned long uaddr,
-				void *kaddr, unsigned long pgoff,
-				unsigned long size)
+				void *kaddr, unsigned long size)
 {
 	struct vm_struct *area;
-	unsigned long off;
-	unsigned long end_index;
-
-	if (check_shl_overflow(pgoff, PAGE_SHIFT, &off))
-		return -EINVAL;
 
 	size = PAGE_ALIGN(size);
 
@@ -2215,10 +2218,8 @@ int remap_vmalloc_range_partial(struct vm_area_struct *vma, unsigned long uaddr,
 	if (!(area->flags & VM_USERMAP))
 		return -EINVAL;
 
-	if (check_add_overflow(size, off, &end_index) ||
-	    end_index > get_vm_area_size(area))
+	if (kaddr + size > area->addr + area->size)
 		return -EINVAL;
-	kaddr += off;
 
 	do {
 		struct page *page = vmalloc_to_page(kaddr);
@@ -2257,25 +2258,19 @@ int remap_vmalloc_range(struct vm_area_struct *vma, void *addr,
 						unsigned long pgoff)
 {
 	return remap_vmalloc_range_partial(vma, vma->vm_start,
-					   addr, pgoff,
+					   addr + (pgoff << PAGE_SHIFT),
 					   vma->vm_end - vma->vm_start);
 }
 EXPORT_SYMBOL(remap_vmalloc_range);
 
 /*
- * Implement stubs for vmalloc_sync_[un]mappings () if the architecture chose
- * not to have one.
- *
- * The purpose of this function is to make sure the vmalloc area
- * mappings are identical in all page-tables in the system.
+ * Implement a stub for vmalloc_sync_all() if the architecture chose not to
+ * have one.
  */
-void __weak vmalloc_sync_mappings(void)
+void __weak vmalloc_sync_all(void)
 {
 }
 
-void __weak vmalloc_sync_unmappings(void)
-{
-}
 
 static int f(pte_t *pte, pgtable_t table, unsigned long addr, void *data)
 {

@@ -65,18 +65,6 @@
 #endif
 
 /*
- * Feature detection for gnu_inline (gnu89 extern inline semantics). Either
- * __GNUC_STDC_INLINE__ is defined (not using gnu89 extern inline semantics,
- * and we opt in to the gnu89 semantics), or __GNUC_STDC_INLINE__ is not
- * defined so the gnu89 semantics are the default.
- */
-#ifdef __GNUC_STDC_INLINE__
-# define __gnu_inline	__attribute__((gnu_inline))
-#else
-# define __gnu_inline
-#endif
-
-/*
  * Force always-inline if the user requests it so via the .config,
  * or if gcc is too old.
  * GCC does not warn about unused static inline functions for
@@ -96,8 +84,6 @@
 #define __inline __inline	__attribute__((unused)) notrace
 #endif
 
-//#define __inline__ inline
-//#define __inline inline
 #define __always_inline	inline __attribute__((always_inline))
 #define  noinline	__attribute__((noinline))
 
@@ -233,15 +219,6 @@
 #endif
 
 /*
- * calling noreturn functions, __builtin_unreachable() and __builtin_trap()
- * confuse the stack allocation in gcc, leading to overly large stack
- * frames, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82365
- *
- * Adding an empty inline assembly before it works around the problem
- */
-#define barrier_before_unreachable() asm volatile("")
-
-/*
  * Mark a position in code as unreachable.  This can be used to
  * suppress control flow warnings after asm blocks that transfer
  * control elsewhere.
@@ -251,11 +228,7 @@
  * unreleased.  Really, we need to have autoconf for the kernel.
  */
 #define unreachable() \
-	do {					\
-		annotate_unreachable();		\
-		barrier_before_unreachable();	\
-		__builtin_unreachable();	\
-	} while (0)
+	do { annotate_unreachable(); __builtin_unreachable(); } while (0)
 
 /* Mark a function definition as prohibited from being cloned. */
 #define __noclone	__attribute__((__noclone__, __optimize__("no-tracer")))
@@ -346,7 +319,3 @@
  * code
  */
 #define uninitialized_var(x) x = x
-
-#if GCC_VERSION >= 50100
-#define COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW 1
-#endif

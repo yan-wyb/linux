@@ -17,7 +17,6 @@
 #define __ASM_PERCPU_H
 
 #include <asm/stack_pointer.h>
-#include <asm/alternative.h>
 
 static inline void set_my_cpu_offset(unsigned long off)
 {
@@ -87,7 +86,6 @@ static inline unsigned long __percpu_##op(void *ptr,			\
 		: [val] "Ir" (val));					\
 		break;							\
 	default:							\
-		ret = 0;						\
 		BUILD_BUG();						\
 	}								\
 									\
@@ -117,7 +115,6 @@ static inline unsigned long __percpu_read(void *ptr, int size)
 		ret = ACCESS_ONCE(*(u64 *)ptr);
 		break;
 	default:
-		ret = 0;
 		BUILD_BUG();
 	}
 
@@ -187,7 +184,6 @@ static inline unsigned long __percpu_xchg(void *ptr, unsigned long val,
 		: [val] "r" (val));
 		break;
 	default:
-		ret = 0;
 		BUILD_BUG();
 	}
 

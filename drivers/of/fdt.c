@@ -9,7 +9,9 @@
  * version 2 as published by the Free Software Foundation.
  */
 
+#ifndef CONFIG_AMLOGIC_MODIFY /* save print time */
 #define pr_fmt(fmt)	"OF: fdt:" fmt
+#endif
 
 #include <linux/crc32.h>
 #include <linux/kernel.h>
@@ -605,8 +607,16 @@ static int __init __reserved_mem_reserve_reg(unsigned long node,
 
 		if (size &&
 		    early_init_dt_reserve_memory_arch(base, size, nomap) == 0)
+		#ifdef CONFIG_AMLOGIC_MODIFY
+			pr_emerg("\t%08lx - %08lx, %8ld KB, %s\n",
+				 (unsigned long)base,
+				 (unsigned long)(base + size),
+				 (unsigned long)(size >> 10),
+				 uname);
+		#else
 			pr_debug("Reserved memory: reserved region for node '%s': base %pa, size %ld MiB\n",
 				uname, &base, (unsigned long)size / SZ_1M);
+		#endif
 		else
 			pr_info("Reserved memory: failed to reserve memory for node '%s': base %pa, size %ld MiB\n",
 				uname, &base, (unsigned long)size / SZ_1M);
@@ -1015,19 +1025,6 @@ u64 __init dt_mem_next_cell(int s, const __be32 **cellp)
 	return of_read_number(p, s);
 }
 
-static int get_ddr_size(void)
-{
-	int ddr_size = 0;
-	if (strstr(boot_command_line, "ddr_size=2"))
-		ddr_size = 2;
-	else if (strstr(boot_command_line, "ddr_size=3"))
-		ddr_size = 3;
-	else
-		ddr_size = 0;
-
-	return ddr_size;
-}
-
 /**
  * early_init_dt_scan_memory - Look for an parse memory nodes
  */
@@ -1036,7 +1033,7 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 {
 	const char *type = of_get_flat_dt_prop(node, "device_type", NULL);
 	const __be32 *reg, *endp;
-	int l, ddr_size;
+	int l;
 
 	/* We are scanning "memory" nodes only */
 	if (type == NULL) {
@@ -1049,14 +1046,7 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 	} else if (strcmp(type, "memory") != 0)
 		return 0;
 
-	ddr_size = get_ddr_size();
-	if (ddr_size == 2)
-		reg = of_get_flat_dt_prop(node, "linux,usable-memory-2g", &l);
-	else if (ddr_size == 3)
-		reg = of_get_flat_dt_prop(node, "linux,usable-memory-3g", &l);
-	else
-		reg = of_get_flat_dt_prop(node, "linux,usable-memory", &l);
-
+	reg = of_get_flat_dt_prop(node, "linux,usable-memory", &l);
 	if (reg == NULL)
 		reg = of_get_flat_dt_prop(node, "reg", &l);
 	if (reg == NULL)
@@ -1130,11 +1120,19 @@ int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
 		p = of_get_flat_dt_prop(node, "bootargs", &l);
 
 	if (p != NULL && l > 0) {
-		strlcpy(cmdline, p, min((int)l, COMMAND_LINE_SIZE));
+		if (concat_cmdline) {
+			int cmdline_len;
+			int copy_len;
+			strlcat(cmdline, " ", COMMAND_LINE_SIZE);
+			cmdline_len = strlen(cmdline);
+			copy_len = COMMAND_LINE_SIZE - cmdline_len - 1;
+			copy_len = min((int)l, copy_len);
+			strncpy(cmdline + cmdline_len, p, copy_len);
+			cmdline[cmdline_len + copy_len] = '\0';
+		} else {
+			strlcpy(cmdline, p, min((int)l, COMMAND_LINE_SIZE));
+		}
 	}
-
-	if (concat_cmdline)
-		strlcat(cmdline, config_cmdline, COMMAND_LINE_SIZE);
 
 	pr_debug("Command line is: %s\n", (char*)data);
 

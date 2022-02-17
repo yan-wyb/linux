@@ -504,11 +504,11 @@ static inline int is_vmalloc_or_module_addr(const void *x)
 
 extern void kvfree(const void *addr);
 
-/*
- * Mapcount of compound page as a whole, does not include mapped sub-pages.
- *
- * Must be called only for compound pages or any their tail sub-pages.
- */
+static inline atomic_t *compound_mapcount_ptr(struct page *page)
+{
+	return &page[1].compound_mapcount;
+}
+
 static inline int compound_mapcount(struct page *page)
 {
 	VM_BUG_ON_PAGE(!PageCompound(page), page);
@@ -528,16 +528,10 @@ static inline void page_mapcount_reset(struct page *page)
 
 int __page_mapcount(struct page *page);
 
-/*
- * Mapcount of 0-order page; when compound sub-page, includes
- * compound_mapcount().
- *
- * Result is undefined for pages which cannot be mapped into userspace.
- * For example SLAB or special types of pages. See function page_has_type().
- * They use this place in struct page differently.
- */
 static inline int page_mapcount(struct page *page)
 {
+	VM_BUG_ON_PAGE(PageSlab(page), page);
+
 	if (unlikely(PageCompound(page)))
 		return __page_mapcount(page);
 	return atomic_read(&page->_mapcount) + 1;
@@ -706,13 +700,25 @@ int alloc_set_pte(struct fault_env *fe, struct mem_cgroup *memcg,
  */
 
 /* Page flags: | [SECTION] | [NODE] | ZONE | [LAST_CPUPID] | ... | FLAGS | */
-#define SECTIONS_PGOFF		((sizeof(unsigned long)*8) - SECTIONS_WIDTH)
-#define NODES_PGOFF		(SECTIONS_PGOFF - NODES_WIDTH)
 #if defined(CONFIG_AMLOGIC_PAGE_TRACE) && defined(CONFIG_64BIT)
-#define ZONES_PGOFF		((sizeof(unsigned int) * 8) - ZONES_WIDTH)
+/*
+ * We use high 32bit of page->flags for page trace, Make sure:
+ * __NR_PAGEFLAGS    : about 21 bits
+ * ZONES_WIDTH       : about  2 bits, MAX 4 zone types
+ * NODES_WIDTH       : about  2 bits if open CONFIG_NUMA, else 0 bit
+ * SECTIONS_WIDTH    : 0 bit if defined CONFIG_SPARSEMEM_VMEMMAP otherwise 18
+ *                     bits on ARM64
+ * LAST_CPUPID_SHIFT : 0 bit if not define CONFIG_NUMA_BALANCING, otherwise
+ *                     8 + NR_CPUS_BITS
+ * All of these macros should be using less than 32bits in total, otherwise
+ * compile will fail
+ */
+#define SECTIONS_PGOFF		((sizeof(unsigned int)*8) - SECTIONS_WIDTH)
 #else
-#define ZONES_PGOFF		(NODES_PGOFF - ZONES_WIDTH)
+#define SECTIONS_PGOFF		((sizeof(unsigned long)*8) - SECTIONS_WIDTH)
 #endif /* CONFIG_AMLOGIC_PAGE_TRACE */
+#define NODES_PGOFF		(SECTIONS_PGOFF - NODES_WIDTH)
+#define ZONES_PGOFF		(NODES_PGOFF - ZONES_WIDTH)
 #define LAST_CPUPID_PGOFF	(ZONES_PGOFF - LAST_CPUPID_WIDTH)
 
 /*
@@ -773,10 +779,6 @@ static inline bool is_zone_device_page(const struct page *page)
 }
 #endif
 
-/* 127: arbitrary random number, small enough to assemble well */
-#define page_ref_zero_or_close_to_overflow(page) \
-	((unsigned int) page_ref_count(page) + 127u <= 127u)
-
 static inline void get_page(struct page *page)
 {
 	page = compound_head(page);
@@ -784,20 +786,11 @@ static inline void get_page(struct page *page)
 	 * Getting a normal page or the head of a compound page
 	 * requires to already have an elevated page->_refcount.
 	 */
-	VM_BUG_ON_PAGE(page_ref_zero_or_close_to_overflow(page), page);
+	VM_BUG_ON_PAGE(page_ref_count(page) <= 0, page);
 	page_ref_inc(page);
 
 	if (unlikely(is_zone_device_page(page)))
 		get_zone_device_page(page);
-}
-
-static inline __must_check bool try_get_page(struct page *page)
-{
-	page = compound_head(page);
-	if (WARN_ON_ONCE(page_ref_count(page) <= 0))
-		return false;
-	page_ref_inc(page);
-	return true;
 }
 
 static inline void put_page(struct page *page)
@@ -1203,30 +1196,6 @@ void zap_page_range(struct vm_area_struct *vma, unsigned long address,
 		unsigned long size, struct zap_details *);
 void unmap_vmas(struct mmu_gather *tlb, struct vm_area_struct *start_vma,
 		unsigned long start, unsigned long end);
-/*
- * This has to be called after a get_task_mm()/mmget_not_zero()
- * followed by taking the mmap_sem for writing before modifying the
- * vmas or anything the coredump pretends not to change from under it.
- *
- * It also has to be called when mmgrab() is used in the context of
- * the process, but then the mm_count refcount is transferred outside
- * the context of the process to run down_write() on that pinned mm.
- *
- * NOTE: find_extend_vma() called from GUP context is the only place
- * that can modify the "mm" (notably the vm_start/end) under mmap_sem
- * for reading and outside the context of the process, so it is also
- * the only case that holds the mmap_sem for reading that must call
- * this function. Generally if the mmap_sem is hold for reading
- * there's no need of this check after get_task_mm()/mmget_not_zero().
- *
- * This function can be obsoleted and the check can be removed, after
- * the coredump code will hold the mmap_sem for writing before
- * invoking the ->core_dump methods.
- */
-static inline bool mmget_still_valid(struct mm_struct *mm)
-{
-	return likely(!mm->core_state);
-}
 
 /**
  * mm_walk - callbacks for walk_page_range
@@ -2233,12 +2202,6 @@ static inline struct vm_area_struct *find_exact_vma(struct mm_struct *mm,
 		vma = NULL;
 
 	return vma;
-}
-
-static inline bool range_in_vma(struct vm_area_struct *vma,
-				unsigned long start, unsigned long end)
-{
-	return (vma && vma->vm_start <= start && end <= vma->vm_end);
 }
 
 #ifdef CONFIG_MMU

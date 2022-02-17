@@ -377,7 +377,7 @@ config XILINX_HWICAP
 
 config R3964
 	tristate "Siemens R3964 line discipline"
-	depends on TTY && BROKEN
+	depends on TTY
 	---help---
 	  This driver allows synchronous communication with devices using the
 	  Siemens R3964 packet protocol. Unless you are dealing with special
@@ -592,15 +592,6 @@ config TILE_SROM
 	  how to partition a single ROM for multiple purposes.
 
 source "drivers/char/xillybus/Kconfig"
-
-config AMLOGIC_GPIOMEM
-	tristate "/dev/gpiomem rootless GPIO access via mmap() on the Amlogic"
-	default y
-	---help---
-	  Provides users with root-free access to the GPIO registers
-	  on Meson platform. Calling mmap(/dev/gpiomem) will map the GPIO
-	  register page to the user's pointer. This drvier can allow to access
-	  gpio memory area in user account.
 
 endmenu
 

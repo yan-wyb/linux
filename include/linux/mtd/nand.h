@@ -24,7 +24,6 @@
 #include <linux/mtd/flashchip.h>
 #include <linux/mtd/bbm.h>
 
-struct nand_chip;
 struct mtd_info;
 struct nand_flash_dev;
 struct device_node;
@@ -40,7 +39,7 @@ int nand_scan_ident(struct mtd_info *mtd, int max_chips,
 int nand_scan_tail(struct mtd_info *mtd);
 
 /* Unregister the MTD device and free resources held by the NAND device */
-void nand_release(struct nand_chip *chip);
+void nand_release(struct mtd_info *mtd);
 
 /* Internal helper for board drivers which need to override command function */
 void nand_wait_ready(struct mtd_info *mtd);
@@ -219,6 +218,9 @@ enum nand_ecc_algo {
 #define NAND_CI_CHIPNR_MSK	0x03
 #define NAND_CI_CELLTYPE_MSK	0x0C
 #define NAND_CI_CELLTYPE_SHIFT	2
+
+/* Keep gcc happy */
+struct nand_chip;
 
 /* ONFI features */
 #define ONFI_FEATURE_16_BIT_BUS		(1 << 0)
@@ -927,6 +929,7 @@ static inline void nand_set_controller_data(struct nand_chip *chip, void *priv)
 #define NAND_MFR_INTEL		0x89
 #define NAND_MFR_ATO		0x9b
 #define NAND_MFR_DOSILICON	0xf8
+#define NAND_MFR_ZETTA		0xba
 
 /* add extra flash manufacturer ID Codes */
 #if defined(CONFIG_AMLOGIC_NAND) || defined(CONFIG_AMLOGIC_M8B_NAND)

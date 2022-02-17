@@ -39,9 +39,7 @@
 static struct {
 	seqcount_t		seq;
 	struct timekeeper	timekeeper;
-} tk_core ____cacheline_aligned = {
-	.seq = SEQCNT_ZERO(tk_core.seq),
-};
+} tk_core ____cacheline_aligned;
 
 static DEFINE_RAW_SPINLOCK(timekeeper_lock);
 static struct timekeeper shadow_timekeeper;
@@ -987,8 +985,9 @@ static int scale64_check_overflow(u64 mult, u64 div, u64 *base)
 	    ((int)sizeof(u64)*8 - fls64(mult) < fls64(rem)))
 		return -EOVERFLOW;
 	tmp *= mult;
+	rem *= mult;
 
-	rem = div64_u64(rem * mult, div);
+	do_div(rem, div);
 	*base = tmp + rem;
 	return 0;
 }

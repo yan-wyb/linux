@@ -39,6 +39,7 @@
 #ifdef CONFIG_AMLOGIC_CMA
 #include <asm/pgtable.h>
 #include <linux/amlogic/aml_cma.h>
+#include <linux/delay.h>
 #include <linux/amlogic/secmon.h>
 #endif /* CONFIG_AMLOGIC_CMA */
 
@@ -226,10 +227,8 @@ static int __init cma_activate_area(struct cma *cma)
 
 	cma->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
 
-	if (!cma->bitmap) {
-		cma->count = 0;
+	if (!cma->bitmap)
 		return -ENOMEM;
-	}
 
 	WARN_ON_ONCE(!pfn_valid(pfn));
 	zone = page_zone(pfn_to_page(pfn));
@@ -411,12 +410,6 @@ int __init cma_declare_contiguous(phys_addr_t base,
 	 */
 	alignment = max(alignment,  (phys_addr_t)PAGE_SIZE <<
 			  max_t(unsigned long, MAX_ORDER - 1, pageblock_order));
-	if (fixed && base & (alignment - 1)) {
-		ret = -EINVAL;
-		pr_err("Region at %pa must be aligned to %pa bytes\n",
-			&base, &alignment);
-		goto err;
-	}
 	base = ALIGN(base, alignment);
 	size = ALIGN(size, alignment);
 	limit &= ~(alignment - 1);
@@ -446,13 +439,6 @@ int __init cma_declare_contiguous(phys_addr_t base,
 	 */
 	if (limit == 0 || limit > memblock_end)
 		limit = memblock_end;
-
-	if (base + size > limit) {
-		ret = -EINVAL;
-		pr_err("Size (%pa) of region at %pa exceeds limit (%pa)\n",
-			&size, &base, &limit);
-		goto err;
-	}
 
 	/* Reserve memory */
 	if (fixed) {
@@ -497,14 +483,12 @@ int __init cma_declare_contiguous(phys_addr_t base,
 
 	ret = cma_init_reserved_mem(base, size, order_per_bit, res_cma);
 	if (ret)
-		goto free_mem;
+		goto err;
 
 	pr_info("Reserved %ld MiB at %pa\n", (unsigned long)size / SZ_1M,
 		&base);
 	return 0;
 
-free_mem:
-	memblock_free(base, size);
 err:
 	pr_err("Failed to reserve %ld MiB\n", (unsigned long)size / SZ_1M);
 	return ret;
@@ -529,6 +513,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	int ret;
 #ifdef CONFIG_AMLOGIC_CMA
 	int dummy;
+	unsigned long long tick;
+	unsigned long long in_tick, timeout;
+
+	in_tick = sched_clock();
 #endif /* CONFIG_AMLOGIC_CMA */
 
 	if (!cma || !cma->count)
@@ -537,6 +525,13 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	pr_debug("%s(cma %p, count %zu, align %d)\n", __func__, (void *)cma,
 		 count, align);
 
+#ifdef CONFIG_AMLOGIC_CMA
+	tick = sched_clock();
+	cma_debug(0, NULL, "(cma %p, count %zu, align %d)\n",
+		  (void *)cma, count, align);
+	in_tick = sched_clock();
+	timeout = 2ULL * 1000000 * (1 + ((count * PAGE_SIZE) >> 20));
+#endif
 	if (!count)
 		return NULL;
 
@@ -591,6 +586,13 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 	#ifndef CONFIG_AMLOGIC_CMA
 		/* try again with a bit different memory target */
 		start = bitmap_no + mask + 1;
+	#else
+		/*
+		 * CMA allocation time out, may blocked on some pages
+		 * relax CPU and try later
+		 */
+		if ((sched_clock() - in_tick) >= timeout)
+			usleep_range(1000, 2000);
 	#endif /* CONFIG_AMLOGIC_CMA */
 	}
 
@@ -598,6 +600,8 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align)
 
 #ifdef CONFIG_AMLOGIC_CMA
 	aml_cma_alloc_post_hook(&dummy, count, page);
+	cma_debug(0, NULL, "return page:%lx, tick:%lld\n",
+		  page ? page_to_pfn(page) : 0, sched_clock() - tick);
 #endif /* CONFIG_AMLOGIC_CMA */
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;

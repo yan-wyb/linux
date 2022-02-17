@@ -28,7 +28,6 @@
 #include <linux/cpu_cooling.h>
 
 #include "../../thermal/thermal_core.h"
-#include "../../thermal/thermal_hwmon.h"
 
 //#define MESON_G12_PTM
 
@@ -54,7 +53,7 @@
 #define R1P1_TS_STAT8		(0x18 * 4)
 #define R1P1_TS_STAT9		(0x19 * 4)
 
-#define R1P1_TS_VALUE_CONT	0x10
+#define R1P1_TS_VALUE_CONT	0x1
 #define	R1P1_TRIM_INFO		0x0
 #define R1P1_TS_TEMP_MASK	0xfff
 #define R1P1_TS_IRQ_MASK	0xff
@@ -150,8 +149,6 @@ struct meson_tsensor_data {
 	void (*tsensor_update_irqs)(struct meson_tsensor_data *data);
 };
 
-static struct meson_tsensor_data *g_tsensor_data_ptr;
-
 static void meson_report_trigger(struct meson_tsensor_data *p)
 {
 	char data[10], *envp[] = { data, NULL };
@@ -192,9 +189,9 @@ static void meson_report_trigger(struct meson_tsensor_data *p)
 static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 {
 	struct meson_tsensor_platform_data *pdata = data->pdata;
-	int64_t div_tmp1, div_tmp2;
+	s64 div_tmp1, div_tmp2;
 	u32 uefuse, reg_code;
-	int cal_a, cal_b, cal_c, cal_d, cal_type;
+	u32 cal_a, cal_b, cal_c, cal_d, cal_type;
 
 	uefuse = data->trim_info;
 	uefuse = uefuse & 0xffff;
@@ -210,7 +207,9 @@ static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 	cal_d = pdata->cal_d;
 	switch (cal_type) {
 	case 0x1:
-		div_tmp2 = (1 << 16) * (temp * 10 + cal_c);
+		div_tmp2 = cal_c;
+		div_tmp2 = div_tmp2 + temp * 10;
+		div_tmp2 = (1 << 16) * div_tmp2;
 		div_tmp2 = div_s64(div_tmp2, cal_d);
 		if (uefuse & 0x8000) {
 			div_tmp2 = div_tmp2 + (uefuse & 0x7fff);
@@ -242,8 +241,8 @@ static u32 temp_to_code(struct meson_tsensor_data *data, int temp, bool trend)
 static int code_to_temp(struct meson_tsensor_data *data, int temp_code)
 {
 	struct meson_tsensor_platform_data *pdata = data->pdata;
-	int temp, cal_type, cal_a, cal_b, cal_c, cal_d;
-	int64_t div_tmp1, div_tmp2;
+	u32 cal_type, cal_a, cal_b, cal_c, cal_d;
+	s64 temp, div_tmp1, div_tmp2;
 	u32 uefuse;
 
 	uefuse = data->trim_info;
@@ -450,7 +449,14 @@ static int r1p1_tsensor_read(struct meson_tsensor_data *data)
 			value_all += (tvalue & 0xffff);
 		}
 	}
-	tvalue = value_all / cnt;
+	if (cnt) {
+		tvalue = value_all / cnt;
+		pr_debug("%s  vall: %u, cnt: %u\n",
+				__func__, value_all, cnt);
+	} else {
+		pr_info("%s  valid cnt is 0\n", __func__);
+		tvalue = 0;
+	}
 	return tvalue;
 }
 
@@ -512,21 +518,6 @@ static int meson_get_temp(void *p, int *temp)
 	mutex_unlock(&data->lock);
 	return 0;
 }
-
-int meson_get_temperature(void)
-{
-	int temp;
-	int ret;
-
-	ret = meson_get_temp(g_tsensor_data_ptr, &temp);
-	if (ret) {
-		printk("meson_get_temp failed!\n");
-		return ret;
-	}
-
-	return temp / 1000;
-}
-EXPORT_SYMBOL(meson_get_temperature);
 
 static void meson_tsensor_work(struct work_struct *work)
 {
@@ -697,8 +688,6 @@ static int meson_tsensor_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, data);
 	mutex_init(&data->lock);
 
-	g_tsensor_data_ptr = data;
-
 	data->clk = devm_clk_get(&pdev->dev, "ts_comp");
 	if (IS_ERR(data->clk)) {
 		dev_err(&pdev->dev, "Failed to get tsclock\n");
@@ -738,9 +727,6 @@ static int meson_tsensor_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to request irq: %d\n", data->irq);
 		goto err_thermal;
 	}
-
-	if (thermal_add_hwmon_sysfs(data->tzd))
-		dev_warn(&pdev->dev, "failed to add hwmon sysfs attributes\n");
 
 	meson_tsensor_control(pdev, true);
 	return 0;

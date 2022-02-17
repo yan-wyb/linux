@@ -22,7 +22,7 @@
 #include <sound/initval.h>
 #include <linux/of.h>
 
-#define DRV_NAME "spdif-dit-dummy"
+#define DRV_NAME "spdif-dit"
 
 #define STUB_RATES	SNDRV_PCM_RATE_8000_192000
 #define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
@@ -50,7 +50,7 @@ static struct snd_soc_dai_driver dit_stub_dai = {
 	.name		= "dit-hifi",
 	.playback 	= {
 		.stream_name	= "Playback",
-		.channels_min	= 2,
+		.channels_min	= 1,
 		.channels_max	= 384,
 		.rates		= STUB_RATES,
 		.formats	= STUB_FORMATS,

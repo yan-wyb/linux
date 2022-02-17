@@ -927,9 +927,12 @@ static void acpi_bus_init_power_state(struct acpi_device *device, int state)
 
 		if (buffer.length && package
 		    && package->type == ACPI_TYPE_PACKAGE
-		    && package->package.count)
-			acpi_extract_power_resources(package, 0, &ps->resources);
-
+		    && package->package.count) {
+			int err = acpi_extract_power_resources(package, 0,
+							       &ps->resources);
+			if (!err)
+				device->power.flags.power_resources = 1;
+		}
 		ACPI_FREE(buffer.pointer);
 	}
 
@@ -976,26 +979,13 @@ static void acpi_bus_get_power_flags(struct acpi_device *device)
 		acpi_bus_init_power_state(device, i);
 
 	INIT_LIST_HEAD(&device->power.states[ACPI_STATE_D3_COLD].resources);
+	if (!list_empty(&device->power.states[ACPI_STATE_D3_HOT].resources))
+		device->power.states[ACPI_STATE_D3_COLD].flags.valid = 1;
 
-	/* Set the defaults for D0 and D3hot (always supported). */
+	/* Set defaults for D0 and D3hot states (always valid) */
 	device->power.states[ACPI_STATE_D0].flags.valid = 1;
 	device->power.states[ACPI_STATE_D0].power = 100;
 	device->power.states[ACPI_STATE_D3_HOT].flags.valid = 1;
-
-	/*
-	 * Use power resources only if the D0 list of them is populated, because
-	 * some platforms may provide _PR3 only to indicate D3cold support and
-	 * in those cases the power resources list returned by it may be bogus.
-	 */
-	if (!list_empty(&device->power.states[ACPI_STATE_D0].resources)) {
-		device->power.flags.power_resources = 1;
-		/*
-		 * D3cold is supported if the D3hot list of power resources is
-		 * not empty.
-		 */
-		if (!list_empty(&device->power.states[ACPI_STATE_D3_HOT].resources))
-			device->power.states[ACPI_STATE_D3_COLD].flags.valid = 1;
-	}
 
 	if (acpi_bus_init_power(device))
 		device->flags.power_manageable = 0;
@@ -1463,8 +1453,7 @@ static int acpi_add_single_object(struct acpi_device **child,
 	 * Note this must be done before the get power-/wakeup_dev-flags calls.
 	 */
 	if (type == ACPI_BUS_TYPE_DEVICE)
-		if (acpi_bus_get_status(device) < 0)
-			acpi_set_device_status(device, 0);
+		acpi_bus_get_status(device);
 
 	acpi_bus_get_power_flags(device);
 	acpi_bus_get_wakeup_device_flags(device);
@@ -1542,7 +1531,7 @@ static int acpi_bus_type_and_status(acpi_handle handle, int *type,
 		 * acpi_add_single_object updates this once we've an acpi_device
 		 * so that acpi_bus_get_status' quirk handling can be used.
 		 */
-		*sta = ACPI_STA_DEFAULT;
+		*sta = 0;
 		break;
 	case ACPI_TYPE_PROCESSOR:
 		*type = ACPI_BUS_TYPE_PROCESSOR;

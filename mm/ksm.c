@@ -710,13 +710,13 @@ static int remove_stable_node(struct stable_node *stable_node)
 		return 0;
 	}
 
-	/*
-	 * Page could be still mapped if this races with __mmput() running in
-	 * between ksm_exit() and exit_mmap(). Just refuse to let
-	 * merge_across_nodes/max_page_sharing be switched.
-	 */
-	err = -EBUSY;
-	if (!page_mapped(page)) {
+	if (WARN_ON_ONCE(page_mapped(page))) {
+		/*
+		 * This should not happen: but if it does, just refuse to let
+		 * merge_across_nodes be switched - there is no need to panic.
+		 */
+		err = -EBUSY;
+	} else {
 		/*
 		 * The stable node did not yet appear stale to get_ksm_page(),
 		 * since that allows for an unmapped ksm page to be recognized
@@ -1468,6 +1468,17 @@ static void cmp_and_merge_page(struct page *page, struct rmap_item *rmap_item)
 
 	tree_rmap_item =
 		unstable_tree_search_insert(rmap_item, page, &tree_page);
+#ifdef CONFIG_AMLOGIC_CMA
+	/*
+	 * Now page is inserted to unstable tree, but do not
+	 * let cma page to be kpage, it can be merged with other pages
+	 */
+	if (cma_page(page)) {
+		if (tree_rmap_item)
+			put_page(tree_page);
+		return;
+	}
+#endif /* CONFIG_AMLOGIC_CMA */
 	if (tree_rmap_item) {
 		bool split;
 

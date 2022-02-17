@@ -159,7 +159,7 @@ static void hdmi_tx_construct_aud_packet(
 			AUD_DB[4] = 0;
 		}
 	} else if (audio_param->type == CT_DOLBY_D) {
-		pr_info(AUD "Audio Type: Dolby Digital +\n");
+		pr_info(AUD "Audio Type: Dobly Digital +\n");
 		if (AUD_DB) {
 			AUD_DB[0] =
 				(FS_REFER_TO_STREAM<<4)|(CC_REFER_TO_STREAM);
@@ -227,12 +227,12 @@ int hdmitx_set_audio(struct hdmitx_dev *hdmitx_device,
 		AUD_DB[i] = 0;
 	for (i = 0; i < (24*2); i++)
 		CHAN_STAT_BUF[i] = 0;
-	if (hdmitx_device->HWOp.SetAudMode(hdmitx_device,
-		audio_param) >= 0) {
+	if (hdmitx_device->hwop.setaudmode(hdmitx_device,
+					   audio_param) >= 0) {
 		hdmi_tx_construct_aud_packet(audio_param, AUD_DB,
 			CHAN_STAT_BUF, hdmi_ch);
 
-		hdmitx_device->HWOp.SetAudioInfoFrame(AUD_DB, CHAN_STAT_BUF);
+		hdmitx_device->hwop.setaudioinfoframe(AUD_DB, CHAN_STAT_BUF);
 		ret = 0;
 	}
 	return ret;
